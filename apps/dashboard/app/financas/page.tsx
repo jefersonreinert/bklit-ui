@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { FinancePage } from "@/components/pages/finance-page";
 
 export default function Page() {
-  return <ComingSoon icon="IconCoins" title="Finanças" />;
+  return <FinancePage />;
 }
