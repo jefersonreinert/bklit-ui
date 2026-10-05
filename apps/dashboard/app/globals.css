@@ -66,93 +66,70 @@
   --font-heading: var(--font-geist-sans);
 }
 
-/* Restaurant palette — warm accents on top of the shared bklit tokens */
+/* Bklit-style monochrome: black charts on frosted dark acrylic */
 :root {
-  --radius: 0.5rem;
-  --brand: oklch(0.646 0.194 41.1);
-  --success: oklch(0.627 0.17 149.2);
-  --warning: oklch(0.769 0.165 70.1);
-  --chart-1: oklch(0.646 0.194 41.1);
-  --chart-2: oklch(0.6 0.118 184.7);
-  --chart-3: oklch(0.769 0.165 70.1);
-  --chart-4: oklch(0.556 0.145 300);
-  --chart-5: oklch(0.627 0.17 149.2);
-  --chart-line-primary: var(--chart-1);
-  --chart-line-secondary: var(--chart-2);
-  --chart-scale-01: oklch(0.954 0.038 75.2);
-  --chart-scale-02: oklch(0.901 0.076 70.7);
-  --chart-scale-03: oklch(0.837 0.128 66.3);
-  --chart-scale-04: oklch(0.705 0.187 47.6);
-  --chart-scale-05: oklch(0.553 0.174 38.4);
+  --radius: 0.75rem;
 }
 
-/* Dark acrylic theme — translucent, blurred surfaces over warm glows */
 .dark {
-  --background: oklch(0.13 0.008 50);
-  --foreground: oklch(0.97 0.004 75);
-  --card: oklch(0.24 0.012 55 / 0.42);
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.34 0 0 / 0.42);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.2 0.01 55 / 0.9);
+  --popover: oklch(0.2 0 0 / 0.9);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.97 0.004 75);
-  --primary-foreground: oklch(0.18 0.01 55);
-  --secondary: oklch(1 0 0 / 0.08);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(1 0 0 / 0.09);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(1 0 0 / 0.07);
-  --muted-foreground: oklch(0.72 0.012 70);
-  --accent: oklch(1 0 0 / 0.09);
+  --muted: oklch(0 0 0 / 0.28);
+  --muted-foreground: oklch(0.78 0 0);
+  --accent: oklch(1 0 0 / 0.1);
   --accent-foreground: var(--foreground);
-  --border: oklch(1 0 0 / 0.09);
-  --input: oklch(1 0 0 / 0.1);
-  --ring: oklch(0.705 0.187 47.6 / 0.6);
-  --sidebar: oklch(0.18 0.01 55 / 0.45);
+  --border: oklch(1 0 0 / 0.1);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(1 0 0 / 0.35);
+  --sidebar: oklch(0.2 0 0 / 0.5);
   --sidebar-foreground: var(--foreground);
-  --sidebar-accent: oklch(1 0 0 / 0.08);
+  --sidebar-accent: oklch(1 0 0 / 0.1);
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: oklch(1 0 0 / 0.08);
 
-  --brand: oklch(0.705 0.187 47.6);
-  --chart-1: oklch(0.705 0.187 47.6);
-  --chart-2: oklch(0.704 0.123 182.5);
-  --chart-3: oklch(0.828 0.165 84.4);
-  --chart-4: oklch(0.714 0.143 302);
-  --chart-5: oklch(0.723 0.192 149.6);
-  --chart-grid: oklch(1 0 0 / 0.07);
-  --chart-label: oklch(0.72 0.012 70);
-  --chart-tooltip-background: oklch(0.2 0.01 55 / 0.92);
+  --brand: oklch(0.985 0 0);
+  --success: oklch(0.72 0.17 150);
+  --warning: oklch(0.8 0.15 80);
+
+  /* Black chart ramp (darkest = primary series) */
+  --chart-1: oklch(0.08 0 0);
+  --chart-2: oklch(0.2 0 0);
+  --chart-3: oklch(0.3 0 0);
+  --chart-4: oklch(0.42 0 0);
+  --chart-5: oklch(0.55 0 0);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-3);
+  --chart-grid: oklch(1 0 0 / 0.08);
+  --chart-label: oklch(0.8 0 0);
+  --chart-foreground: oklch(0.8 0 0);
+  --chart-crosshair: oklch(1 0 0 / 0.4);
+  --chart-indicator-color: oklch(1 0 0);
+  --chart-indicator-secondary-color: oklch(0.08 0 0);
+  --chart-tooltip-background: oklch(0.12 0 0 / 0.92);
   --legend: transparent;
-  --legend-track: oklch(1 0 0 / 0.08);
+  --legend-track: oklch(0 0 0 / 0.3);
   --legend-muted: oklch(1 0 0 / 0.06);
-  --chart-scale-01: oklch(1 0 0 / 0.06);
-  --chart-scale-02: oklch(0.408 0.098 45);
-  --chart-scale-03: oklch(0.553 0.174 38.4);
-  --chart-scale-04: oklch(0.705 0.187 47.6);
-  --chart-scale-05: oklch(0.837 0.128 66.3);
+  --chart-scale-01: oklch(1 0 0 / 0.07);
+  --chart-scale-02: oklch(0.45 0 0);
+  --chart-scale-03: oklch(0.32 0 0);
+  --chart-scale-04: oklch(0.2 0 0);
+  --chart-scale-05: oklch(0.06 0 0);
 }
 
-/* Warm ambient glows behind the acrylic layers */
+/* Neutral ambient light behind the acrylic layers */
 .ambient-glow {
   background-image:
-    radial-gradient(
-      42rem 30rem at 8% -6%,
-      oklch(0.62 0.19 42 / 0.45),
-      transparent 70%
-    ),
-    radial-gradient(
-      36rem 28rem at 96% 12%,
-      oklch(0.62 0.13 185 / 0.3),
-      transparent 70%
-    ),
-    radial-gradient(
-      40rem 30rem at 55% 105%,
-      oklch(0.55 0.16 300 / 0.3),
-      transparent 70%
-    ),
-    radial-gradient(
-      30rem 22rem at 40% 45%,
-      oklch(0.7 0.16 70 / 0.12),
-      transparent 70%
-    );
+    radial-gradient(40rem 30rem at 6% -8%, oklch(1 0 0 / 0.16), transparent 70%),
+    radial-gradient(36rem 28rem at 98% 10%, oklch(0.8 0 0 / 0.1), transparent 70%),
+    radial-gradient(44rem 30rem at 55% 108%, oklch(1 0 0 / 0.1), transparent 70%);
 }
 
 @utility acrylic {

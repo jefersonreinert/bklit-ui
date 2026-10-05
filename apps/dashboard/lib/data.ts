@@ -38,15 +38,16 @@ function monthsAgo(n: number) {
   return new Date(TODAY.getFullYear(), TODAY.getMonth() - n, 1);
 }
 
+/** Monochrome (black) ramp, Bklit-style. */
 export const palette = {
-  brasa: "#ea580c",
-  teal: "#0d9488",
-  amber: "#f59e0b",
-  violet: "#8b5cf6",
-  green: "#16a34a",
-  rose: "#e11d48",
-  sky: "#0284c7",
-  stone: "#78716c",
+  brasa: "oklch(0.08 0 0)",
+  teal: "oklch(0.2 0 0)",
+  amber: "oklch(0.3 0 0)",
+  violet: "oklch(0.4 0 0)",
+  green: "oklch(0.5 0 0)",
+  rose: "oklch(0.25 0 0)",
+  sky: "oklch(0.5 0 0)",
+  stone: "oklch(0.6 0 0)",
 };
 
 /* -------------------------------------------------------------------------- */

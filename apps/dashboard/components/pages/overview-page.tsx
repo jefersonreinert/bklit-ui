@@ -161,7 +161,6 @@ export function OverviewPage() {
           value={series.reduce((a, d) => a + d.revenue, 0)}
         />
         <KpiCard
-          color="var(--chart-2)"
           dataKey="orders"
           icon="IconReceiptBill"
           label="Pedidos no período"
@@ -171,7 +170,6 @@ export function OverviewPage() {
           value={series.reduce((a, d) => a + d.orders, 0)}
         />
         <KpiCard
-          color="var(--chart-3)"
           dataKey="ticket"
           formatOptions={brlFormatOptions}
           icon="IconMoneyHand"
@@ -225,7 +223,7 @@ export function OverviewPage() {
             maxBarSize={28}
           >
             <Grid horizontal />
-            <SeriesBar dataKey="orders" fill="var(--chart-2)" radius={4} />
+            <SeriesBar dataKey="orders" fill="var(--chart-4)" radius={4} />
             <Line dataKey="revenue" stroke="var(--chart-1)" yAxisId="right" />
             <YAxis yAxisId="left" />
             <YAxis

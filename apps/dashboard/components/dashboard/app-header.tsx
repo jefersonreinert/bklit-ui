@@ -69,7 +69,7 @@ export function AppHeader() {
         variant="ghost"
       >
         <Icon className="size-4" name="IconBell" />
-        <span className="absolute top-2 right-2 size-2 rounded-full bg-brand" />
+        <span className="absolute top-2 right-2 size-2 rounded-full bg-foreground" />
       </Button>
       <div className="hidden size-8 items-center justify-center rounded-full bg-muted font-medium text-xs sm:flex">
         GR

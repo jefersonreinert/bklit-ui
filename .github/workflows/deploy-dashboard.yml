@@ -42,9 +42,8 @@ jobs:
 
       - name: Configure Pages
         id: pages
+        # Requires Settings → Pages → Source: "GitHub Actions" (one-time).
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Build static dashboard
         run: pnpm --filter dashboard build
