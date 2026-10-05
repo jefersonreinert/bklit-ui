@@ -8,6 +8,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant beige (&:is(.beige *));
+@custom-variant light (&:is(.light *));
 
 @theme inline {
   --color-background: var(--background);
@@ -212,6 +213,95 @@
   --chart-scale-04: #7a5a45;
   --chart-scale-05: #4a3226;
   --chart-scale-pattern-color: #faf9f5;
+}
+
+/* Light theme — Bklit default: white surfaces with black monochrome charts */
+.light {
+  color-scheme: light;
+  --background: oklch(0.965 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0 / 0.75);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0 / 0.95);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.145 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0.6 0 0);
+  --sidebar: oklch(0.985 0 0 / 0.7);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.92 0 0);
+  --sidebar-accent-foreground: oklch(0.145 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+
+  --brand: oklch(0.145 0 0);
+  --success: oklch(0.6 0.15 150);
+  --warning: oklch(0.75 0.15 75);
+  --kpi-1: oklch(0.2 0 0);
+  --kpi-2: oklch(0.2 0 0);
+  --kpi-3: oklch(0.2 0 0);
+  --kpi-4: oklch(0.2 0 0);
+
+  --series-1: oklch(0.18 0 0);
+  --series-2: oklch(0.32 0 0);
+  --series-3: oklch(0.45 0 0);
+  --series-4: oklch(0.58 0 0);
+  --series-5: oklch(0.7 0 0);
+  --series-6: oklch(0.38 0 0);
+  --series-7: oklch(0.52 0 0);
+  --series-8: oklch(0.64 0 0);
+
+  --chart-1: oklch(0.2 0 0);
+  --chart-2: oklch(0.35 0 0);
+  --chart-3: oklch(0.5 0 0);
+  --chart-4: oklch(0.65 0 0);
+  --chart-5: oklch(0.8 0 0);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-3);
+  --chart-background: oklch(0.94 0 0);
+  --chart-foreground: oklch(0.5 0 0);
+  --chart-grid: oklch(0 0 0 / 0.08);
+  --chart-label: oklch(0.45 0 0);
+  --chart-crosshair: oklch(0 0 0 / 0.35);
+  --chart-indicator-color: oklch(0.145 0 0);
+  --chart-indicator-secondary-color: oklch(1 0 0);
+  --chart-tooltip-background: oklch(1 0 0);
+  --chart-tooltip-foreground: oklch(0.145 0 0);
+  --chart-tooltip-muted: oklch(0.5 0 0);
+  --legend: transparent;
+  --legend-foreground: oklch(0.145 0 0);
+  --legend-muted: oklch(0.94 0 0);
+  --legend-muted-foreground: oklch(0.5 0 0);
+  --legend-track: oklch(0.9 0 0);
+  --chart-scale-01: oklch(0.93 0 0);
+  --chart-scale-02: oklch(0.78 0 0);
+  --chart-scale-03: oklch(0.58 0 0);
+  --chart-scale-04: oklch(0.38 0 0);
+  --chart-scale-05: oklch(0.18 0 0);
+  --chart-scale-pattern-color: oklch(1 0 0);
+}
+
+.light .ambient-glow {
+  background-image:
+    radial-gradient(40rem 30rem at 6% -8%, oklch(1 0 0 / 0.9), transparent 70%),
+    radial-gradient(
+      36rem 28rem at 98% 10%,
+      oklch(0.9 0 0 / 0.6),
+      transparent 70%
+    );
+}
+
+.light .acrylic {
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.8),
+    0 8px 24px -14px oklch(0 0 0 / 0.2);
 }
 
 .beige .ambient-glow {

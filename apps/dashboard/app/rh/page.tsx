@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { HrPage } from "@/components/pages/hr/hr-page";
 
 export default function Page() {
-  return <ComingSoon icon="IconPeople" title="Recursos Humanos" />;
+  return <HrPage />;
 }

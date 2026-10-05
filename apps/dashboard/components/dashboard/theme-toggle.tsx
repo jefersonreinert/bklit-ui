@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 
 const themeOptions: { value: string; label: string; icon: IconName }[] = [
   { value: "dark", label: "Escuro", icon: "IconMoon" },
-  { value: "beige", label: "Bege", icon: "IconSun" },
+  { value: "beige", label: "Bege", icon: "IconJavaCoffeeBean" },
+  { value: "light", label: "Claro", icon: "IconSun" },
 ];
 
-/** Segmented switch between the dark acrylic and beige themes. */
+/** Segmented switch between the dark acrylic, beige and light themes. */
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);

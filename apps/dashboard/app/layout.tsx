@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           attribute="class"
           defaultTheme="dark"
           enableSystem={false}
-          themes={["dark", "beige"]}
+          themes={["dark", "beige", "light"]}
         >
           <div
             aria-hidden="true"
