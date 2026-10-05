@@ -35,7 +35,7 @@ export function KpiCard({
   suffix,
   series,
   dataKey = "value",
-  color = "var(--chart-1)",
+  color = "var(--kpi-1)",
   footer,
 }: {
   title: string;

@@ -161,6 +161,7 @@ export function OverviewPage() {
           value={series.reduce((a, d) => a + d.revenue, 0)}
         />
         <KpiCard
+          color="var(--kpi-2)"
           dataKey="orders"
           icon="IconReceiptBill"
           label="Pedidos no período"
@@ -170,6 +171,7 @@ export function OverviewPage() {
           value={series.reduce((a, d) => a + d.orders, 0)}
         />
         <KpiCard
+          color="var(--kpi-3)"
           dataKey="ticket"
           formatOptions={brlFormatOptions}
           icon="IconMoneyHand"
@@ -239,7 +241,7 @@ export function OverviewPage() {
                   value: formatBRL(Number(p.revenue)),
                 },
                 {
-                  color: "var(--chart-2)",
+                  color: "var(--chart-4)",
                   label: "Pedidos",
                   value: formatInt(Number(p.orders)),
                 },
@@ -391,7 +393,7 @@ export function OverviewPage() {
             <LinearGradient
               from="var(--chart-1)"
               id="top-dishes-gradient"
-              to="var(--chart-3)"
+              to="var(--chart-4)"
               vertical={false}
             />
             <Grid fadeVertical horizontal={false} vertical />

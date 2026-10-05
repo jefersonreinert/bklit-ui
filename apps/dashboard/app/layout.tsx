@@ -23,11 +23,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       className={cn(GeistSans.variable, GeistMono.variable)}
       lang="pt-BR"
-      style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
       <body className="relative isolate">
-        <ThemeProvider attribute="class" forcedTheme="dark">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          themes={["dark", "beige"]}
+        >
           <div
             aria-hidden="true"
             className="ambient-glow pointer-events-none fixed inset-0 -z-10"

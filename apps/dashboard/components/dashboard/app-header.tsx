@@ -13,6 +13,7 @@ import {
 import { TODAY } from "@/lib/data";
 import { type NavItem, navItems, normalizePath } from "@/lib/nav";
 import { SidebarBrand, SidebarFooterCard, SidebarNav } from "./app-sidebar";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AppHeader() {
   const pathname = normalizePath(usePathname());
@@ -62,6 +63,7 @@ export function AppHeader() {
         </p>
       </div>
 
+      <ThemeToggle />
       <Button
         aria-label="Notificações"
         className="relative"

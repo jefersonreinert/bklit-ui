@@ -7,6 +7,7 @@
 @source "../../../packages/ui/src/**/*.tsx";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant beige (&:is(.beige *));
 
 @theme inline {
   --color-background: var(--background);
@@ -100,6 +101,20 @@
   --warning: oklch(0.8 0.15 80);
 
   /* Black chart ramp (darkest = primary series) */
+  --series-1: oklch(0.08 0 0);
+  --series-2: oklch(0.2 0 0);
+  --series-3: oklch(0.3 0 0);
+  --series-4: oklch(0.4 0 0);
+  --series-5: oklch(0.5 0 0);
+  --series-6: oklch(0.25 0 0);
+  --series-7: oklch(0.5 0 0);
+  --series-8: oklch(0.6 0 0);
+  color-scheme: dark;
+  --kpi-1: oklch(0.08 0 0);
+  --kpi-2: oklch(0.08 0 0);
+  --kpi-3: oklch(0.08 0 0);
+  --kpi-4: oklch(0.08 0 0);
+
   --chart-1: oklch(0.08 0 0);
   --chart-2: oklch(0.2 0 0);
   --chart-3: oklch(0.3 0 0);
@@ -124,8 +139,108 @@
   --chart-scale-05: oklch(0.06 0 0);
 }
 
+/* Beige theme — Anthropic-inspired ivory with colorful charts and cards */
+.beige {
+  color-scheme: light;
+  --background: #f0eee6;
+  --foreground: #141413;
+  --card: oklch(0.985 0.006 95 / 0.72);
+  --card-foreground: #141413;
+  --popover: oklch(0.985 0.006 95 / 0.95);
+  --popover-foreground: #141413;
+  --primary: #141413;
+  --primary-foreground: #faf9f5;
+  --secondary: #e8e6dc;
+  --secondary-foreground: #141413;
+  --muted: #e8e6dc;
+  --muted-foreground: #6b6a63;
+  --accent: #e8e6dc;
+  --accent-foreground: #141413;
+  --destructive: #bf4d43;
+  --border: #dedcd1;
+  --input: #dedcd1;
+  --ring: #8b6a52;
+  --sidebar: oklch(0.97 0.008 95 / 0.7);
+  --sidebar-foreground: #141413;
+  --sidebar-accent: #e3dacc;
+  --sidebar-accent-foreground: #141413;
+  --sidebar-border: #dedcd1;
+
+  --brand: #6b4a35;
+  --kpi-1: #5c3d2e;
+  --kpi-2: #5c3d2e;
+  --kpi-3: #5c3d2e;
+  --kpi-4: #5c3d2e;
+  --success: #788c5d;
+  --warning: #d4a27f;
+
+  /* Monochrome brown ramp (darkest = primary series) */
+  --series-1: #4a3226;
+  --series-2: #6b4a35;
+  --series-3: #8b6a52;
+  --series-4: #a88a70;
+  --series-5: #c4ab92;
+  --series-6: #5c3d2e;
+  --series-7: #9a7a60;
+  --series-8: #b89c82;
+
+  --chart-1: #5c3d2e;
+  --chart-2: #7a5a45;
+  --chart-3: #9a7a60;
+  --chart-4: #b89c82;
+  --chart-5: #d4c0a8;
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-background: #e8e6dc;
+  --chart-foreground: #6b6a63;
+  --chart-grid: oklch(0.2 0.01 80 / 0.1);
+  --chart-label: #6b6a63;
+  --chart-crosshair: oklch(0.3 0.01 80 / 0.4);
+  --chart-indicator-color: #141413;
+  --chart-indicator-secondary-color: #faf9f5;
+  --chart-tooltip-background: #faf9f5;
+  --chart-tooltip-foreground: #141413;
+  --chart-tooltip-muted: #6b6a63;
+  --legend: transparent;
+  --legend-foreground: #141413;
+  --legend-muted: #e8e6dc;
+  --legend-muted-foreground: #6b6a63;
+  --legend-track: #e3dacc;
+  --chart-scale-01: #e8e6dc;
+  --chart-scale-02: #d4c0a8;
+  --chart-scale-03: #a88a70;
+  --chart-scale-04: #7a5a45;
+  --chart-scale-05: #4a3226;
+  --chart-scale-pattern-color: #faf9f5;
+}
+
+.beige .ambient-glow {
+  background-image:
+    radial-gradient(
+      40rem 30rem at 6% -8%,
+      oklch(0.75 0.05 60 / 0.25),
+      transparent 70%
+    ),
+    radial-gradient(
+      36rem 28rem at 98% 10%,
+      oklch(0.8 0.03 75 / 0.22),
+      transparent 70%
+    ),
+    radial-gradient(
+      44rem 30rem at 55% 108%,
+      oklch(0.75 0.04 55 / 0.18),
+      transparent 70%
+    );
+}
+
+.beige .acrylic {
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.7),
+    0 8px 24px -14px oklch(0.35 0.03 60 / 0.35);
+}
+
 /* Neutral ambient light behind the acrylic layers */
-.ambient-glow {
+.dark .ambient-glow {
   background-image:
     radial-gradient(40rem 30rem at 6% -8%, oklch(1 0 0 / 0.16), transparent 70%),
     radial-gradient(
