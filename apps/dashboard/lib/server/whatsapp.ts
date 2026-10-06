@@ -130,7 +130,9 @@ export async function readChat(chat: string, limit = 50) {
   return {
     ...data,
     messages: data.messages.map((m) =>
-      m.hasMedia ? { ...m, mediaUrl: signedUrl("media", chat, m.id) } : m
+      m.hasMedia && !m.mediaUrl
+        ? { ...m, mediaUrl: signedUrl("media", chat, m.id) }
+        : m
     ),
   };
 }

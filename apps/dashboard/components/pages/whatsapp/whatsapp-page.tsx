@@ -182,12 +182,23 @@ function ChatRow({
       onClick={onOpen}
       type="button"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--chat-out) font-medium text-(--chat-out-foreground) text-sm">
+      <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-(--chat-out) font-medium text-(--chat-out-foreground) text-sm">
         {chat.isGroup ? (
           <Icon className="size-4" name="IconPeople" />
         ) : (
           (chat.name[0] ?? "?").toUpperCase()
         )}
+        {chat.avatarUrl ? (
+          // biome-ignore lint/performance/noImgElement: signed archive URL
+          <img
+            alt=""
+            className="absolute inset-0 size-full object-cover"
+            height={40}
+            loading="lazy"
+            src={chat.avatarUrl}
+            width={40}
+          />
+        ) : null}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
@@ -440,6 +451,7 @@ function Inbox({ wa }: { wa: Wa }) {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("all");
   const me = wa.status?.bridge?.me;
+  const stats = wa.status?.bridge?.stats;
   const q = query.trim().toLowerCase();
   const list = (wa.chats ?? []).filter(
     (c) => (!q || c.name.toLowerCase().includes(q)) && TAB_FILTERS[tab](c)
@@ -458,6 +470,13 @@ function Inbox({ wa }: { wa: Wa }) {
           <p className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
             {me?.name ?? "Conectado"}
             {me?.number ? ` · +${me.number}` : ""}
+            {stats ? (
+              <span className="block truncate">
+                Arquivo: {stats.messages.toLocaleString("pt-BR")} mensagens ·{" "}
+                {stats.chats.toLocaleString("pt-BR")} conversas ·{" "}
+                {stats.mediaArchived.toLocaleString("pt-BR")} arquivos
+              </span>
+            ) : null}
           </p>
           <Button onClick={wa.logout} size="sm" variant="ghost">
             Desconectar

@@ -12,7 +12,11 @@ services:
     envVars:
       - key: BRIDGE_SECRET
         sync: false
-      - key: HF_TOKEN
+      - key: SUPABASE_URL
         sync: false
-      - key: HF_SESSION_REPO
-        value: JefersonReinert/casa-brasa-wa-session
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MEDIA_HISTORY_DAYS
+        value: "180"
+      - key: MEDIA_MAX_MB
+        value: "16"

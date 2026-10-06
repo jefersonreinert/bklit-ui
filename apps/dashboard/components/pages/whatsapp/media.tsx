@@ -31,7 +31,7 @@ function DocumentCard({ m }: { m: WaMessage }) {
     <a
       className="flex min-w-48 items-center gap-3 rounded-xl bg-black/5 p-2.5 transition-colors hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
       download={name}
-      href={m.mediaUrl}
+      href={m.mediaUrl ?? undefined}
       rel="noopener"
       target="_blank"
     >
@@ -55,7 +55,7 @@ function ImageMedia({ m, poster }: { m: WaMessage; poster?: string }) {
   return (
     <a
       className="block overflow-hidden rounded-xl"
-      href={m.mediaUrl}
+      href={m.mediaUrl ?? undefined}
       rel="noopener"
       target="_blank"
     >
@@ -71,7 +71,7 @@ function ImageMedia({ m, poster }: { m: WaMessage; poster?: string }) {
         decoding="async"
         height={m.type === "sticker" ? 128 : 320}
         loading="lazy"
-        src={m.mediaUrl}
+        src={m.mediaUrl ?? undefined}
         style={poster ? { backgroundImage: `url(${poster})` } : undefined}
         width={m.type === "sticker" ? 128 : 256}
       />
@@ -87,7 +87,7 @@ function AudioMedia({ m }: { m: WaMessage }) {
         className="h-10 w-60 max-w-full"
         controls
         preload="none"
-        src={m.mediaUrl}
+        src={m.mediaUrl ?? undefined}
       />
       {m.media?.duration ? (
         <span className="text-[11px] opacity-70">
@@ -98,9 +98,24 @@ function AudioMedia({ m }: { m: WaMessage }) {
   );
 }
 
+const UNAVAILABLE: Record<string, string> = {
+  expired: "Arquivo expirado no WhatsApp",
+  failed: "Não foi possível baixar o arquivo",
+};
+
 export function MessageMedia({ m }: { m: WaMessage }) {
   if (!(m.hasMedia && m.mediaUrl)) {
     return null;
+  }
+  const unavailable = m.mediaStatus ? UNAVAILABLE[m.mediaStatus] : undefined;
+  if (unavailable) {
+    return (
+      <p className="flex items-center gap-2 rounded-xl bg-black/5 px-3 py-2 text-xs opacity-80 dark:bg-white/5">
+        <Icon className="size-4" name="IconCircleInfo" />
+        {unavailable}
+        {m.media?.filename ? ` · ${m.media.filename}` : ""}
+      </p>
+    );
   }
   const poster = thumbUrl(m);
   if (m.type === "image" || m.type === "sticker") {
@@ -115,7 +130,7 @@ export function MessageMedia({ m }: { m: WaMessage }) {
         playsInline
         poster={poster}
         preload="none"
-        src={m.mediaUrl}
+        src={m.mediaUrl ?? undefined}
       />
     );
   }

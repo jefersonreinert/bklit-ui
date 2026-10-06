@@ -10,6 +10,10 @@ export interface WaBridgeStatus {
   pairingCode: string | null;
   me: { name: string | null; number: string | null } | null;
   error: string | null;
+  /** History sync from the phone. */
+  sync?: { batches: number; messages: number; progress: number | null };
+  /** What the database archive holds. */
+  stats?: { chats: number; messages: number; mediaArchived: number } | null;
 }
 
 export interface WaChat {
@@ -18,6 +22,8 @@ export interface WaChat {
   isGroup: boolean;
   archived: boolean;
   unread: number;
+  /** Signed URL of the contact/group photo (archived), if any. */
+  avatarUrl?: string | null;
   /** Unix seconds. */
   timestamp: number;
   last: { body: string; fromMe: boolean; type: string } | null;
@@ -41,8 +47,10 @@ export interface WaMessage {
     /** Base64 JPEG preview for images, videos and stickers. */
     thumb: string | null;
   } | null;
-  /** Short-lived signed URL to the full file on the bridge. */
-  mediaUrl?: string;
+  /** Signed URL to the file (archive, or the bridge when not archived yet). */
+  mediaUrl?: string | null;
+  /** pending | done | skipped | failed | expired */
+  mediaStatus?: string | null;
 }
 
 /** What /api/whatsapp/status tells the page. */
