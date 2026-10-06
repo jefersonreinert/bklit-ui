@@ -1,105 +1,20 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import {
+  DEFAULT_PREFERENCES,
+  FONTS,
+  type FontOption,
+  type Preferences,
+} from "./preferences-fonts";
+import type { StoredSettings } from "./settings-types";
 
 /**
- * Per-device preferences: the user's name/role and the app typeface.
- * Stored in localStorage; the font is applied through `--app-font`.
+ * The user's name/role, the app typeface and the app icon.
+ * Saved on the server (/api/settings, a private Blob store) so it survives
+ * reinstalling the Home Screen app, with a localStorage copy for instant
+ * loads and offline use. The font is applied through `--app-font`.
  */
-
-export interface FontOption {
-  id: string;
-  label: string;
-  /** Short description shown in Configurações. */
-  note: string;
-  stack: string;
-  /** Google Fonts family query (absent = already bundled or system). */
-  google?: string;
-}
-
-export const FONTS: FontOption[] = [
-  {
-    id: "geist",
-    label: "Geist",
-    note: "Padrão do app — moderna e neutra",
-    stack: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
-  },
-  {
-    id: "system",
-    label: "Sistema (San Francisco)",
-    note: "A fonte nativa do iPhone e do Mac",
-    stack:
-      "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif",
-  },
-  {
-    id: "inter",
-    label: "Inter",
-    note: "Ótima leitura em telas e números",
-    stack: "'Inter', ui-sans-serif, system-ui, sans-serif",
-    google: "Inter:wght@400;500;600;700",
-  },
-  {
-    id: "jakarta",
-    label: "Plus Jakarta Sans",
-    note: "Geométrica e elegante",
-    stack: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif",
-    google: "Plus+Jakarta+Sans:wght@400;500;600;700",
-  },
-  {
-    id: "dm-sans",
-    label: "DM Sans",
-    note: "Suave, ótima para painéis",
-    stack: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
-    google: "DM+Sans:wght@400;500;600;700",
-  },
-  {
-    id: "manrope",
-    label: "Manrope",
-    note: "Contemporânea e compacta",
-    stack: "'Manrope', ui-sans-serif, system-ui, sans-serif",
-    google: "Manrope:wght@400;500;600;700",
-  },
-  {
-    id: "ibm-plex",
-    label: "IBM Plex Sans",
-    note: "Técnica, com personalidade",
-    stack: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif",
-    google: "IBM+Plex+Sans:wght@400;500;600;700",
-  },
-  {
-    id: "source-serif",
-    label: "Source Serif 4",
-    note: "Serifada, estilo editorial",
-    stack: "'Source Serif 4', ui-serif, Georgia, serif",
-    google: "Source+Serif+4:wght@400;500;600;700",
-  },
-  {
-    id: "lora",
-    label: "Lora",
-    note: "Serifada clássica, calorosa",
-    stack: "'Lora', ui-serif, Georgia, serif",
-    google: "Lora:wght@400;500;600;700",
-  },
-  {
-    id: "jetbrains-mono",
-    label: "JetBrains Mono",
-    note: "Monoespaçada, visual técnico",
-    stack: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
-    google: "JetBrains+Mono:wght@400;500;600;700",
-  },
-];
-
-export interface Preferences {
-  name: string;
-  role: string;
-  font: string;
-}
-
-export const DEFAULT_PREFERENCES: Preferences = {
-  name: "Gabriela",
-  role: "Gerente",
-  font: "geist",
-};
 
 const KEY = "casa-brasa-preferences";
 const WORDS = /\s+/;
@@ -124,8 +39,8 @@ function read(): Preferences {
 /** Current preferences outside React (e.g. for sample data). */
 export const getPreferences = () => read();
 
-export function setPreferences(patch: Partial<Preferences>) {
-  current = { ...read(), ...patch };
+function apply(next: Preferences) {
+  current = next;
   try {
     localStorage.setItem(KEY, JSON.stringify(current));
   } catch {
@@ -137,6 +52,11 @@ export function setPreferences(patch: Partial<Preferences>) {
   }
 }
 
+/** Changes preferences on this device only (see savePreferences). */
+export function setPreferences(patch: Partial<Preferences>) {
+  apply({ ...read(), ...patch });
+}
+
 export function usePreferences(): Preferences {
   return useSyncExternalStore(
     (l) => {
@@ -146,6 +66,128 @@ export function usePreferences(): Preferences {
     read,
     () => DEFAULT_PREFERENCES
   );
+}
+
+/* ---------------------------- server sync ---------------------------- */
+
+/** "cloud" = saved on the server; "device" = only here (no server store). */
+export type SaveResult = "cloud" | "device" | "error";
+
+const API = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/settings/`;
+
+/** Brings a server copy into the local store. */
+function adopt(server: StoredSettings) {
+  const local = read();
+  apply({
+    ...local,
+    name: server.name,
+    role: server.role,
+    font: server.font,
+    icon: server.icon,
+    // The local preview belongs to the icon it was made from
+    iconData: server.icon === local.icon ? local.iconData : undefined,
+    updatedAt: server.updatedAt,
+  });
+}
+
+async function send(
+  url: string,
+  init: RequestInit
+): Promise<{ result: SaveResult; settings?: StoredSettings }> {
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: { "Content-Type": "application/json" },
+    });
+    // Static build (no API) or no Blob store configured
+    if (res.status === 404 || res.status === 405 || res.status === 503) {
+      return { result: "device" };
+    }
+    if (!res.ok) {
+      return { result: "error" };
+    }
+    const { settings } = (await res.json()) as { settings: StoredSettings };
+    return { result: "cloud", settings };
+  } catch {
+    return { result: "error" };
+  }
+}
+
+/** Saves on this device right away, then on the server. */
+export async function savePreferences(
+  patch: Partial<Pick<Preferences, "name" | "role" | "font">>
+): Promise<SaveResult> {
+  setPreferences({ ...patch, updatedAt: Date.now() });
+  const { name, role, font } = read();
+  const { result, settings } = await send(API, {
+    method: "POST",
+    body: JSON.stringify({ name, role, font }),
+  });
+  if (settings) {
+    adopt(settings);
+  }
+  return result;
+}
+
+/** Uploads the icon (PNG data URLs keyed by size) or, with null, resets it. */
+export async function saveIcon(
+  pngs: Record<number, string> | null
+): Promise<SaveResult> {
+  const body = pngs
+    ? Object.fromEntries(
+        Object.entries(pngs).map(([size, url]) => [size, url.split(",")[1]])
+      )
+    : undefined;
+  const { result, settings } = await send(`${API}icon/`, {
+    method: pngs ? "POST" : "DELETE",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (settings) {
+    adopt(settings);
+  }
+  if (result !== "error") {
+    // Keep a preview so the new icon shows immediately (and offline)
+    setPreferences({
+      iconData: pngs?.[192],
+      ...(result === "device"
+        ? { icon: undefined, updatedAt: Date.now() }
+        : {}),
+    });
+  }
+  return result;
+}
+
+/** On load: take the server copy when newer, or upload newer local edits. */
+async function pull() {
+  try {
+    const res = await fetch(API, { cache: "no-store" });
+    if (!res.ok) {
+      return;
+    }
+    const { available, settings } = (await res.json()) as {
+      available: boolean;
+      settings: StoredSettings | null;
+    };
+    const local = read();
+    if (settings && settings.updatedAt >= (local.updatedAt ?? 0)) {
+      adopt(settings);
+    } else if (available && (local.updatedAt || !settings)) {
+      // Edits made before the server store existed (or offline) go up now
+      await savePreferences({});
+    }
+  } catch {
+    // offline — keep the local copy
+  }
+}
+
+/** URL of the current app icon, or null for the default mark. */
+export function appIconSrc(prefs: Preferences, size = 192) {
+  if (prefs.iconData) {
+    return prefs.iconData;
+  }
+  return prefs.icon
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/brand/icon/?size=${size}&v=${prefs.icon}`
+    : null;
 }
 
 export const firstName = (name: string) =>
@@ -194,8 +236,19 @@ export function applyFont(fontId: string) {
 
 /** Applies the saved typeface on first load (mounted once in the layout). */
 export function PreferencesBoot() {
+  const { icon } = usePreferences();
   useEffect(() => {
     applyFont(read().font);
+    pull();
   }, []);
+  // "Adicionar à Tela de Início" reads this link: point it at the newest icon
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>(
+      'link[rel="apple-touch-icon"]'
+    );
+    if (link && icon) {
+      link.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/brand/icon/?size=180&v=${icon}`;
+    }
+  }, [icon]);
   return null;
 }

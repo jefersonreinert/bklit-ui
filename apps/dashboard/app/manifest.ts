@@ -4,6 +4,12 @@ const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const dynamic = "force-static";
 
+/** Uploaded icon through the API; the static build has only the default. */
+const icon = (size: number) =>
+  process.env.STATIC_EXPORT === "1"
+    ? `${base}/icons/icon-${size}.png`
+    : `${base}/api/brand/icon/?size=${size}`;
+
 /** Installable app: opened from the Home Screen it runs without Safari's bars. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -20,17 +26,17 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "pt-BR",
     icons: [
       {
-        src: `${base}/icons/icon-192.png`,
+        src: icon(192),
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: `${base}/icons/icon-512.png`,
+        src: icon(512),
         sizes: "512x512",
         type: "image/png",
       },
       {
-        src: `${base}/icons/icon-512.png`,
+        src: icon(512),
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

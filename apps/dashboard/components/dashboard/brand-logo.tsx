@@ -1,10 +1,31 @@
+"use client";
+
+import { appIconSrc, usePreferences } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 /**
  * Brand mark shown in the header menu button and the sidebar.
- * Rendered with `currentColor` inside a tile so it adapts to every theme.
+ * Rendered with `currentColor` inside a tile so it adapts to every theme;
+ * replaced by the icon uploaded in Configurações when there is one.
  */
 export function BrandLogo({ className }: { className?: string }) {
+  const src = appIconSrc(usePreferences());
+  if (src) {
+    return (
+      // biome-ignore lint/performance/noImgElement: uploaded data URL / API image
+      <img
+        alt=""
+        aria-hidden="true"
+        className={cn(
+          "size-9 shrink-0 rounded-lg bg-muted object-cover",
+          className
+        )}
+        height={36}
+        src={src}
+        width={36}
+      />
+    );
+  }
   return (
     <span
       aria-hidden="true"

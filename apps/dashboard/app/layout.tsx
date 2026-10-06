@@ -11,6 +11,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PreferencesBoot } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
   title: {
     default: "Casa Brasa — Dashboard",
@@ -24,8 +26,12 @@ export const metadata: Metadata = {
     title: "Casa Brasa",
     statusBarStyle: "black-translucent",
   },
+  // The API serves the icon uploaded in Configurações (static build: default)
   icons: {
-    apple: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/icons/icon-180.png`,
+    apple:
+      process.env.STATIC_EXPORT === "1"
+        ? `${base}/icons/icon-180.png`
+        : `${base}/api/brand/icon/?size=180`,
   },
   formatDetection: { telephone: false },
   // Older iOS versions still look for Apple's original tag
