@@ -15,6 +15,8 @@ USER node
 COPY --chown=node:node package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --chown=node:node . .
+# Pairing/login fixes for Baileys 7 rc (fails the build if Baileys changed)
+RUN node patches/patch-baileys.mjs
 
 EXPOSE 10000
 CMD ["node", "--max-old-space-size=384", "server.mjs"]

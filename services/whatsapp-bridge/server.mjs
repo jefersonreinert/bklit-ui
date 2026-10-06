@@ -364,6 +364,8 @@ async function start() {
     // Each QR/pairing ref lives 3 min, so a pairing code stays valid long
     // enough to type it (the socket restarts when the refs run out)
     qrTimeout: 180_000,
+    // No query timeout: linking by phone number can take a while on the phone
+    defaultQueryTimeoutMs: undefined,
     markOnlineOnConnect: false,
     getMessage: async (key) =>
       (await messageRaw(key.remoteJid, key.id).catch(() => null))?.raw
