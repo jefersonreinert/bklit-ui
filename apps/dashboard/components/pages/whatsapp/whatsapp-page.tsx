@@ -408,7 +408,7 @@ export function WhatsappPage() {
   if (!status.configured) {
     return (
       <Panel
-        description="O servidor do WhatsApp (whatsapp-web.js no Hugging Face, grátis) ainda não foi configurado. Veja os passos na página Conectores."
+        description="O servidor do WhatsApp (whatsapp-web.js num servidor gratuito) ainda não foi configurado. Veja os passos na página Conectores."
         title="WhatsApp ainda não configurado"
       >
         <Button

@@ -5,7 +5,7 @@ import { seal, unseal } from "./sealed-cookie";
 
 /**
  * Client for the whatsapp-web.js bridge (services/whatsapp-bridge, hosted on
- * a free Hugging Face Space). Server-only: the bridge secret never reaches
+ * Render's free plan). Server-only: the bridge secret never reaches
  * the browser, and every route is locked behind WHATSAPP_ACCESS_CODE.
  */
 
@@ -67,14 +67,10 @@ async function bridge<T>(path: string, init?: RequestInit): Promise<T> {
   if (!config) {
     throw new WhatsappError("WhatsApp não configurado", 503);
   }
-  const headers: Record<string, string> = {
+  const headers = {
     "x-bridge-secret": config.secret,
     "content-type": "application/json",
   };
-  // Private Hugging Face Spaces need a token to be reached at all
-  if (process.env.WHATSAPP_HF_TOKEN) {
-    headers.authorization = `Bearer ${process.env.WHATSAPP_HF_TOKEN}`;
-  }
   let res: Response;
   try {
     res = await fetch(`${config.url}${path}`, {

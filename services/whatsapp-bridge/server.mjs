@@ -59,6 +59,13 @@ const client = new Client({
       "--disable-dev-shm-usage",
       "--disable-gpu",
       "--no-zygote",
+      // Fit Render's free 512 MB instance
+      "--no-first-run",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-default-apps",
+      "--mute-audio",
+      "--renderer-process-limit=1",
       // Optional extra flags (e.g. a proxy when testing locally)
       ...(process.env.EXTRA_CHROME_ARGS ?? "").split(" ").filter(Boolean),
     ],

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, ctx: Ctx) {
   if (action === "status") {
     return json(await status(request));
   }
-  // Daily Vercel cron: keeps the free Space from sleeping
+  // Daily Vercel cron (backup to the GitHub keep-alive): wakes the bridge
   if (action === "keepalive") {
     try {
       return json(await bridgeHealth());

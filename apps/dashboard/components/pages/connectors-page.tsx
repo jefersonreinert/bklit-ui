@@ -375,16 +375,16 @@ function WhatsappCard({ status }: { status: ConnectorsStatus | null }) {
           </CardTitle>
           <CardDescription>
             Seu WhatsApp como aparelho conectado (whatsapp-web.js), rodando num
-            servidor gratuito do Hugging Face. Leia e responda conversas no app;
-            o assistente pode ler e resumir (não envia nada sozinho).
+            servidor gratuito (Render). Leia e responda conversas no app; o
+            assistente pode ler e resumir (não envia nada sozinho).
           </CardDescription>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 text-muted-foreground text-sm">
         {ready ? null : (
           <p>
-            Falta configurar o servidor gratuito no Hugging Face (Space Docker
-            com <code>services/whatsapp-bridge</code>) e adicionar{" "}
+            Falta configurar o servidor gratuito no Render (Docker com{" "}
+            <code>services/whatsapp-bridge</code>) e adicionar{" "}
             <code>WHATSAPP_BRIDGE_URL</code>,{" "}
             <code>WHATSAPP_BRIDGE_SECRET</code> e{" "}
             <code>WHATSAPP_ACCESS_CODE</code> no Vercel.
