@@ -621,7 +621,7 @@ const routes = {
     const code = await sock.requestPairingCode(phone);
     state.pairingCode = code;
     state.pairingAt = Date.now();
-    console.log("Pairing code issued");
+    console.log(`Pairing code issued (${phone.length} digits)`);
     return { code };
   },
   "POST /logout": async () => {
