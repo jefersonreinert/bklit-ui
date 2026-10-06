@@ -261,6 +261,21 @@ function logPairingFrames(socket) {
         ? `<${v.length ?? v.data?.length} bytes>`
         : v
     );
+    // Too many pairing codes for this number: WhatsApp drops the request
+    const err =
+      node?.tag === "iq" && node?.attrs?.type === "error"
+        ? node.content?.find?.((c) => c.tag === "error")?.attrs
+        : null;
+    if (
+      err?.code === "429" &&
+      state.pairingAt &&
+      Date.now() - state.pairingAt < 30_000
+    ) {
+      state.pairingCode = null;
+      state.pairingAt = null;
+      state.pairingBlockedAt = Date.now();
+      console.log("Pairing refused: rate-overlimit (429)");
+    }
     if (
       text.includes("link_code") ||
       text.includes("pair-") ||
@@ -628,13 +643,18 @@ const routes = {
     qr: null,
     pairingCode: state.pairingCode,
     pairingAt: state.pairingAt ?? null,
+    pairingBlockedAt: state.pairingBlockedAt ?? null,
     me: state.me,
     error: state.error,
     sync: state.sync,
     stats: await stats().catch(() => null),
   }),
   "POST /pair": async (_req, _url, body) => {
-    const phone = String(body.phone ?? "").replace(NON_DIGITS, "");
+    let phone = String(body.phone ?? "").replace(NON_DIGITS, "");
+    // Brazilian numbers typed without the country code (DDD + number)
+    if (phone.length === 10 || phone.length === 11) {
+      phone = `55${phone}`;
+    }
     if (!PHONE.test(phone)) {
       throw fail("invalid phone", 400);
     }
@@ -644,6 +664,7 @@ const routes = {
     const code = await sock.requestPairingCode(phone);
     state.pairingCode = code;
     state.pairingAt = Date.now();
+    state.pairingBlockedAt = null;
     console.log(`Pairing code issued (${phone.length} digits)`);
     return { code };
   },

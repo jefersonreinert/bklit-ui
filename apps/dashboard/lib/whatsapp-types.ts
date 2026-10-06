@@ -10,6 +10,8 @@ export interface WaBridgeStatus {
   pairingCode: string | null;
   /** When the code was issued (ms); it is valid for a few minutes. */
   pairingAt?: number | null;
+  /** WhatsApp refused new codes for this number (too many attempts). */
+  pairingBlockedAt?: number | null;
   me: { name: string | null; number: string | null } | null;
   error: string | null;
   /** History sync from the phone. */

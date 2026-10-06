@@ -118,6 +118,8 @@ function Pair({ wa, onBack }: { wa: Wa; onBack?: () => void }) {
   const [phone, setPhone] = useState("55");
   const [busy, setBusy] = useState(false);
   const code = wa.status?.bridge?.pairingCode ?? null;
+  const blockedAt = wa.status?.bridge?.pairingBlockedAt;
+  const blocked = Boolean(blockedAt && Date.now() - blockedAt < 60 * 60_000);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -141,6 +143,13 @@ function Pair({ wa, onBack }: { wa: Wa; onBack?: () => void }) {
           />
         </label>
         <Problem text={wa.error} />
+        {blocked ? (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            O WhatsApp bloqueou novos códigos temporariamente porque houve
+            muitas tentativas seguidas. Espere cerca de 1 hora e gere um código
+            só uma vez, digitando-o logo em seguida.
+          </p>
+        ) : null}
         <Button disabled={busy} type="submit">
           {busy ? "Gerando código…" : "Gerar código de conexão"}
         </Button>
