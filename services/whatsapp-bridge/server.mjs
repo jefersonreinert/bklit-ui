@@ -40,6 +40,9 @@ if (SECRET.length < 24) {
   process.exit(1);
 }
 
+// Never die silently: RemoteAuth backups run in timers
+process.on("unhandledRejection", (e) => console.error("Unhandled:", e));
+
 const authStrategy =
   SESSION_REPO && HF_TOKEN
     ? new RemoteAuth({
