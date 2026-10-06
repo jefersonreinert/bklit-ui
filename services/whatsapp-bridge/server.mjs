@@ -253,8 +253,29 @@ const enqueue = (label, fn) => {
 
 /* ------------------------------- socket --------------------------------- */
 
+/** Logs WhatsApp's replies around device linking (pairing diagnostics). */
+function logPairingFrames(socket) {
+  socket.ws.on("frame", (node) => {
+    const text = JSON.stringify(node, (_k, v) =>
+      v?.type === "Buffer" || v instanceof Uint8Array
+        ? `<${v.length ?? v.data?.length} bytes>`
+        : v
+    );
+    if (
+      text.includes("link_code") ||
+      text.includes("pair-") ||
+      (node?.tag === "iq" && node?.attrs?.type === "error") ||
+      node?.tag === "stream:error" ||
+      node?.tag === "failure"
+    ) {
+      console.log("WA frame:", text.slice(0, 700));
+    }
+  });
+}
+
 function bindEvents(socket, saveCreds) {
   socket.ev.on("creds.update", saveCreds);
+  logPairingFrames(socket);
   socket.ev.on("connection.update", (u) => onConnection(socket, u));
 
   socket.ev.on("messaging-history.set", (h) =>
@@ -794,8 +815,29 @@ http
   })
   .listen(PORT, () => console.log(`Bridge listening on ${PORT}`));
 
+/*
+ * Render starts the new instance before stopping the old one; two sockets on
+ * the same session make WhatsApp drop both. The old one closes on SIGTERM and
+ * the new one waits a bit before connecting.
+ */
+let stopping = false;
+process.on("SIGTERM", () => {
+  stopping = true;
+  console.log("SIGTERM: closing WhatsApp socket");
+  try {
+    sock?.end(undefined);
+  } catch {
+    // already closed
+  }
+  setTimeout(() => process.exit(0), 1500);
+});
+const STARTUP_DELAY_MS = Number(process.env.STARTUP_DELAY_MS ?? 20_000);
+
 /** Starts the socket, retrying while the database is unreachable. */
 function boot() {
+  if (stopping) {
+    return;
+  }
   start().catch((e) => {
     state.status = "disconnected";
     state.error = e.message;
@@ -803,4 +845,4 @@ function boot() {
     setTimeout(boot, 15_000);
   });
 }
-boot();
+setTimeout(boot, STARTUP_DELAY_MS);
