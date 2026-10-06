@@ -16,6 +16,11 @@ import {
   ServiceLogo,
   ServiceTile,
 } from "@/components/dashboard/service-logos";
+import {
+  speak,
+  speakable,
+  stopSpeaking,
+} from "@/components/pages/voice/voice-engine";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -208,6 +213,8 @@ function toApiMessages(history: ChatMessage[]) {
   }));
 }
 
+const CLAUDE_PREFIX = /^Claude\s+/;
+
 const IMAGE_EXT = /\.(heic|heif|jpe?g|png|webp|gif)$/i;
 
 const uid = () =>
@@ -272,7 +279,7 @@ function UserBubble({ message: m }: { message: ChatMessage }) {
         </div>
       ) : null}
       {m.content ? (
-        <div className="whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-[15px] leading-relaxed">
+        <div className="whitespace-pre-wrap rounded-[26px] bg-muted px-5 py-3.5 text-[17px] leading-relaxed">
           {m.content}
         </div>
       ) : null}
@@ -301,7 +308,11 @@ function ModelSelect({
   value: AiModelId;
   onChange: (m: AiModelId) => void;
 }) {
-  const items = AI_MODELS.map((m) => ({ value: m.id, label: m.name }));
+  // Short names in the pill ("Opus 5.5"), like Claude's app
+  const items = AI_MODELS.map((m) => ({
+    value: m.id,
+    label: m.name.replace(CLAUDE_PREFIX, ""),
+  }));
   return (
     <Select
       items={items}
@@ -310,10 +321,13 @@ function ModelSelect({
     >
       <SelectTrigger
         aria-label="Modelo"
-        className="h-8 w-auto gap-1 border-0 bg-transparent px-2 text-muted-foreground shadow-none hover:bg-muted"
+        className="h-10 w-auto min-w-0 shrink gap-1.5 truncate rounded-full border-0 bg-muted/70 px-3.5 text-[15px] text-foreground shadow-none hover:bg-muted"
         size="sm"
       >
         <SelectValue />
+        {value === "claude-haiku-4-5" ? null : (
+          <span className="text-muted-foreground">Médio</span>
+        )}
       </SelectTrigger>
       <SelectContent>
         {AI_MODELS.map((m) => (
@@ -344,7 +358,9 @@ function Composer({
   extras,
   preview,
   canSend,
+  placeholder,
 }: {
+  placeholder?: string;
   connectors: ReactNode;
   /** Attach / camera / microphone buttons. */
   extras?: ReactNode;
@@ -391,43 +407,53 @@ function Composer({
     }
   };
 
+  const ready = Boolean(value.trim() || canSend);
+  const round =
+    "flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity";
+  let primary: ReactNode;
+  if (streaming) {
+    primary = (
+      <button aria-label="Parar resposta" className={round} type="submit">
+        <span className="size-3 rounded-[3px] bg-background" />
+      </button>
+    );
+  } else if (ready) {
+    primary = (
+      <button aria-label="Enviar mensagem" className={round} type="submit">
+        <Icon className="size-5" name="IconArrowUp" />
+      </button>
+    );
+  } else {
+    primary = (
+      <a aria-label="Modo voz" className={round} href={`${BASE_PATH}/voz/`}>
+        <Icon className="size-5" name="IconVoiceMid" />
+      </a>
+    );
+  }
+
   return (
     <form
-      className="acrylic flex flex-col gap-2 rounded-[20px] border bg-card p-3 shadow-sm transition-shadow focus-within:shadow-md"
+      className="acrylic flex flex-col gap-2 rounded-[28px] border bg-card p-2.5 shadow-sm transition-shadow focus-within:shadow-md"
       onSubmit={submit}
     >
       {preview}
       <textarea
         aria-label="Mensagem para o assistente"
         autoFocus={autoFocus}
-        className="max-h-[220px] min-h-[44px] w-full resize-none bg-transparent px-1.5 pt-1 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
+        className="max-h-[220px] min-h-[48px] w-full resize-none bg-transparent px-3 pt-2 text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground"
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Como posso ajudar hoje?"
+        placeholder={placeholder ?? "Como posso ajudar hoje?"}
         ref={ref}
         rows={1}
         value={value}
       />
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1.5">
         {connectors}
-        {extras}
-        <div className="ml-auto flex items-center gap-1">
-          <ModelSelect onChange={onModelChange} value={model} />
-          <button
-            aria-label={streaming ? "Parar resposta" : "Enviar mensagem"}
-            className={cn(
-              "flex size-8 items-center justify-center rounded-lg text-white transition-opacity",
-              !(streaming || value.trim() || canSend) && "opacity-40"
-            )}
-            disabled={!(streaming || value.trim() || canSend)}
-            style={{ backgroundColor: CLAY }}
-            type="submit"
-          >
-            <Icon
-              className="size-4"
-              name={streaming ? "IconStop" : "IconArrowUp"}
-            />
-          </button>
+        <ModelSelect onChange={onModelChange} value={model} />
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {extras}
+          {primary}
         </div>
       </div>
     </form>
@@ -502,54 +528,91 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
     : `${BASE_PATH}/conectores/`;
 }
 
-function ConnectorsMenu({
+const MENU_ROW =
+  "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left text-sm transition-colors hover:bg-muted";
+
+/** The composer's "+" menu: photos, camera and connectors (like Claude's app). */
+function PlusMenu({
   status,
   prefs,
   onChange,
+  onFiles,
+  onCamera,
 }: {
   status: ConnectorsStatus | null;
   prefs: ConnectorPrefs;
   onChange: (key: ConnectorKey, on: boolean) => void;
+  onFiles: (files: FileList | null) => void;
+  onCamera: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const active = CONNECTOR_ROWS.filter(
     (r) => isConnected(status, r.key) && prefs[r.key]
   );
   return (
-    <Popover>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button
-            aria-label="Conectores"
-            className={cn(
-              "gap-1.5 rounded-lg",
-              active.length > 0 && "text-foreground"
-            )}
-            size="sm"
+          <button
+            aria-label="Adicionar fotos, câmera e conectores"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-muted/70 text-foreground transition-colors hover:bg-muted"
             type="button"
-            variant="ghost"
           />
         }
       >
-        <Icon className="size-4" name="IconConnectors1" />
-        {active.map((r) => (
-          <ServiceLogo brand={r.key} className="size-3.5" key={r.key} />
-        ))}
-        {active.length === 1 ? (
-          <span className="text-xs">{active[0]?.label}</span>
+        <Icon className="size-5" name="IconPlusLarge" />
+        {active.length > 0 ? (
+          <span className="absolute -right-0.5 -bottom-0.5 flex -space-x-1">
+            {active.slice(0, 3).map((r) => (
+              <span
+                className="flex size-4 items-center justify-center rounded-full bg-white ring-2 ring-card"
+                key={r.key}
+              >
+                <ServiceLogo brand={r.key} className="size-2.5" />
+              </span>
+            ))}
+          </span>
         ) : null}
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="acrylic w-72 gap-3 p-3 backdrop-blur-xl"
+        className="acrylic w-76 gap-1 p-2 backdrop-blur-xl"
         side="top"
       >
-        <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+        <label className={cn(MENU_ROW, "cursor-pointer")}>
+          <input
+            accept="image/*"
+            className="sr-only"
+            multiple
+            onChange={(e) => {
+              onFiles(e.target.files);
+              e.target.value = "";
+              setOpen(false);
+            }}
+            type="file"
+          />
+          <Icon className="size-5" name="IconImages1" />
+          Fotos e imagens
+        </label>
+        <button
+          className={MENU_ROW}
+          onClick={() => {
+            setOpen(false);
+            onCamera();
+          }}
+          type="button"
+        >
+          <Icon className="size-5" name="IconCamera1" />
+          Câmera
+        </button>
+        <div className="my-1 border-t" />
+        <p className="px-2 pt-1 pb-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">
           Conectores
         </p>
         {CONNECTOR_ROWS.map((r) => {
           const connected = isConnected(status, r.key);
           return (
-            <div className="flex items-center gap-3" key={r.key}>
+            <div className="flex items-center gap-3 px-2 py-1" key={r.key}>
               <ServiceTile brand={r.key} className="size-8 rounded-lg" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{r.label}</p>
@@ -575,13 +638,58 @@ function ConnectorsMenu({
           );
         })}
         <a
-          className="text-muted-foreground text-xs underline-offset-2 hover:underline"
+          className="px-2 pt-1 pb-1 text-muted-foreground text-xs underline-offset-2 hover:underline"
           href={`${BASE_PATH}/conectores/`}
         >
           Gerenciar conectores
         </a>
       </PopoverContent>
     </Popover>
+  );
+}
+
+const SERVICE_NAMES: Record<string, string> = {
+  notion: "Notion",
+  gmail: "Gmail",
+  drive: "Google Drive",
+  youtube: "YouTube",
+  whatsapp: "WhatsApp",
+};
+
+/** "Usou Gmail e Notion · 3 ações ›", expandable (like Claude's tool line). */
+function ToolSummary({ tools }: { tools: ToolUse[] }) {
+  const [open, setOpen] = useState(false);
+  const running = tools.some((t) => t.status === "running");
+  const names = [
+    ...new Set(tools.map((t) => SERVICE_NAMES[t.server] ?? t.server)),
+  ];
+  const list =
+    names.length > 1
+      ? `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`
+      : (names[0] ?? "");
+  return (
+    <div className="mb-3">
+      <button
+        aria-expanded={open}
+        className="flex items-center gap-1.5 text-[15px] text-muted-foreground transition-colors hover:text-foreground"
+        onClick={() => setOpen((o) => !o)}
+        type="button"
+      >
+        <span className={cn(running && "animate-pulse")}>
+          {running ? `Usando ${list}…` : `Usou ${list}`}
+          {` · ${tools.length} ${tools.length === 1 ? "ação" : "ações"}`}
+        </span>
+        <Icon
+          className={cn("size-4 transition-transform", open && "rotate-90")}
+          name="IconChevronRight"
+        />
+      </button>
+      {open ? (
+        <div className="mt-2">
+          <ToolChips tools={tools} />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -635,6 +743,7 @@ function MessageActions({
 }) {
   const [copied, setCopied] = useState(false);
   const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const [playing, setPlaying] = useState(false);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(content);
@@ -644,10 +753,28 @@ function MessageActions({
       // clipboard blocked
     }
   };
+  const share = async () => {
+    if (navigator.share) {
+      await navigator.share({ text: content }).catch(() => null);
+    } else {
+      await copy();
+    }
+  };
+  const play = async () => {
+    if (playing) {
+      stopSpeaking();
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    await speak(speakable(content)).catch(() => null);
+    setPlaying(false);
+  };
+  useEffect(() => () => stopSpeaking(), []);
   const btn =
-    "flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground";
+    "flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="-ml-2 flex items-center gap-0.5">
       <button
         aria-label="Copiar resposta"
         className={btn}
@@ -655,8 +782,28 @@ function MessageActions({
         type="button"
       >
         <Icon
-          className="size-3.5"
+          className="size-[18px]"
           name={copied ? "IconCheckmark1" : "IconSquareBehindSquare1"}
+        />
+      </button>
+      <button
+        aria-label="Compartilhar"
+        className={btn}
+        onClick={share}
+        type="button"
+      >
+        <Icon className="size-[18px]" name="IconShareOs" />
+      </button>
+      <button
+        aria-label={playing ? "Parar leitura" : "Ouvir resposta"}
+        aria-pressed={playing}
+        className={cn(btn, playing && "text-foreground")}
+        onClick={play}
+        type="button"
+      >
+        <Icon
+          className="size-[18px]"
+          name={playing ? "IconStop" : "IconPlay"}
         />
       </button>
       <button
@@ -666,7 +813,7 @@ function MessageActions({
         onClick={() => setVote(vote === "up" ? null : "up")}
         type="button"
       >
-        <Icon className="size-3.5" name="IconThumbsUp" />
+        <Icon className="size-[18px]" name="IconThumbsUp" />
       </button>
       <button
         aria-label="Não gostei"
@@ -675,7 +822,7 @@ function MessageActions({
         onClick={() => setVote(vote === "down" ? null : "down")}
         type="button"
       >
-        <Icon className="size-3.5" name="IconThumbsDown" />
+        <Icon className="size-[18px]" name="IconThumbsDown" />
       </button>
       {onRetry ? (
         <button
@@ -684,7 +831,7 @@ function MessageActions({
           onClick={onRetry}
           type="button"
         >
-          <Icon className="size-3.5" name="IconArrowRotateClockwise" />
+          <Icon className="size-[18px]" name="IconArrowRotateClockwise" />
         </button>
       ) : null}
     </div>
@@ -1088,10 +1235,6 @@ export function AiPage() {
     }
   };
 
-  const connectorsMenu = (
-    <ConnectorsMenu onChange={changePref} prefs={prefs} status={connectors} />
-  );
-
   const addFiles = async (files: FileList | null) => {
     setAttachError(null);
     const room = MAX_ATTACHMENTS - attachments.length;
@@ -1111,53 +1254,35 @@ export function AiPage() {
     }
   };
 
+  const connectorsMenu = (
+    <PlusMenu
+      onCamera={() => setCameraOpen(true)}
+      onChange={changePref}
+      onFiles={addFiles}
+      prefs={prefs}
+      status={connectors}
+    />
+  );
+
   const composerExtras = (
-    <>
-      <label
-        className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        title="Enviar fotos ou imagens"
-      >
-        <span className="sr-only">Enviar fotos ou imagens</span>
-        <input
-          accept="image/*"
-          className="sr-only"
-          multiple
-          onChange={(e) => {
-            addFiles(e.target.files);
-            e.target.value = "";
-          }}
-          type="file"
-        />
-        <Icon className="size-4" name="IconImages1" />
-      </label>
-      <button
-        aria-label="Abrir a câmera"
-        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        onClick={() => setCameraOpen(true)}
-        title="Abrir a câmera"
-        type="button"
-      >
-        <Icon className="size-4" name="IconCamera1" />
-      </button>
-      <button
-        aria-label={
-          dictation.listening ? "Parar o ditado" : "Ditar pelo microfone"
-        }
-        aria-pressed={dictation.listening}
-        className={cn(
-          "flex size-8 items-center justify-center rounded-lg transition-colors",
-          dictation.listening
-            ? "animate-pulse text-white"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        )}
-        onClick={dictation.toggle}
-        style={dictation.listening ? { backgroundColor: CLAY } : undefined}
-        title="Ditar pelo microfone"
-        type="button"
-      >
-        <Icon className="size-4" name="IconMicrophone" />
-      </button>
-    </>
+    <button
+      aria-label={
+        dictation.listening ? "Parar o ditado" : "Ditar pelo microfone"
+      }
+      aria-pressed={dictation.listening}
+      className={cn(
+        "flex size-10 items-center justify-center rounded-full transition-colors",
+        dictation.listening
+          ? "animate-pulse text-white"
+          : "bg-muted/70 text-foreground hover:bg-muted"
+      )}
+      onClick={dictation.toggle}
+      style={dictation.listening ? { backgroundColor: CLAY } : undefined}
+      title="Ditar pelo microfone"
+      type="button"
+    >
+      <Icon className="size-5" name="IconMicrophone" />
+    </button>
   );
 
   const composerPreview = (
@@ -1220,49 +1345,78 @@ export function AiPage() {
       </Sheet>
 
       <section className="flex min-w-0 flex-1 flex-col">
-        {/* Barra superior */}
-        <div className="flex h-12 shrink-0 items-center gap-2 px-3 md:px-5">
-          <Button
-            aria-label="Conversas"
-            className="xl:hidden"
-            onClick={() => setHistoryOpen(true)}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Icon className="size-4" name="IconHistory" />
-          </Button>
-          {/* The app header already says "Assistente IA" */}
-          <p className="min-w-0 flex-1 truncate font-medium text-sm">
-            {active?.title}
-          </p>
+        {/* Barra superior: botões redondos flutuantes, como no app do Claude */}
+        <div className="flex h-14 shrink-0 items-center gap-2 px-3 md:px-5">
           <button
-            aria-pressed={demoMode}
-            className={cn(
-              "shrink-0 rounded-full border px-2 py-0.5 text-[11px] transition-colors",
-              demoMode
-                ? "border-primary/40 bg-primary/10 text-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-            onClick={toggleDemo}
-            title={
-              demoMode
-                ? "Toque para voltar a usar o Claude"
-                : "Testar sem usar a API (não gasta créditos)"
-            }
+            aria-label="Conversas"
+            className="acrylic flex size-11 items-center justify-center rounded-full border bg-card/80 shadow-sm xl:hidden"
+            onClick={() => setHistoryOpen(true)}
             type="button"
           >
-            {demoMode ? "Modo demonstração ✓" : "Testar sem API"}
+            <Icon className="size-5" name="IconBarsTwo" />
           </button>
-          {active ? (
-            <Button
+          {/* The app header already says "Assistente IA" */}
+          <p className="min-w-0 flex-1 truncate text-center font-medium text-muted-foreground text-sm">
+            {active?.title}
+            {demoMode ? " · demonstração" : ""}
+          </p>
+          <div className="acrylic flex h-11 items-center gap-1 rounded-full border bg-card/80 px-1.5 shadow-sm">
+            <button
               aria-label="Nova conversa"
+              className="flex size-9 items-center justify-center rounded-full hover:bg-muted"
               onClick={newChat}
-              size="icon-sm"
-              variant="ghost"
+              type="button"
             >
-              <Icon className="size-4" name="IconEditBig" />
-            </Button>
-          ) : null}
+              <Icon className="size-5" name="IconEditBig" />
+            </button>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <button
+                    aria-label="Mais opções"
+                    className="flex size-9 items-center justify-center rounded-full hover:bg-muted"
+                    type="button"
+                  />
+                }
+              >
+                <Icon className="size-5" name="IconDotGrid1x3Horizontal" />
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="acrylic w-64 gap-1 p-2 backdrop-blur-xl"
+              >
+                <button
+                  aria-pressed={demoMode}
+                  className={MENU_ROW}
+                  onClick={toggleDemo}
+                  type="button"
+                >
+                  <Icon
+                    className="size-5"
+                    name={demoMode ? "IconCheckmark1" : "IconSparklesSoft"}
+                  />
+                  <span className="flex flex-col">
+                    <span>
+                      {demoMode ? "Modo demonstração ✓" : "Testar sem API"}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {demoMode
+                        ? "Toque para voltar a usar o Claude"
+                        : "Respostas com os dados do painel, sem gastar créditos"}
+                    </span>
+                  </span>
+                </button>
+                <a className={MENU_ROW} href={`${BASE_PATH}/voz/`}>
+                  <Icon className="size-5" name="IconVoiceMid" />
+                  Modo voz
+                </a>
+                <a className={MENU_ROW} href={`${BASE_PATH}/conectores/`}>
+                  <Icon className="size-5" name="IconConnectors1" />
+                  Conectores
+                </a>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {messages.length === 0 ? (
@@ -1337,7 +1491,9 @@ export function AiPage() {
                         spinning={pending && m.content === ""}
                       />
                       <div className="min-w-0 flex-1">
-                        {m.tools?.length ? <ToolChips tools={m.tools} /> : null}
+                        {m.tools?.length ? (
+                          <ToolSummary tools={m.tools} />
+                        ) : null}
                         {m.content === "" && !m.tools?.length ? (
                           <p className="text-muted-foreground text-sm">
                             Pensando…
@@ -1377,6 +1533,7 @@ export function AiPage() {
                 onModelChange={setModel}
                 onStop={() => abortRef.current?.abort()}
                 onSubmit={() => send(draft)}
+                placeholder="Responda ao Claude…"
                 preview={composerPreview}
                 streaming={streaming}
                 value={draft}
