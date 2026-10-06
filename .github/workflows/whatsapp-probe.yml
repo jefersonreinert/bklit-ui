@@ -1,0 +1,23 @@
+name: WhatsApp probe
+
+# Manual check: can a new Baileys device reach WhatsApp from GitHub's network?
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: services/whatsapp-bridge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --omit=dev --no-audit --no-fund
+      - run: node tools/probe.mjs
