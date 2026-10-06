@@ -14,6 +14,7 @@ import {
 import { TODAY } from "@/lib/data";
 import { type NavItem, navItems, normalizePath } from "@/lib/nav";
 import { usePreferences } from "@/lib/preferences";
+import { AnthropicWordmark } from "./anthropic-wordmark";
 import { SidebarBrand, SidebarFooterCard, SidebarNav } from "./app-sidebar";
 import { BrandLogo } from "./brand-logo";
 import { ProfileAvatar } from "./profile-avatar";
@@ -56,7 +57,14 @@ export function AppHeader() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <h1 className="truncate font-semibold text-base leading-tight">
-          {current.label}
+          {current.href === "/ia" ? (
+            <>
+              <span className="sr-only">{current.label}</span>
+              <AnthropicWordmark className="h-3.5 md:h-4" />
+            </>
+          ) : (
+            current.label
+          )}
         </h1>
         <p className="hidden truncate text-muted-foreground text-xs sm:block">
           {current.description} ·{" "}
