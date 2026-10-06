@@ -12,11 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { WaChat, WaMessage } from "@/lib/whatsapp-types";
 import { MessageMedia } from "./media";
 import { useWhatsapp } from "./use-whatsapp";
+import { WaComposer } from "./wa-composer";
 
 type Wa = ReturnType<typeof useWhatsapp>;
 
@@ -304,9 +304,6 @@ function Bubble({ m, group }: { m: WaMessage; group: boolean }) {
 }
 
 function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
-  const [text, setText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [sending, setSending] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const lastId = wa.messages?.at(-1)?.id;
 
@@ -317,20 +314,6 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
     }
   }, [lastId]);
 
-  const submit = async (e?: FormEvent) => {
-    e?.preventDefault();
-    const value = text.trim();
-    if (!(value || file) || sending) {
-      return;
-    }
-    setSending(true);
-    const ok = file ? await wa.sendFile(file, value) : await wa.send(value);
-    if (ok) {
-      setText("");
-      setFile(null);
-    }
-    setSending(false);
-  };
   const hasMore = (wa.messages?.length ?? 0) >= wa.limit;
 
   return (
@@ -372,64 +355,13 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
           ))
         )}
       </div>
-      {file ? (
-        <div className="flex items-center gap-2 border-t px-3 py-2 text-sm">
-          <Icon className="size-4 shrink-0" name="IconPaperclip1" />
-          <span className="min-w-0 flex-1 truncate">{file.name}</span>
-          <Button
-            aria-label="Remover anexo"
-            onClick={() => setFile(null)}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Icon className="size-4" name="IconCrossSmall" />
-          </Button>
-        </div>
-      ) : null}
-      <form
-        className="flex items-end gap-2 border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
-        onSubmit={submit}
-      >
-        <label className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
-          <span className="sr-only">Anexar foto ou arquivo</span>
-          <input
-            className="sr-only"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              e.target.value = "";
-            }}
-            type="file"
-          />
-          <Icon className="size-5" name="IconPaperclip1" />
-        </label>
-        <Textarea
-          aria-label="Mensagem"
-          className="max-h-32 min-h-10 flex-1 resize-none"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing
-            ) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          placeholder={file ? "Legenda (opcional)" : "Mensagem"}
-          rows={1}
-          value={text}
+      <div className="shrink-0 px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <WaComposer
+          onSend={(value, file) =>
+            file ? wa.sendFile(file, value) : wa.send(value)
+          }
         />
-        <Button
-          aria-label="Enviar"
-          className="rounded-full bg-(--chat-accent) text-(--chat-accent-foreground) hover:opacity-90"
-          disabled={sending || !(text.trim() || file)}
-          size="icon"
-          type="submit"
-        >
-          <Icon className="size-4" name="IconArrowUp" />
-        </Button>
-      </form>
+      </div>
     </div>
   );
 }
