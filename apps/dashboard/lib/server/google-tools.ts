@@ -149,8 +149,12 @@ export const isGoogleTool = (name: string) =>
   (GMAIL_TOOL_NAMES as readonly string[]).includes(name) ||
   (DRIVE_TOOL_NAMES as readonly string[]).includes(name);
 
-export const toolServer = (name: string) =>
-  name.startsWith("drive_") ? "drive" : "gmail";
+export function toolServer(name: string) {
+  if (name.startsWith("youtube_")) {
+    return "youtube";
+  }
+  return name.startsWith("drive_") ? "drive" : "gmail";
+}
 
 export function htmlToText(html: string) {
   return html

@@ -286,6 +286,65 @@ function GoogleCard({
   );
 }
 
+function YoutubeCard({ status }: { status: ConnectorsStatus | null }) {
+  const yt = status?.youtube;
+  const ready = yt?.available ?? false;
+  let state = "Configuração pendente";
+  if (ready) {
+    state = yt?.transcripts
+      ? "Ativo com transcrição"
+      : "Ativo (sem transcrição)";
+  }
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+          <Icon className="size-5" name="IconYoutube" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            YouTube
+            <Badge variant={ready ? "secondary" : "outline"}>{state}</Badge>
+          </CardTitle>
+          <CardDescription>
+            Pesquisa vídeos de qualquer canal, detalhes, duração, playlists
+            completas e comentários. Não precisa de login: usa a chave do
+            servidor.
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 text-muted-foreground text-sm">
+        {ready && !yt?.transcripts ? (
+          <p>
+            Para a <b>transcrição completa</b>, crie uma chave em{" "}
+            <span className="text-foreground">
+              aistudio.google.com → Get API key
+            </span>{" "}
+            e adicione <code>GEMINI_API_KEY</code> no Vercel.
+          </p>
+        ) : null}
+        {ready ? null : (
+          <p>
+            Adicione <code>YOUTUBE_API_KEY</code> (YouTube Data API v3) no
+            Vercel e faça um novo deploy.
+          </p>
+        )}
+        <div className="flex justify-end border-t pt-3">
+          <Button
+            disabled={!ready}
+            nativeButton={false}
+            render={<a href={`${BASE_PATH}/youtube/`} />}
+            size="sm"
+            variant="outline"
+          >
+            Abrir YouTube
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ConnectorsPage() {
   const { status, disconnectNotion, disconnectGoogle } = useConnectors();
   const banner = useRedirectBanner();
@@ -351,6 +410,7 @@ export function ConnectorsPage() {
 
       <NotionCard onDisconnect={disconnectNotion} status={status} />
       <GoogleCard onDisconnect={disconnectGoogle} status={status} />
+      <YoutubeCard status={status} />
     </div>
   );
 }

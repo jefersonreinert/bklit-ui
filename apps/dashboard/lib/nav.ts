@@ -27,6 +27,12 @@ export const navItems: NavItem[] = [
     icon: "IconEmail1",
   },
   {
+    href: "/youtube",
+    label: "YouTube",
+    description: "Pesquisa, playlists e transcrição de vídeos",
+    icon: "IconYoutube",
+  },
+  {
     href: "/conectores",
     label: "Conectores",
     description: "Notion, Gmail e Google Drive no assistente",

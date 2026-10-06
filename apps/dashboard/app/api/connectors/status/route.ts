@@ -5,6 +5,8 @@ import {
 } from "@/lib/server/google-connector";
 import { readConnection } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
+import { geminiKey } from "@/lib/server/transcript";
+import { youtubeKey } from "@/lib/server/youtube";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,10 @@ export async function GET(request: NextRequest) {
         ...(google
           ? { email: google.email, connectedAt: google.connectedAt }
           : {}),
+      },
+      youtube: {
+        available: Boolean(youtubeKey()),
+        transcripts: Boolean(geminiKey()),
       },
     },
     { headers: { "Cache-Control": "no-store" } }

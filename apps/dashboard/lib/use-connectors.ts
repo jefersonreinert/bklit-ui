@@ -20,6 +20,8 @@ export interface ConnectorsStatus {
     email?: string;
     connectedAt?: number;
   };
+  /** Public YouTube data (server API key); transcripts need Gemini. */
+  youtube: { available: boolean; transcripts: boolean };
 }
 
 const OFFLINE: ConnectorsStatus = {
@@ -28,6 +30,7 @@ const OFFLINE: ConnectorsStatus = {
   ai: false,
   notion: { connected: false },
   google: { available: false, connected: false },
+  youtube: { available: false, transcripts: false },
 };
 
 export function notionStartUrl(returnTo?: string) {

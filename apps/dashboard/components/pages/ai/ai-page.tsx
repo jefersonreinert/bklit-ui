@@ -84,6 +84,11 @@ const TOOL_LABELS: Record<string, string> = {
   gmail_create_draft: "Criando rascunho",
   drive_search: "Pesquisando no Drive",
   drive_read_file: "Lendo arquivo",
+  youtube_search: "Pesquisando no YouTube",
+  youtube_video: "Lendo vídeo",
+  youtube_channel: "Lendo canal",
+  youtube_playlist: "Lendo playlist",
+  youtube_transcript: "Transcrevendo vídeo",
 };
 
 function toolLabel(name: string) {
@@ -349,26 +354,43 @@ function Composer({
   );
 }
 
-type ConnectorKey = "notion" | "gmail" | "drive";
+type ConnectorKey = "notion" | "gmail" | "drive" | "youtube";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
 const CONNECTOR_ROWS: { key: ConnectorKey; label: string; icon: IconName }[] = [
   { key: "notion", label: "Notion", icon: "IconNotion" },
   { key: "gmail", label: "Gmail", icon: "IconEmail1" },
   { key: "drive", label: "Google Drive", icon: "IconFolder1" },
+  { key: "youtube", label: "YouTube", icon: "IconYoutube" },
 ];
 
 const SERVER_ICONS: Record<string, IconName> = {
   notion: "IconNotion",
   gmail: "IconEmail1",
   drive: "IconFolder1",
+  youtube: "IconYoutube",
 };
 
 function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (!status) {
     return false;
   }
+  if (key === "youtube") {
+    return status.youtube.available;
+  }
   return key === "notion" ? status.notion.connected : status.google.connected;
+}
+
+function connectorSubtitle(status: ConnectorsStatus | null, key: ConnectorKey) {
+  if (!isConnected(status, key)) {
+    return "Não conectado";
+  }
+  if (key === "youtube") {
+    return status?.youtube.transcripts
+      ? "Pesquisa e transcrição"
+      : "Pesquisa (sem transcrição)";
+  }
+  return (key !== "notion" && status?.google.email) || "Conectado";
 }
 
 function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
@@ -378,6 +400,9 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
   }
   if (key === "notion") {
     return notionStartUrl(back);
+  }
+  if (key === "youtube") {
+    return `${BASE_PATH}/conectores/`;
   }
   return status.google.available
     ? googleStartUrl(back)
@@ -438,10 +463,7 @@ function ConnectorsMenu({
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{r.label}</p>
                 <p className="truncate text-muted-foreground text-xs">
-                  {connected
-                    ? (r.key !== "notion" && status?.google.email) ||
-                      "Conectado"
-                    : "Não conectado"}
+                  {connectorSubtitle(status, r.key)}
                 </p>
               </div>
               {connected ? (
@@ -644,6 +666,7 @@ export function AiPage() {
     notion: true,
     gmail: true,
     drive: true,
+    youtube: true,
   });
   const { status: connectors } = useConnectors();
   const abortRef = useRef<AbortController | null>(null);

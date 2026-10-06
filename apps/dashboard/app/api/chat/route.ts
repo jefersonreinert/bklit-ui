@@ -23,6 +23,13 @@ import {
   sealConnection,
 } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
+import {
+  isYoutubeTool,
+  runYoutubeTool,
+  YOUTUBE_INSTRUCTIONS,
+  youtubeAvailable,
+  youtubeTools,
+} from "@/lib/server/youtube-tools";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,6 +57,8 @@ interface Connectors {
   google: { token: string; email: string } | null;
   gmail: boolean;
   drive: boolean;
+  /** Public YouTube data; needs only the server's API key. */
+  youtube: boolean;
   notices: string[];
   cookies: string[];
 }
@@ -158,6 +167,7 @@ async function resolveConnectors(
     google: null,
     gmail: false,
     drive: false,
+    youtube: Boolean(requested?.includes("youtube") && youtubeAvailable()),
     notices: [],
     cookies: [],
   };
@@ -198,6 +208,7 @@ function buildParams(
       ? [{ type: "mcp_toolset" as const, mcp_server_name: "notion" }]
       : []),
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
+    ...(c.youtube ? youtubeTools() : []),
   ];
   return {
     model,
@@ -213,6 +224,9 @@ function buildParams(
         ? [{ type: "text" as const, text: NOTION_INSTRUCTIONS }]
         : []),
       ...(google ? [{ type: "text" as const, text: google }] : []),
+      ...(c.youtube
+        ? [{ type: "text" as const, text: YOUTUBE_INSTRUCTIONS }]
+        : []),
     ],
     messages,
     ...(betas.length > 0 ? { betas } : {}),
@@ -272,6 +286,19 @@ async function streamOnce(
   return stream.finalMessage();
 }
 
+function runClientTool(c: Connectors, name: string, input: unknown) {
+  if (c.youtube && isYoutubeTool(name)) {
+    return runYoutubeTool(name, input);
+  }
+  if (c.google && isGoogleTool(name)) {
+    return runGoogleTool(c.google.token, name, input);
+  }
+  return Promise.resolve({
+    content: `Ferramenta indisponível: ${name}`,
+    isError: true,
+  });
+}
+
 /** Runs the Gmail/Drive tool calls of one turn and returns their results. */
 async function runClientTools(
   final: BetaMessage,
@@ -283,10 +310,7 @@ async function runClientTools(
     if (block.type !== "tool_use") {
       continue;
     }
-    const result =
-      c.google && isGoogleTool(block.name)
-        ? await runGoogleTool(c.google.token, block.name, block.input)
-        : { content: `Ferramenta indisponível: ${block.name}`, isError: true };
+    const result = await runClientTool(c, block.name, block.input);
     emit({ type: "tool_done", error: result.isError });
     results.push({
       type: "tool_result",
@@ -391,6 +415,7 @@ export async function POST(request: NextRequest) {
     connectors.notion ? "notion" : null,
     connectors.gmail ? "gmail" : null,
     connectors.drive ? "drive" : null,
+    connectors.youtube ? "youtube" : null,
   ].filter(Boolean);
   const response = new Response(readable, {
     headers: {
