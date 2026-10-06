@@ -48,7 +48,16 @@ interface ChatRequest {
   messages?: { role: "user" | "assistant"; content: string }[];
   connectors?: string[];
   user?: { name?: string; role?: string };
+  /** "voice" = the reply will be spoken aloud (Voz page). */
+  style?: "voice" | "notes";
 }
+
+const STYLE_INSTRUCTIONS: Record<"voice" | "notes", string> = {
+  voice:
+    "Você está em uma conversa por voz: a resposta será lida em voz alta no fone. Responda em português falado e natural, em no máximo 3 a 4 frases curtas, sem markdown, sem tabelas, sem listas com símbolos e sem emojis. Diga números de forma falada (ex.: 'cerca de vinte e sete por cento'). Se a pessoa pedir detalhes, ofereça continuar.",
+  notes:
+    "Você está recebendo a transcrição automática de um microfone (pode ter erros de reconhecimento e frases cortadas). Corrija mentalmente os erros óbvios e responda exatamente o que for pedido.",
+};
 
 // Names and roles: letters, digits, spaces and light punctuation only
 const NOT_NAME_CHARS = /[^\p{L}\p{N} .,'’()&/-]/gu;
@@ -214,7 +223,7 @@ function buildParams(
   model: AiModelId,
   messages: Anthropic.Beta.BetaMessageParam[],
   c: Connectors,
-  who: string | null
+  extras: string[]
 ): BetaParams {
   const isHaiku = model === "claude-haiku-4-5";
   const betas = [
@@ -245,7 +254,7 @@ function buildParams(
         text: SYSTEM_PROMPT,
         cache_control: { type: "ephemeral" },
       },
-      ...(who ? [{ type: "text" as const, text: who }] : []),
+      ...extras.map((text) => ({ type: "text" as const, text })),
       ...(c.notion
         ? [{ type: "text" as const, text: NOTION_INSTRUCTIONS }]
         : []),
@@ -415,7 +424,11 @@ export async function POST(request: NextRequest) {
   }
 
   const connectors = await resolveConnectors(request, body.connectors);
-  const params = buildParams(model, history, connectors, userBlock(body.user));
+  const extras = [
+    userBlock(body.user),
+    body.style ? STYLE_INSTRUCTIONS[body.style] : null,
+  ].filter((t): t is string => Boolean(t));
+  const params = buildParams(model, history, connectors, extras);
   const client = new Anthropic();
   const abort = new AbortController();
 

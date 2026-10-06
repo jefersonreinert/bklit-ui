@@ -958,7 +958,7 @@ export function AiPage() {
   );
 
   return (
-    <div className="-m-4 flex h-[calc(100dvh-4rem)] md:-m-6">
+    <div className="-m-4 flex h-[calc(100dvh-var(--header-h)-env(safe-area-inset-bottom))] md:-m-6">
       {/* Histórico (desktop) */}
       <aside className="hidden w-64 shrink-0 border-r p-3 xl:block">
         {history}

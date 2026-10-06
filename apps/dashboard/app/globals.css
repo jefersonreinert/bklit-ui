@@ -354,6 +354,11 @@
     0 10px 30px -12px oklch(0 0 0 / 0.5);
 }
 
+:root {
+  /* Header height including the iPhone status bar in Home Screen mode */
+  --header-h: calc(4rem + env(safe-area-inset-top));
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

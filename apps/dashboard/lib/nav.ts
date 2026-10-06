@@ -21,6 +21,12 @@ export const navItems: NavItem[] = [
     icon: "IconSparklesSoft",
   },
   {
+    href: "/voz",
+    label: "Voz",
+    description: "Escuta contínua, conversa por voz e anotações",
+    icon: "IconMicrophone",
+  },
+  {
     href: "/email",
     label: "E-mail",
     description: "Caixa de entrada do Gmail",

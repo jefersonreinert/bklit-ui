@@ -26,7 +26,7 @@ export function AppHeader() {
   const prefs = usePreferences();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/30 px-4 backdrop-blur-xl md:px-6 print:hidden">
+    <header className="sticky top-0 z-30 flex h-[var(--header-h)] items-center gap-3 border-b bg-background/30 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:px-6 print:hidden">
       <Sheet onOpenChange={setOpen} open={open}>
         <SheetTrigger
           render={
@@ -41,7 +41,7 @@ export function AppHeader() {
           <BrandLogo className="size-8" />
         </SheetTrigger>
         <SheetContent
-          className="acrylic w-72! gap-6 bg-sidebar p-4"
+          className="acrylic w-72! gap-6 bg-sidebar p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
           side="left"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>

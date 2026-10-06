@@ -220,7 +220,7 @@ export function EmailPage() {
   );
 
   return (
-    <div className="-m-4 flex h-[calc(100dvh-4rem)] md:-m-6">
+    <div className="-m-4 flex h-[calc(100dvh-var(--header-h)-env(safe-area-inset-bottom))] md:-m-6">
       {/* Pastas (desktop) */}
       <aside className="hidden w-56 shrink-0 flex-col gap-4 border-r p-3 lg:flex">
         <Button

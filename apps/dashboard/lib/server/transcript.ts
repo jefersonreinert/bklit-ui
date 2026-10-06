@@ -140,3 +140,69 @@ export async function transcribeVideo(videoId: string): Promise<YtTranscript> {
       : (last?.body.error?.message ?? `Gemini respondeu ${status}`)
   );
 }
+
+const AUDIO_PROMPT = `Transcreva exatamente a fala deste trecho de áudio, no idioma falado (normalmente português do Brasil).
+Responda somente com o texto falado, sem comentários, sem tempos e sem aspas. Se não houver fala compreensível, responda exatamente: [sem fala]`;
+
+const AUDIO_TYPES = new Set([
+  "audio/mp4",
+  "audio/aac",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/webm",
+  "audio/ogg",
+]);
+
+/** Short microphone clips (base64) → text, with the same model fallbacks. */
+export async function transcribeAudio(base64: string, mimeType: string) {
+  const key = geminiKey();
+  if (!key) {
+    throw new TranscriptError(503, "GEMINI_API_KEY não configurada");
+  }
+  const mime = mimeType.split(";")[0]?.trim() ?? "";
+  if (!AUDIO_TYPES.has(mime)) {
+    throw new TranscriptError(415, `Formato de áudio não suportado: ${mime}`);
+  }
+  const body = JSON.stringify({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inline_data: { mime_type: mime, data: base64 } },
+          { text: AUDIO_PROMPT },
+        ],
+      },
+    ],
+    generationConfig: { temperature: 0, maxOutputTokens: 4096 },
+  });
+  let lastStatus = 502;
+  for (const model of [...new Set([geminiModel(), ...FALLBACK_MODELS])]) {
+    const res = await fetch(
+      `${API}/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body,
+      }
+    );
+    const json = (await res.json().catch(() => ({}))) as GeminiResponse;
+    if (res.ok) {
+      const text = (json.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text ?? "")
+        .join("")
+        .trim();
+      return text === "[sem fala]" ? "" : text;
+    }
+    lastStatus = res.status;
+    if (!(RETRYABLE.has(res.status) || res.status === 404)) {
+      throw new TranscriptError(
+        res.status,
+        json.error?.message ?? `Gemini respondeu ${res.status}`
+      );
+    }
+  }
+  throw new TranscriptError(
+    lastStatus,
+    "O Gemini está sobrecarregado agora. Tente de novo em instantes."
+  );
+}
