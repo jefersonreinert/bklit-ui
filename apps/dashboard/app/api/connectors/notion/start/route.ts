@@ -5,14 +5,10 @@ import {
   PENDING_COOKIE,
   startAuthorization,
 } from "@/lib/server/notion-connector";
+import { safeReturnTo } from "@/lib/server/return-to";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
 
 export const dynamic = "force-dynamic";
-
-/** Only same-site relative paths ("/ia/"), never "//evil.com". */
-function safeReturnTo(value: string | null, fallback: string) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
-}
 
 /** Redirects the browser to Notion's consent screen (OAuth + PKCE). */
 export async function GET(request: NextRequest) {

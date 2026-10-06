@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon } from "@bklitui/icons";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import {
   BASE_PATH,
   type ConnectorsStatus,
+  googleStartUrl,
   notionStartUrl,
   useConnectors,
 } from "@/lib/use-connectors";
@@ -27,7 +28,16 @@ const ERRORS: Record<string, string> = {
   access_denied: "A conexão foi cancelada na tela do Notion.",
   expired: "A tentativa de conexão expirou. Clique em Conectar novamente.",
   state_mismatch:
-    "A resposta do Notion não confere com esta sessão. Tente novamente.",
+    "A resposta do serviço não confere com esta sessão. Tente novamente.",
+  missing_google_client:
+    "Falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no Vercel (veja o passo a passo no card do Google).",
+  missing_scopes:
+    "Marque as permissões do Gmail e do Drive na tela do Google para o painel funcionar.",
+};
+
+const CONNECTED: Record<string, string> = {
+  notion: "Notion conectado com sucesso.",
+  google: "Google conectado: Gmail e Drive já estão disponíveis.",
 };
 
 interface Banner {
@@ -41,8 +51,9 @@ function useRedirectBanner() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
-    if (params.get("connected") === "notion") {
-      setBanner({ tone: "ok", text: "Notion conectado com sucesso." });
+    const connected = CONNECTED[params.get("connected") ?? ""];
+    if (connected) {
+      setBanner({ tone: "ok", text: connected });
     } else if (error) {
       setBanner({
         tone: "error",
@@ -151,35 +162,132 @@ function NotionCard({
   );
 }
 
-function SoonCard({
-  name,
-  icon,
-  description,
-}: {
-  name: string;
-  icon: IconName;
-  description: string;
-}) {
+function GoogleSetupSteps() {
   return (
-    <Card className="opacity-70">
+    <ol className="list-decimal space-y-1.5 pl-5 text-muted-foreground text-sm">
+      <li>
+        Em <span className="text-foreground">console.cloud.google.com</span>,
+        crie um projeto e ative a <b>Gmail API</b> e a <b>Google Drive API</b>.
+      </li>
+      <li>
+        Em <b>Google Auth Platform</b>, configure a tela de consentimento
+        (Externo) e adicione o seu e-mail como <b>usuário de teste</b>.
+      </li>
+      <li>
+        Crie um <b>ID do cliente OAuth</b> do tipo &quot;Aplicativo da Web&quot;
+        com este URI de redirecionamento:
+        <code className="mt-1 block break-all rounded bg-muted px-2 py-1 text-foreground text-xs">
+          {typeof window === "undefined"
+            ? "/api/connectors/google/callback/"
+            : `${window.location.origin}${BASE_PATH}/api/connectors/google/callback/`}
+        </code>
+      </li>
+      <li>
+        No Vercel, adicione <code>GOOGLE_CLIENT_ID</code> e{" "}
+        <code>GOOGLE_CLIENT_SECRET</code> e faça um novo deploy.
+      </li>
+    </ol>
+  );
+}
+
+function GoogleCard({
+  status,
+  onDisconnect,
+}: {
+  status: ConnectorsStatus | null;
+  onDisconnect: () => void;
+}) {
+  const google = status?.google;
+  const connected = google?.connected ?? false;
+  let action = (
+    <Button disabled size="sm" variant="outline">
+      Carregando…
+    </Button>
+  );
+  if (status && !status.available) {
+    action = (
+      <Button disabled size="sm" variant="outline">
+        Indisponível nesta versão
+      </Button>
+    );
+  } else if (connected) {
+    action = (
+      <Button onClick={onDisconnect} size="sm" variant="outline">
+        Desconectar
+      </Button>
+    );
+  } else if (google && !google.available) {
+    action = (
+      <Button disabled size="sm" variant="outline">
+        Configuração pendente
+      </Button>
+    );
+  } else if (status) {
+    action = (
+      <Button
+        nativeButton={false}
+        render={<a href={googleStartUrl()} />}
+        size="sm"
+      >
+        Conectar com Google
+      </Button>
+    );
+  }
+
+  return (
+    <Card>
       <CardHeader className="flex flex-row items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-5" name={icon} />
+          <Icon className="size-5" name="IconGoogle" />
         </span>
         <div className="min-w-0 flex-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
-            {name}
-            <Badge variant="outline">Em breve</Badge>
+            Gmail e Google Drive
+            <StatusBadge connected={connected} />
           </CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardDescription>
+            Um login do Google libera a página E-mail e dá ao assistente acesso
+            ao Gmail (ler e criar rascunhos) e ao Drive (somente leitura).
+          </CardDescription>
         </div>
       </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ul className="grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
+          {[
+            "Ler, responder e enviar e-mails na página E-mail",
+            "Assistente resume e-mails de fornecedores e reservas",
+            "Assistente escreve rascunhos — você revisa e envia",
+            "Buscar contratos, planilhas e notas fiscais no Drive",
+          ].map((t) => (
+            <li className="flex items-center gap-2" key={t}>
+              <Icon className="size-4 shrink-0" name="IconCheckmark1Small" />
+              {t}
+            </li>
+          ))}
+        </ul>
+        {google && !google.available && status?.available ? (
+          <div className="rounded-xl border bg-muted/30 p-4">
+            <p className="mb-2 font-medium text-sm">
+              Configuração única no Google Cloud
+            </p>
+            <GoogleSetupSteps />
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="text-muted-foreground text-xs">
+            {connected
+              ? `Conectado como ${google?.email ?? "sua conta"}. O acesso fica salvo neste navegador.`
+              : "Você vai escolher a conta e confirmar as permissões na tela do Google."}
+          </p>
+          {action}
+        </div>
+      </CardContent>
     </Card>
   );
 }
 
 export function ConnectorsPage() {
-  const { status, disconnectNotion } = useConnectors();
+  const { status, disconnectNotion, disconnectGoogle } = useConnectors();
   const banner = useRedirectBanner();
 
   return (
@@ -231,29 +339,18 @@ export function ConnectorsPage() {
         <div className="rounded-xl border px-4 py-3 text-muted-foreground text-sm">
           O assistente está em modo demonstração: adicione{" "}
           <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code> no
-          Vercel para o Claude usar o Notion de verdade.
+          Vercel para o Claude usar os conectores de verdade.
         </div>
       ) : null}
       {status && !status.available ? (
         <div className="rounded-xl border px-4 py-3 text-muted-foreground text-sm">
           Esta versão estática (GitHub Pages) não tem servidor. Use a versão do
-          Vercel para conectar o Notion.
+          Vercel para usar os conectores.
         </div>
       ) : null}
 
       <NotionCard onDisconnect={disconnectNotion} status={status} />
-      <div className="grid gap-4 md:grid-cols-2">
-        <SoonCard
-          description="Ler e rascunhar e-mails de fornecedores e reservas."
-          icon="IconEmail1"
-          name="Gmail"
-        />
-        <SoonCard
-          description="Encontrar contratos, notas fiscais e planilhas."
-          icon="IconGoogle"
-          name="Google Drive"
-        />
-      </div>
+      <GoogleCard onDisconnect={disconnectGoogle} status={status} />
     </div>
   );
 }

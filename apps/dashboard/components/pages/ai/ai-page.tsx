@@ -31,6 +31,7 @@ import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
 import {
   BASE_PATH,
   type ConnectorsStatus,
+  googleStartUrl,
   notionStartUrl,
   useConnectors,
 } from "@/lib/use-connectors";
@@ -66,7 +67,7 @@ interface Conversation {
 const STORAGE_KEY = "casa-brasa-ai-conversations";
 const CLAY = "#d97757";
 const API_URL = `${BASE_PATH}/api/chat/`;
-const NOTION_PREF_KEY = "casa-brasa-ai-notion";
+const CONNECTOR_PREFS_KEY = "casa-brasa-ai-connectors";
 
 const NOTION_PREFIX = /^notion-/;
 
@@ -78,11 +79,16 @@ const TOOL_LABELS: Record<string, string> = {
   "create-comment": "Comentando",
   "get-comments": "Lendo comentários",
   "query-data-sources": "Consultando base de dados",
+  gmail_search: "Pesquisando e-mails",
+  gmail_read_thread: "Lendo e-mail",
+  gmail_create_draft: "Criando rascunho",
+  drive_search: "Pesquisando no Drive",
+  drive_read_file: "Lendo arquivo",
 };
 
 function toolLabel(name: string) {
   const short = name.replace(NOTION_PREFIX, "");
-  return TOOL_LABELS[short] ?? short.replaceAll("-", " ");
+  return TOOL_LABELS[short] ?? short.replaceAll("-", " ").replaceAll("_", " ");
 }
 
 async function readNdjson(
@@ -343,24 +349,63 @@ function Composer({
   );
 }
 
+type ConnectorKey = "notion" | "gmail" | "drive";
+type ConnectorPrefs = Record<ConnectorKey, boolean>;
+
+const CONNECTOR_ROWS: { key: ConnectorKey; label: string; icon: IconName }[] = [
+  { key: "notion", label: "Notion", icon: "IconNotion" },
+  { key: "gmail", label: "Gmail", icon: "IconEmail1" },
+  { key: "drive", label: "Google Drive", icon: "IconFolder1" },
+];
+
+const SERVER_ICONS: Record<string, IconName> = {
+  notion: "IconNotion",
+  gmail: "IconEmail1",
+  drive: "IconFolder1",
+};
+
+function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
+  if (!status) {
+    return false;
+  }
+  return key === "notion" ? status.notion.connected : status.google.connected;
+}
+
+function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
+  const back = `${BASE_PATH}/ia/`;
+  if (!status?.configured) {
+    return `${BASE_PATH}/conectores/`;
+  }
+  if (key === "notion") {
+    return notionStartUrl(back);
+  }
+  return status.google.available
+    ? googleStartUrl(back)
+    : `${BASE_PATH}/conectores/`;
+}
+
 function ConnectorsMenu({
   status,
-  notionEnabled,
-  onNotionChange,
+  prefs,
+  onChange,
 }: {
   status: ConnectorsStatus | null;
-  notionEnabled: boolean;
-  onNotionChange: (on: boolean) => void;
+  prefs: ConnectorPrefs;
+  onChange: (key: ConnectorKey, on: boolean) => void;
 }) {
-  const connected = status?.notion.connected ?? false;
-  const active = connected && notionEnabled;
+  const active = CONNECTOR_ROWS.filter(
+    (r) => isConnected(status, r.key) && prefs[r.key]
+  );
   return (
     <Popover>
       <PopoverTrigger
         render={
           <Button
             aria-label="Conectores"
-            className={cn("gap-1.5 rounded-lg", active && "text-foreground")}
+            className={cn(
+              "gap-1.5 rounded-lg",
+              active.length > 0 && "text-foreground"
+            )}
             size="sm"
             type="button"
             variant="ghost"
@@ -368,11 +413,11 @@ function ConnectorsMenu({
         }
       >
         <Icon className="size-4" name="IconConnectors1" />
-        {active ? (
-          <span className="flex items-center gap-1 text-xs">
-            <Icon className="size-3.5" name="IconNotion" />
-            Notion
-          </span>
+        {active.map((r) => (
+          <Icon className="size-3.5" key={r.key} name={r.icon} />
+        ))}
+        {active.length === 1 ? (
+          <span className="text-xs">{active[0]?.label}</span>
         ) : null}
       </PopoverTrigger>
       <PopoverContent
@@ -383,47 +428,39 @@ function ConnectorsMenu({
         <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
           Conectores
         </p>
-        <div className="flex items-center gap-3">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
-            <Icon className="size-4" name="IconNotion" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-sm">Notion</p>
-            <p className="text-muted-foreground text-xs">
-              {connected ? "Conectado" : "Não conectado"}
-            </p>
-          </div>
-          {connected ? (
-            <Switch
-              aria-label="Usar Notion nesta conversa"
-              checked={notionEnabled}
-              onCheckedChange={onNotionChange}
-            />
-          ) : (
-            <a
-              className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
-              href={
-                status?.configured
-                  ? notionStartUrl(`${BASE_PATH}/ia/`)
-                  : `${BASE_PATH}/conectores/`
-              }
-            >
-              Conectar
-            </a>
-          )}
-        </div>
-        {(["Gmail", "Google Drive"] as const).map((name) => (
-          <div className="flex items-center gap-3 opacity-60" key={name}>
-            <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
-              <Icon
-                className="size-4"
-                name={name === "Gmail" ? "IconEmail1" : "IconGoogle"}
-              />
-            </span>
-            <p className="flex-1 font-medium text-sm">{name}</p>
-            <span className="text-muted-foreground text-xs">Em breve</span>
-          </div>
-        ))}
+        {CONNECTOR_ROWS.map((r) => {
+          const connected = isConnected(status, r.key);
+          return (
+            <div className="flex items-center gap-3" key={r.key}>
+              <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
+                <Icon className="size-4" name={r.icon} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm">{r.label}</p>
+                <p className="truncate text-muted-foreground text-xs">
+                  {connected
+                    ? (r.key !== "notion" && status?.google.email) ||
+                      "Conectado"
+                    : "Não conectado"}
+                </p>
+              </div>
+              {connected ? (
+                <Switch
+                  aria-label={`Usar ${r.label} nesta conversa`}
+                  checked={prefs[r.key]}
+                  onCheckedChange={(on) => onChange(r.key, on)}
+                />
+              ) : (
+                <a
+                  className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                  href={connectHref(status, r.key)}
+                >
+                  Conectar
+                </a>
+              )}
+            </div>
+          );
+        })}
         <a
           className="text-muted-foreground text-xs underline-offset-2 hover:underline"
           href={`${BASE_PATH}/conectores/`}
@@ -451,7 +488,7 @@ function ToolChips({ tools }: { tools: ToolUse[] }) {
               "size-3.5",
               t.status === "running" && "animate-pulse"
             )}
-            name="IconNotion"
+            name={SERVER_ICONS[t.server] ?? "IconConnectors1"}
           />
           {toolLabel(t.name)}
           {t.status === "done" ? (
@@ -603,30 +640,52 @@ export function AiPage() {
   const [streaming, setStreaming] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [notionEnabled, setNotionEnabled] = useState(true);
+  const [prefs, setPrefs] = useState<ConnectorPrefs>({
+    notion: true,
+    gmail: true,
+    drive: true,
+  });
   const { status: connectors } = useConnectors();
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Deep link from other pages: /ia/?prompt=...
+    const prompt = new URLSearchParams(window.location.search).get("prompt");
+    if (prompt) {
+      setDraft(prompt.slice(0, 2000));
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
     setConversations(loadConversations());
     try {
-      setNotionEnabled(localStorage.getItem(NOTION_PREF_KEY) !== "off");
+      const saved = localStorage.getItem(CONNECTOR_PREFS_KEY);
+      if (saved) {
+        setPrefs((p) => ({ ...p, ...(JSON.parse(saved) as ConnectorPrefs) }));
+      }
     } catch {
-      // storage unavailable — keep the default
+      // storage unavailable or corrupt — keep the defaults
     }
   }, []);
 
-  const changeNotion = useCallback((on: boolean) => {
-    setNotionEnabled(on);
-    try {
-      localStorage.setItem(NOTION_PREF_KEY, on ? "on" : "off");
-    } catch {
-      // storage unavailable — preference lasts for this visit only
-    }
+  const changePref = useCallback((key: ConnectorKey, on: boolean) => {
+    setPrefs((p) => {
+      const next = { ...p, [key]: on };
+      try {
+        localStorage.setItem(CONNECTOR_PREFS_KEY, JSON.stringify(next));
+      } catch {
+        // storage unavailable — preference lasts for this visit only
+      }
+      return next;
+    });
   }, []);
 
-  const notionActive = Boolean(connectors?.notion.connected && notionEnabled);
+  const activeConnectors = CONNECTOR_ROWS.filter(
+    (r) => isConnected(connectors, r.key) && prefs[r.key]
+  ).map((r) => r.key);
+  const activeKey = activeConnectors.join(",");
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const messages = active?.messages ?? [];
@@ -746,7 +805,7 @@ export function AiPage() {
           body: JSON.stringify({
             model: chosenModel,
             messages: history.map(({ role, content }) => ({ role, content })),
-            connectors: notionActive ? ["notion"] : [],
+            connectors: activeKey ? activeKey.split(",") : [],
           }),
           signal: controller.signal,
         });
@@ -781,7 +840,7 @@ export function AiPage() {
       handleEvent,
       streamDemo,
       updateConversation,
-      notionActive,
+      activeKey,
     ]
   );
 
@@ -854,11 +913,7 @@ export function AiPage() {
   };
 
   const connectorsMenu = (
-    <ConnectorsMenu
-      notionEnabled={notionEnabled}
-      onNotionChange={changeNotion}
-      status={connectors}
-    />
+    <ConnectorsMenu onChange={changePref} prefs={prefs} status={connectors} />
   );
 
   const history = (

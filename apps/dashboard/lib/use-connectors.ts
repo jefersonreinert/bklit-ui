@@ -12,6 +12,14 @@ export interface ConnectorsStatus {
   /** ANTHROPIC_API_KEY is set on the server. */
   ai: boolean;
   notion: { connected: boolean; connectedAt?: number };
+  /** One Google login covers Gmail and Drive. */
+  google: {
+    /** GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are set on the server. */
+    available: boolean;
+    connected: boolean;
+    email?: string;
+    connectedAt?: number;
+  };
 }
 
 const OFFLINE: ConnectorsStatus = {
@@ -19,10 +27,16 @@ const OFFLINE: ConnectorsStatus = {
   configured: false,
   ai: false,
   notion: { connected: false },
+  google: { available: false, connected: false },
 };
 
 export function notionStartUrl(returnTo?: string) {
   const url = `${BASE_PATH}/api/connectors/notion/start/`;
+  return returnTo ? `${url}?returnTo=${encodeURIComponent(returnTo)}` : url;
+}
+
+export function googleStartUrl(returnTo?: string) {
+  const url = `${BASE_PATH}/api/connectors/google/start/`;
   return returnTo ? `${url}?returnTo=${encodeURIComponent(returnTo)}` : url;
 }
 
@@ -60,5 +74,15 @@ export function useConnectors() {
     }
   }, [refresh]);
 
-  return { status, refresh, disconnectNotion };
+  const disconnectGoogle = useCallback(async () => {
+    try {
+      await fetch(`${BASE_PATH}/api/connectors/google/disconnect/`, {
+        method: "POST",
+      });
+    } finally {
+      await refresh();
+    }
+  }, [refresh]);
+
+  return { status, refresh, disconnectNotion, disconnectGoogle };
 }
