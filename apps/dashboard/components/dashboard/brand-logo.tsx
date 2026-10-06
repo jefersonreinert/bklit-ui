@@ -1,6 +1,6 @@
 "use client";
 
-import { appIconSrc, usePreferences } from "@/lib/preferences";
+import { imageSrc, usePreferences } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * replaced by the icon uploaded in Configurações when there is one.
  */
 export function BrandLogo({ className }: { className?: string }) {
-  const src = appIconSrc(usePreferences());
+  const src = imageSrc(usePreferences(), "icon");
   if (src) {
     return (
       // biome-ignore lint/performance/noImgElement: uploaded data URL / API image

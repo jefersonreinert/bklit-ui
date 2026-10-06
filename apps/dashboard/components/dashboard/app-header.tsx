@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/sheet";
 import { TODAY } from "@/lib/data";
 import { type NavItem, navItems, normalizePath } from "@/lib/nav";
-import { initialsOf, usePreferences } from "@/lib/preferences";
+import { usePreferences } from "@/lib/preferences";
 import { SidebarBrand, SidebarFooterCard, SidebarNav } from "./app-sidebar";
 import { BrandLogo } from "./brand-logo";
+import { ProfileAvatar } from "./profile-avatar";
 import { ThemeToggle } from "./theme-toggle";
 
 export function AppHeader() {
@@ -79,11 +80,11 @@ export function AppHeader() {
       </Button>
       <Link
         aria-label={`Configurações de ${prefs.name}`}
-        className="hidden size-8 items-center justify-center rounded-full bg-muted font-medium text-xs transition-colors hover:bg-foreground hover:text-background sm:flex"
+        className="hidden rounded-full transition-opacity hover:opacity-80 sm:flex"
         href="/configuracoes"
         title={`${prefs.name} · Configurações`}
       >
-        {initialsOf(prefs.name)}
+        <ProfileAvatar fallbackClassName="text-xs" />
       </Link>
     </header>
   );

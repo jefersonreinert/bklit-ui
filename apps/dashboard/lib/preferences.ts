@@ -7,7 +7,11 @@ import {
   type FontOption,
   type Preferences,
 } from "./preferences-fonts";
-import type { StoredSettings } from "./settings-types";
+import {
+  IMAGE_SIZES,
+  type ImageKind,
+  type StoredSettings,
+} from "./settings-types";
 
 /**
  * The user's name/role, the app typeface and the app icon.
@@ -84,8 +88,10 @@ function adopt(server: StoredSettings) {
     role: server.role,
     font: server.font,
     icon: server.icon,
-    // The local preview belongs to the icon it was made from
+    avatar: server.avatar,
+    // Local previews belong to the image version they were made from
     iconData: server.icon === local.icon ? local.iconData : undefined,
+    avatarData: server.avatar === local.avatar ? local.avatarData : undefined,
     updatedAt: server.updatedAt,
   });
 }
@@ -129,8 +135,11 @@ export async function savePreferences(
   return result;
 }
 
-/** Uploads the icon (PNG data URLs keyed by size) or, with null, resets it. */
-export async function saveIcon(
+const DATA_KEY = { icon: "iconData", avatar: "avatarData" } as const;
+
+/** Uploads an image (PNG data URLs keyed by size) or, with null, removes it. */
+export async function saveImage(
+  kind: ImageKind,
   pngs: Record<number, string> | null
 ): Promise<SaveResult> {
   const body = pngs
@@ -138,7 +147,7 @@ export async function saveIcon(
         Object.entries(pngs).map(([size, url]) => [size, url.split(",")[1]])
       )
     : undefined;
-  const { result, settings } = await send(`${API}icon/`, {
+  const { result, settings } = await send(`${API}image/${kind}/`, {
     method: pngs ? "POST" : "DELETE",
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -146,11 +155,12 @@ export async function saveIcon(
     adopt(settings);
   }
   if (result !== "error") {
-    // Keep a preview so the new icon shows immediately (and offline)
+    // Keep a preview so the new image shows immediately (and offline)
+    const preview = pngs?.[IMAGE_SIZES[kind][0] ?? 0];
     setPreferences({
-      iconData: pngs?.[192],
+      [DATA_KEY[kind]]: preview,
       ...(result === "device"
-        ? { icon: undefined, updatedAt: Date.now() }
+        ? { [kind]: undefined, updatedAt: Date.now() }
         : {}),
     });
   }
@@ -180,13 +190,16 @@ async function pull() {
   }
 }
 
-/** URL of the current app icon, or null for the default mark. */
-export function appIconSrc(prefs: Preferences, size = 192) {
-  if (prefs.iconData) {
-    return prefs.iconData;
+/** URL of an uploaded image (app icon / profile photo), or null if none. */
+export function imageSrc(prefs: Preferences, kind: ImageKind, size?: number) {
+  const data = prefs[DATA_KEY[kind]];
+  if (data) {
+    return data;
   }
-  return prefs.icon
-    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/brand/icon/?size=${size}&v=${prefs.icon}`
+  const version = prefs[kind];
+  const sized = size ? `size=${size}&` : "";
+  return version
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/brand/${kind}/?${sized}v=${version}`
     : null;
 }
 

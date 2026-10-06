@@ -1,7 +1,7 @@
 import { del, get, list, put } from "@vercel/blob";
 import {
-  ICON_SIZES,
-  type IconSize,
+  IMAGE_SIZES,
+  type ImageKind,
   type StoredSettings,
 } from "@/lib/settings-types";
 
@@ -12,9 +12,9 @@ import {
  */
 
 const SETTINGS_PATH = "settings/profile.json";
-const ICON_PREFIX = "settings/icon-";
-const iconPath = (version: string, size: IconSize) =>
-  `${ICON_PREFIX}${version}-${size}.png`;
+const prefix = (kind: ImageKind) => `settings/${kind}-`;
+const imagePath = (kind: ImageKind, version: string, size: number) =>
+  `${prefix(kind)}${version}-${size}.png`;
 
 export const storeAvailable = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
@@ -55,12 +55,15 @@ export async function writeSettings(settings: StoredSettings) {
   return settings;
 }
 
-/** Stores every icon size under a new version and drops older versions. */
-export async function writeIcon(files: Record<IconSize, Uint8Array>) {
+/** Stores every size of an image under a new version; drops older ones. */
+export async function writeImage(
+  kind: ImageKind,
+  files: Record<number, Uint8Array>
+) {
   const version = Date.now().toString(36);
   await Promise.all(
-    ICON_SIZES.map((size) =>
-      put(iconPath(version, size), Buffer.from(files[size]), {
+    IMAGE_SIZES[kind].map((size) =>
+      put(imagePath(kind, version, size), Buffer.from(files[size] ?? []), {
         access: "private",
         addRandomSuffix: false,
         allowOverwrite: true,
@@ -68,23 +71,27 @@ export async function writeIcon(files: Record<IconSize, Uint8Array>) {
       })
     )
   );
-  await removeIcons(version);
+  await removeImages(kind, version);
   return version;
 }
 
-/** Deletes stored icons, keeping `keep` (a version) when given. */
-export async function removeIcons(keep?: string) {
-  const { blobs } = await list({ prefix: ICON_PREFIX });
+/** Deletes stored versions of an image, keeping `keep` when given. */
+export async function removeImages(kind: ImageKind, keep?: string) {
+  const { blobs } = await list({ prefix: prefix(kind) });
   const stale = blobs
-    .filter((b) => !(keep && b.pathname.startsWith(`${ICON_PREFIX}${keep}-`)))
+    .filter((b) => !(keep && b.pathname.startsWith(`${prefix(kind)}${keep}-`)))
     .map((b) => b.url);
   if (stale.length > 0) {
     await del(stale);
   }
 }
 
-export async function readIcon(version: string, size: IconSize) {
-  const result = await get(iconPath(version, size), {
+export async function readImage(
+  kind: ImageKind,
+  version: string,
+  size: number
+) {
+  const result = await get(imagePath(kind, version, size), {
     access: "private",
     useCache: false,
   });

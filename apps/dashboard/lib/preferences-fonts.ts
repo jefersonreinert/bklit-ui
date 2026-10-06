@@ -90,6 +90,10 @@ export interface Preferences {
   icon?: string;
   /** Local copy of the uploaded icon (data URL) for instant display. */
   iconData?: string;
+  /** Version of the uploaded profile photo (served by /api/brand/avatar). */
+  avatar?: string;
+  /** Local copy of the profile photo (data URL). */
+  avatarData?: string;
   /** Last change (ms); the newest of device and server wins. */
   updatedAt?: number;
 }
