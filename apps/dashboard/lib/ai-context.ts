@@ -1,3 +1,4 @@
+import { CHART_INSTRUCTIONS } from "./ai-chart-spec";
 import {
   cmvTargets,
   initialBeverageState,
@@ -157,6 +158,8 @@ Como responder:
 - Quando houver um problema, explique a causa provável e proponha ações concretas com impacto estimado.
 - Use markdown: títulos curtos, listas e tabelas quando ajudarem. Valores em R$ no formato brasileiro.
 - Os dados são uma fotografia do painel; mudanças feitas na tela durante a sessão não aparecem aqui.
+
+${CHART_INSTRUCTIONS}
 
 <dados_do_painel>
 ${businessContext()}

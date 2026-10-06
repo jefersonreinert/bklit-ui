@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { AiChart } from "./ai-chart";
 
 /**
  * Small, dependency-free markdown renderer for assistant replies:
@@ -61,9 +62,42 @@ const splitRow = (row: string) =>
     .split("|")
     .map((c) => c.trim());
 
+/** ```chart blocks become charts (also the one-line form ```chart {…}```). */
+function chartFence(lines: string[], i: number, key: string): Parsed | null {
+  const first = at(lines, i).slice(FENCE.length);
+  if (!first.startsWith("chart")) {
+    return null;
+  }
+  const inline = first.slice("chart".length).trim();
+  if (inline.endsWith(FENCE)) {
+    return {
+      node: (
+        <AiChart complete key={key} source={inline.slice(0, -FENCE.length)} />
+      ),
+      next: i + 1,
+    };
+  }
+  const body: string[] = inline ? [inline] : [];
+  let j = i + 1;
+  while (j < lines.length && !at(lines, j).startsWith(FENCE)) {
+    body.push(lines[j] ?? "");
+    j++;
+  }
+  // Still streaming until the closing fence arrives
+  const complete = j < lines.length;
+  return {
+    node: <AiChart complete={complete} key={key} source={body.join("\n")} />,
+    next: j + 1,
+  };
+}
+
 const parseFence: BlockParser = (lines, i, key) => {
   if (!at(lines, i).startsWith(FENCE)) {
     return null;
+  }
+  const chart = chartFence(lines, i, key);
+  if (chart) {
+    return chart;
   }
   const code: string[] = [];
   let j = i + 1;
