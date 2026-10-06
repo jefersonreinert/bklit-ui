@@ -75,6 +75,14 @@
 }
 
 .dark {
+  /* Chat (WhatsApp page): warm Anthropic-style tones */
+  --chat-accent: #d97757;
+  --chat-accent-foreground: #faf9f5;
+  --chat-out: #3d3730;
+  --chat-out-foreground: #faf9f5;
+  --chat-out-muted: #b8ad9e;
+  --chat-in: #262421;
+  --chat-name: #e3a382;
   --background: oklch(0.12 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.34 0 0 / 0.42);
@@ -149,6 +157,14 @@
 
 /* Beige theme — Anthropic-inspired ivory with colorful charts and cards */
 .beige {
+  /* Chat (WhatsApp page): warm Anthropic-style tones */
+  --chat-accent: #c96442;
+  --chat-accent-foreground: #faf9f5;
+  --chat-out: #e9dfcf;
+  --chat-out-foreground: #141413;
+  --chat-out-muted: #7d7062;
+  --chat-in: #faf9f5;
+  --chat-name: #a84f33;
   color-scheme: light;
   --background: #f0eee6;
   --foreground: #141413;
@@ -224,6 +240,14 @@
 
 /* Light theme — Bklit default: white surfaces with black monochrome charts */
 .light {
+  /* Chat (WhatsApp page): warm Anthropic-style tones */
+  --chat-accent: #c96442;
+  --chat-accent-foreground: #ffffff;
+  --chat-out: #f0eee6;
+  --chat-out-foreground: #141413;
+  --chat-out-muted: #6b6559;
+  --chat-in: #ffffff;
+  --chat-name: #a84f33;
   color-scheme: light;
   --background: oklch(0.965 0 0);
   --foreground: oklch(0.145 0 0);

@@ -163,13 +163,13 @@ function ChatRow({
   return (
     <button
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/60",
-        active && "bg-muted"
+        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-(--chat-out)/50",
+        active && "bg-(--chat-out)"
       )}
       onClick={onOpen}
       type="button"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted font-medium text-sm">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--chat-out) font-medium text-(--chat-out-foreground) text-sm">
         {chat.isGroup ? (
           <Icon className="size-4" name="IconPeople" />
         ) : (
@@ -184,7 +184,7 @@ function ChatRow({
           <span
             className={cn(
               "shrink-0 text-xs",
-              chat.unread ? "text-[#25D366]" : "text-muted-foreground"
+              chat.unread ? "text-(--chat-accent)" : "text-muted-foreground"
             )}
           >
             {chat.timestamp ? time(chat.timestamp) : ""}
@@ -196,7 +196,7 @@ function ChatRow({
             {chat.last?.body || (chat.last ? `[${chat.last.type}]` : "")}
           </span>
           {chat.unread ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#25D366] px-1.5 font-semibold text-[11px] text-white">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-(--chat-accent) px-1.5 font-semibold text-(--chat-accent-foreground) text-[11px]">
               {chat.unread}
             </span>
           ) : null}
@@ -214,12 +214,12 @@ function Bubble({ m, group }: { m: WaMessage; group: boolean }) {
         className={cn(
           "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
           m.fromMe
-            ? "rounded-br-md bg-[#d9fdd3] text-[#111b21]"
-            : "rounded-bl-md border bg-card"
+            ? "rounded-br-md bg-(--chat-out) text-(--chat-out-foreground)"
+            : "rounded-bl-md border bg-(--chat-in)"
         )}
       >
         {group && !m.fromMe && m.author ? (
-          <p className="mb-0.5 font-medium text-[#128c7e] text-xs">
+          <p className="mb-0.5 font-medium text-(--chat-name) text-xs">
             {m.author.split("@")[0]}
           </p>
         ) : null}
@@ -227,7 +227,7 @@ function Bubble({ m, group }: { m: WaMessage; group: boolean }) {
         <span
           className={cn(
             "ml-2 align-bottom text-[10px]",
-            m.fromMe ? "text-[#667781]" : "text-muted-foreground"
+            m.fromMe ? "text-(--chat-out-muted)" : "text-muted-foreground"
           )}
         >
           {time(m.timestamp)}
@@ -314,7 +314,7 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
         />
         <Button
           aria-label="Enviar"
-          className="rounded-full bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+          className="rounded-full bg-(--chat-accent) text-(--chat-accent-foreground) hover:opacity-90"
           disabled={sending || !text.trim()}
           size="icon"
           type="submit"
