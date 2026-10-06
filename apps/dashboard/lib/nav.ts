@@ -63,6 +63,12 @@ export const navItems: NavItem[] = [
     icon: "IconCoins",
   },
   {
+    href: "/financas-pessoais",
+    label: "Finanças Pessoais",
+    description: "Extratos do banco viram dashboard automaticamente",
+    icon: "IconWallet2",
+  },
+  {
     href: "/rh",
     label: "Recursos Humanos",
     description: "Equipe, desempenho e escalas",

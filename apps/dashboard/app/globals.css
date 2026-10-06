@@ -138,6 +138,10 @@
   --ai-chart-3: oklch(0.68 0 0);
   --ai-chart-4: oklch(0.56 0 0);
   --ai-chart-5: oklch(0.45 0 0);
+  /* Personal finance: money out (clay), money in, secondary series */
+  --pf-out: #d97757;
+  --pf-in: oklch(0.86 0 0);
+  --pf-alt: oklch(0.6 0 0);
   --chart-grid: oklch(1 0 0 / 0.08);
   --chart-label: oklch(0.8 0 0);
   --chart-foreground: oklch(0.8 0 0);
@@ -209,6 +213,9 @@
   --series-8: #b89c82;
 
   --chart-1: #5c3d2e;
+  --pf-out: #c96442;
+  --pf-in: #5c3d2e;
+  --pf-alt: #9a7a60;
   --chart-2: #7a5a45;
   --chart-3: #9a7a60;
   --chart-4: #b89c82;
@@ -290,6 +297,9 @@
   --series-8: oklch(0.64 0 0);
 
   --chart-1: oklch(0.2 0 0);
+  --pf-out: #c96442;
+  --pf-in: oklch(0.25 0 0);
+  --pf-alt: oklch(0.6 0 0);
   --chart-2: oklch(0.35 0 0);
   --chart-3: oklch(0.5 0 0);
   --chart-4: oklch(0.65 0 0);
