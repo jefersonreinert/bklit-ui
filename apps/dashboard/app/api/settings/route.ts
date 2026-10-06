@@ -3,6 +3,7 @@ import { FONTS } from "@/lib/preferences-fonts";
 import { isCrossSite } from "@/lib/server/same-site";
 import {
   readSettings,
+  readSettingsSafe,
   storeAvailable,
   writeSettings,
 } from "@/lib/server/settings-store";
@@ -13,10 +14,17 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 /** Saved profile/look, or `settings: null` when nothing was saved yet. */
 export async function GET() {
-  return Response.json(
-    { available: storeAvailable(), settings: await readSettings() },
-    { headers: NO_STORE }
-  );
+  try {
+    return Response.json(
+      { available: storeAvailable(), settings: await readSettings() },
+      { headers: NO_STORE }
+    );
+  } catch {
+    return Response.json(
+      { error: "store_error" },
+      { status: 502, headers: NO_STORE }
+    );
+  }
 }
 
 const text = (v: unknown, max: number) =>
@@ -42,7 +50,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_settings" }, { status: 400 });
   }
   try {
-    const current = await readSettings();
+    const current = await readSettingsSafe();
     const saved = await writeSettings({
       name,
       role: text(body.role, 60),

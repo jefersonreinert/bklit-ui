@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { readIcon, readSettings } from "@/lib/server/settings-store";
+import { readIcon, readSettingsSafe } from "@/lib/server/settings-store";
 import { ICON_SIZES, type IconSize } from "@/lib/settings-types";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,10 @@ export async function GET(request: NextRequest) {
   const size: IconSize = ICON_SIZES.includes(asked as IconSize)
     ? (asked as IconSize)
     : 512;
-  const settings = await readSettings();
-  const stream = settings?.icon ? await readIcon(settings.icon, size) : null;
+  const settings = await readSettingsSafe();
+  const stream = settings?.icon
+    ? await readIcon(settings.icon, size).catch(() => null)
+    : null;
   if (!stream) {
     return Response.redirect(
       new URL(`${base}/icons/icon-${size}.png`, request.url),

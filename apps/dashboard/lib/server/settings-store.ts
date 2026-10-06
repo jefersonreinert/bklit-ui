@@ -26,13 +26,19 @@ async function readText(pathname: string) {
   return await new Response(result.stream).text();
 }
 
+/** Saved settings, null when nothing was saved yet; throws if the store fails. */
 export async function readSettings(): Promise<StoredSettings | null> {
   if (!storeAvailable()) {
     return null;
   }
+  const text = await readText(SETTINGS_PATH);
+  return text ? (JSON.parse(text) as StoredSettings) : null;
+}
+
+/** Like readSettings, but a store failure reads as "nothing saved". */
+export async function readSettingsSafe() {
   try {
-    const text = await readText(SETTINGS_PATH);
-    return text ? (JSON.parse(text) as StoredSettings) : null;
+    return await readSettings();
   } catch {
     return null;
   }

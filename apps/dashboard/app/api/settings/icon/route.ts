@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { DEFAULT_PREFERENCES } from "@/lib/preferences-fonts";
 import { isCrossSite } from "@/lib/server/same-site";
 import {
-  readSettings,
+  readSettingsSafe,
   removeIcons,
   storeAvailable,
   writeIcon,
@@ -49,7 +49,7 @@ function decodeIcons(body: unknown) {
 }
 
 async function saveIcon(icon: string | undefined) {
-  const current = (await readSettings()) ?? {
+  const current = (await readSettingsSafe()) ?? {
     ...DEFAULT_PREFERENCES,
     updatedAt: 0,
   };
