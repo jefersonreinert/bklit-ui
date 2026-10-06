@@ -357,6 +357,58 @@ function YoutubeCard({ status }: { status: ConnectorsStatus | null }) {
   );
 }
 
+function WhatsappCard({ status }: { status: ConnectorsStatus | null }) {
+  const wa = status?.whatsapp;
+  const ready = wa?.available ?? false;
+  let state = "Configuração pendente";
+  if (ready) {
+    state = wa?.unlocked ? "Liberado neste aparelho" : "Configurado";
+  }
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start gap-3">
+        <ServiceTile brand="whatsapp" />
+        <div className="min-w-0 flex-1">
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            WhatsApp
+            <Badge variant={ready ? "secondary" : "outline"}>{state}</Badge>
+          </CardTitle>
+          <CardDescription>
+            Seu WhatsApp como aparelho conectado (whatsapp-web.js), rodando num
+            servidor gratuito do Hugging Face. Leia e responda conversas no app;
+            o assistente pode ler e resumir (não envia nada sozinho).
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 text-muted-foreground text-sm">
+        {ready ? null : (
+          <p>
+            Falta configurar o servidor gratuito no Hugging Face (Space Docker
+            com <code>services/whatsapp-bridge</code>) e adicionar{" "}
+            <code>WHATSAPP_BRIDGE_URL</code>,{" "}
+            <code>WHATSAPP_BRIDGE_SECRET</code> e{" "}
+            <code>WHATSAPP_ACCESS_CODE</code> no Vercel.
+          </p>
+        )}
+        <p>
+          Não é oficial: o WhatsApp pode restringir contas que automatizam
+          mensagens. Aqui só é enviado o que você digita.
+        </p>
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+          <Button
+            disabled={!ready}
+            nativeButton={false}
+            render={<a href={`${BASE_PATH}/whatsapp/`} />}
+            size="sm"
+          >
+            Abrir WhatsApp
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ConnectorsPage() {
   const { status, disconnectNotion, disconnectGoogle } = useConnectors();
   const banner = useRedirectBanner();
@@ -423,6 +475,7 @@ export function ConnectorsPage() {
       <NotionCard onDisconnect={disconnectNotion} status={status} />
       <GoogleCard onDisconnect={disconnectGoogle} status={status} />
       <YoutubeCard status={status} />
+      <WhatsappCard status={status} />
     </div>
   );
 }

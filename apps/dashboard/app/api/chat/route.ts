@@ -23,6 +23,13 @@ import {
   sealConnection,
 } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
+import { hasAccess, whatsappConfig } from "@/lib/server/whatsapp";
+import {
+  isWhatsappTool,
+  runWhatsappTool,
+  WHATSAPP_INSTRUCTIONS,
+  WHATSAPP_TOOLS,
+} from "@/lib/server/whatsapp-tools";
 import {
   isYoutubeTool,
   runYoutubeTool,
@@ -86,6 +93,8 @@ interface Connectors {
   drive: boolean;
   /** Public YouTube data; needs only the server's API key. */
   youtube: boolean;
+  /** WhatsApp bridge, only for a browser that entered the access code. */
+  whatsapp: boolean;
   notices: string[];
   cookies: string[];
 }
@@ -208,6 +217,11 @@ async function resolveConnectors(
     gmail: false,
     drive: false,
     youtube: Boolean(requested?.includes("youtube") && youtubeAvailable()),
+    whatsapp: Boolean(
+      requested?.includes("whatsapp") &&
+        whatsappConfig() &&
+        (await hasAccess(request))
+    ),
     notices: [],
     cookies: [],
   };
@@ -252,6 +266,7 @@ function buildParams(
       : []),
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
     ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
+    ...(c.whatsapp ? WHATSAPP_TOOLS : []),
   ];
   return {
     model,
@@ -270,6 +285,9 @@ function buildParams(
       ...(google ? [{ type: "text" as const, text: google }] : []),
       ...(c.youtube
         ? [{ type: "text" as const, text: YOUTUBE_INSTRUCTIONS }]
+        : []),
+      ...(c.whatsapp
+        ? [{ type: "text" as const, text: WHATSAPP_INSTRUCTIONS }]
         : []),
     ],
     messages,
@@ -331,6 +349,9 @@ async function streamOnce(
 }
 
 function runClientTool(c: Connectors, name: string, input: unknown) {
+  if (c.whatsapp && isWhatsappTool(name)) {
+    return runWhatsappTool(name, input);
+  }
   if (c.youtube && isYoutubeTool(name)) {
     return runYoutubeTool(
       name,
@@ -472,6 +493,7 @@ export async function POST(request: NextRequest) {
     connectors.gmail ? "gmail" : null,
     connectors.drive ? "drive" : null,
     connectors.youtube ? "youtube" : null,
+    connectors.whatsapp ? "whatsapp" : null,
   ].filter(Boolean);
   const response = new Response(readable, {
     headers: {

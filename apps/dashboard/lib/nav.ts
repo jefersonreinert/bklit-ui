@@ -33,6 +33,12 @@ export const navItems: NavItem[] = [
     icon: "IconEmail1",
   },
   {
+    href: "/whatsapp",
+    label: "WhatsApp",
+    description: "Suas conversas do WhatsApp",
+    icon: "IconWhatsapp",
+  },
+  {
     href: "/videos",
     label: "Meus vídeos",
     description: "Biblioteca: salvos, playlists e player",
@@ -47,7 +53,7 @@ export const navItems: NavItem[] = [
   {
     href: "/conectores",
     label: "Conectores",
-    description: "Notion, Gmail e Google Drive no assistente",
+    description: "Notion, Gmail, Drive, YouTube e WhatsApp no assistente",
     icon: "IconConnectors1",
   },
   {

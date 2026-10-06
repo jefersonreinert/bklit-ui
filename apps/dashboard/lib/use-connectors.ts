@@ -26,6 +26,8 @@ export interface ConnectorsStatus {
   };
   /** Public YouTube data (server API key); transcripts need Gemini. */
   youtube: { available: boolean; transcripts: boolean };
+  /** WhatsApp bridge configured; `unlocked` = this browser has the access code. */
+  whatsapp: { available: boolean; unlocked: boolean };
 }
 
 const OFFLINE: ConnectorsStatus = {
@@ -35,6 +37,7 @@ const OFFLINE: ConnectorsStatus = {
   notion: { connected: false },
   google: { available: false, connected: false },
   youtube: { available: false, transcripts: false },
+  whatsapp: { available: false, unlocked: false },
 };
 
 export function notionStartUrl(returnTo?: string) {

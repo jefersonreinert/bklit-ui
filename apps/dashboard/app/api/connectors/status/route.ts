@@ -9,6 +9,7 @@ import {
 import { readConnection } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
 import { geminiKey } from "@/lib/server/transcript";
+import { hasAccess, whatsappConfig } from "@/lib/server/whatsapp";
 import { youtubeKey } from "@/lib/server/youtube";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,10 @@ export async function GET(request: NextRequest) {
       youtube: {
         available: Boolean(youtubeKey()),
         transcripts: Boolean(geminiKey()),
+      },
+      whatsapp: {
+        available: Boolean(whatsappConfig()),
+        unlocked: await hasAccess(request),
       },
     },
     { headers: { "Cache-Control": "no-store" } }

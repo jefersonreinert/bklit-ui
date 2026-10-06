@@ -352,7 +352,7 @@ function Composer({
   );
 }
 
-type ConnectorKey = "notion" | "gmail" | "drive" | "youtube";
+type ConnectorKey = "notion" | "gmail" | "drive" | "youtube" | "whatsapp";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
 const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
@@ -360,9 +360,16 @@ const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
   { key: "gmail", label: "Gmail" },
   { key: "drive", label: "Google Drive" },
   { key: "youtube", label: "YouTube" },
+  { key: "whatsapp", label: "WhatsApp" },
 ];
 
-const SERVICE_KEYS = new Set<string>(["notion", "gmail", "drive", "youtube"]);
+const SERVICE_KEYS = new Set<string>([
+  "notion",
+  "gmail",
+  "drive",
+  "youtube",
+  "whatsapp",
+]);
 const isService = (server: string): server is ServiceBrand =>
   SERVICE_KEYS.has(server);
 
@@ -372,6 +379,9 @@ function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   }
   if (key === "youtube") {
     return status.youtube.available;
+  }
+  if (key === "whatsapp") {
+    return Boolean(status.whatsapp?.available && status.whatsapp.unlocked);
   }
   return key === "notion" ? status.notion.connected : status.google.connected;
 }
@@ -384,6 +394,9 @@ function connectorSubtitle(status: ConnectorsStatus | null, key: ConnectorKey) {
     return status?.youtube.transcripts
       ? "Pesquisa e transcrição"
       : "Pesquisa (sem transcrição)";
+  }
+  if (key === "whatsapp") {
+    return "Ler conversas";
   }
   return (key !== "notion" && status?.google.email) || "Conectado";
 }
@@ -398,6 +411,9 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
   }
   if (key === "youtube") {
     return `${BASE_PATH}/conectores/`;
+  }
+  if (key === "whatsapp") {
+    return `${BASE_PATH}/whatsapp/`;
   }
   return status.google.available
     ? googleStartUrl(back)
@@ -670,6 +686,7 @@ export function AiPage() {
     gmail: true,
     drive: true,
     youtube: true,
+    whatsapp: true,
   });
   const { status: connectors } = useConnectors();
   const profile = usePreferences();
