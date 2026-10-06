@@ -46,8 +46,10 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build static dashboard
-        run: pnpm --filter dashboard build
+        # Static hosting has no server: drop the API route (AI page uses demo mode)
+        run: rm -rf apps/dashboard/app/api && pnpm --filter dashboard build
         env:
+          STATIC_EXPORT: "1"
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
           NEXT_TELEMETRY_DISABLED: 1
 

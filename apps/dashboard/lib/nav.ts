@@ -15,6 +15,12 @@ export const navItems: NavItem[] = [
     icon: "IconLayoutDashboard",
   },
   {
+    href: "/ia",
+    label: "Assistente IA",
+    description: "Converse com o Claude sobre o seu restaurante",
+    icon: "IconSparklesSoft",
+  },
+  {
     href: "/financas",
     label: "Finanças",
     description: "Receitas, despesas e fluxo de caixa",
