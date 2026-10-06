@@ -21,6 +21,12 @@ export const navItems: NavItem[] = [
     icon: "IconSparklesSoft",
   },
   {
+    href: "/conectores",
+    label: "Conectores",
+    description: "Notion, Gmail e Google Drive no assistente",
+    icon: "IconConnectors1",
+  },
+  {
     href: "/financas",
     label: "Finanças",
     description: "Receitas, despesas e fluxo de caixa",

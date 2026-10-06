@@ -4,12 +4,18 @@ import { Icon, type IconName } from "@bklitui/icons";
 import {
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -18,8 +24,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { demoAnswer } from "@/lib/ai-demo";
+import type { ChatStreamEvent } from "@/lib/ai-events";
 import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
+import {
+  BASE_PATH,
+  type ConnectorsStatus,
+  notionStartUrl,
+  useConnectors,
+} from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 import { Markdown } from "./markdown";
 
@@ -27,10 +41,18 @@ import { Markdown } from "./markdown";
 /* Tipos e persistência local (conveniência por navegador)                    */
 /* -------------------------------------------------------------------------- */
 
+interface ToolUse {
+  server: string;
+  name: string;
+  status: "running" | "done" | "error";
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** MCP tool calls made while answering (e.g. Notion search). */
+  tools?: ToolUse[];
 }
 
 interface Conversation {
@@ -43,7 +65,61 @@ interface Conversation {
 
 const STORAGE_KEY = "casa-brasa-ai-conversations";
 const CLAY = "#d97757";
-const API_URL = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat/`;
+const API_URL = `${BASE_PATH}/api/chat/`;
+const NOTION_PREF_KEY = "casa-brasa-ai-notion";
+
+const NOTION_PREFIX = /^notion-/;
+
+const TOOL_LABELS: Record<string, string> = {
+  search: "Pesquisando",
+  fetch: "Lendo página",
+  "create-pages": "Criando página",
+  "update-page": "Editando página",
+  "create-comment": "Comentando",
+  "get-comments": "Lendo comentários",
+  "query-data-sources": "Consultando base de dados",
+};
+
+function toolLabel(name: string) {
+  const short = name.replace(NOTION_PREFIX, "");
+  return TOOL_LABELS[short] ?? short.replaceAll("-", " ");
+}
+
+async function readNdjson(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (e: ChatStreamEvent) => void
+) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer = drainLines(
+      buffer + decoder.decode(value, { stream: true }),
+      onEvent
+    );
+  }
+  drainLines(`${buffer}\n`, onEvent);
+}
+
+/** Parses complete NDJSON lines and keeps the trailing partial line. */
+function drainLines(buffer: string, onEvent: (e: ChatStreamEvent) => void) {
+  const lines = buffer.split("\n");
+  const rest = lines.pop() ?? "";
+  for (const line of lines) {
+    if (line.trim()) {
+      try {
+        onEvent(JSON.parse(line) as ChatStreamEvent);
+      } catch {
+        // ignore a malformed line rather than breaking the whole answer
+      }
+    }
+  }
+  return rest;
+}
 
 function loadConversations(): Conversation[] {
   try {
@@ -183,8 +259,10 @@ function Composer({
   streaming,
   model,
   onModelChange,
+  connectors,
   autoFocus,
 }: {
+  connectors: ReactNode;
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
@@ -241,16 +319,7 @@ function Composer({
         value={value}
       />
       <div className="flex items-center gap-1">
-        <Button
-          aria-label="Anexar arquivo (em breve)"
-          className="rounded-lg"
-          disabled
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          <Icon className="size-4" name="IconPlusLarge" />
-        </Button>
+        {connectors}
         <div className="ml-auto flex items-center gap-1">
           <ModelSelect onChange={onModelChange} value={model} />
           <button
@@ -271,6 +340,129 @@ function Composer({
         </div>
       </div>
     </form>
+  );
+}
+
+function ConnectorsMenu({
+  status,
+  notionEnabled,
+  onNotionChange,
+}: {
+  status: ConnectorsStatus | null;
+  notionEnabled: boolean;
+  onNotionChange: (on: boolean) => void;
+}) {
+  const connected = status?.notion.connected ?? false;
+  const active = connected && notionEnabled;
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label="Conectores"
+            className={cn("gap-1.5 rounded-lg", active && "text-foreground")}
+            size="sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <Icon className="size-4" name="IconConnectors1" />
+        {active ? (
+          <span className="flex items-center gap-1 text-xs">
+            <Icon className="size-3.5" name="IconNotion" />
+            Notion
+          </span>
+        ) : null}
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="acrylic w-72 gap-3 p-3 backdrop-blur-xl"
+        side="top"
+      >
+        <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          Conectores
+        </p>
+        <div className="flex items-center gap-3">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
+            <Icon className="size-4" name="IconNotion" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm">Notion</p>
+            <p className="text-muted-foreground text-xs">
+              {connected ? "Conectado" : "Não conectado"}
+            </p>
+          </div>
+          {connected ? (
+            <Switch
+              aria-label="Usar Notion nesta conversa"
+              checked={notionEnabled}
+              onCheckedChange={onNotionChange}
+            />
+          ) : (
+            <a
+              className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+              href={
+                status?.configured
+                  ? notionStartUrl(`${BASE_PATH}/ia/`)
+                  : `${BASE_PATH}/conectores/`
+              }
+            >
+              Conectar
+            </a>
+          )}
+        </div>
+        {(["Gmail", "Google Drive"] as const).map((name) => (
+          <div className="flex items-center gap-3 opacity-60" key={name}>
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
+              <Icon
+                className="size-4"
+                name={name === "Gmail" ? "IconEmail1" : "IconGoogle"}
+              />
+            </span>
+            <p className="flex-1 font-medium text-sm">{name}</p>
+            <span className="text-muted-foreground text-xs">Em breve</span>
+          </div>
+        ))}
+        <a
+          className="text-muted-foreground text-xs underline-offset-2 hover:underline"
+          href={`${BASE_PATH}/conectores/`}
+        >
+          Gerenciar conectores
+        </a>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ToolChips({ tools }: { tools: ToolUse[] }) {
+  return (
+    <div className="mb-2 flex flex-wrap gap-1.5">
+      {tools.map((t, i) => (
+        <span
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border bg-card/60 px-2.5 py-1 text-muted-foreground text-xs",
+            t.status === "error" && "border-destructive/40 text-destructive"
+          )}
+          key={`${t.name}-${i}`}
+        >
+          <Icon
+            className={cn(
+              "size-3.5",
+              t.status === "running" && "animate-pulse"
+            )}
+            name="IconNotion"
+          />
+          {toolLabel(t.name)}
+          {t.status === "done" ? (
+            <Icon className="size-3" name="IconCheckmark1Small" />
+          ) : null}
+          {t.status === "error" ? (
+            <Icon className="size-3" name="IconCrossSmall" />
+          ) : null}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -411,12 +603,30 @@ export function AiPage() {
   const [streaming, setStreaming] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [notionEnabled, setNotionEnabled] = useState(true);
+  const { status: connectors } = useConnectors();
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setConversations(loadConversations());
+    try {
+      setNotionEnabled(localStorage.getItem(NOTION_PREF_KEY) !== "off");
+    } catch {
+      // storage unavailable — keep the default
+    }
   }, []);
+
+  const changeNotion = useCallback((on: boolean) => {
+    setNotionEnabled(on);
+    try {
+      localStorage.setItem(NOTION_PREF_KEY, on ? "on" : "off");
+    } catch {
+      // storage unavailable — preference lasts for this visit only
+    }
+  }, []);
+
+  const notionActive = Boolean(connectors?.notion.connected && notionEnabled);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
   const messages = active?.messages ?? [];
@@ -452,6 +662,42 @@ export function AiPage() {
         ),
       })),
     [updateConversation]
+  );
+
+  const updateTools = useCallback(
+    (convId: string, msgId: string, fn: (tools: ToolUse[]) => ToolUse[]) =>
+      updateConversation(convId, (c) => ({
+        ...c,
+        messages: c.messages.map((m) =>
+          m.id === msgId ? { ...m, tools: fn(m.tools ?? []) } : m
+        ),
+      })),
+    [updateConversation]
+  );
+
+  const handleEvent = useCallback(
+    (convId: string, msgId: string, e: ChatStreamEvent) => {
+      if (e.type === "text") {
+        appendToAssistant(convId, msgId, e.text);
+      } else if (e.type === "tool") {
+        updateTools(convId, msgId, (t) => [
+          ...t,
+          { server: e.server, name: e.name, status: "running" },
+        ]);
+      } else if (e.type === "tool_done") {
+        updateTools(convId, msgId, (t) => {
+          const i = t.findIndex((x) => x.status === "running");
+          return i < 0
+            ? t
+            : t.map((x, j) =>
+                j === i ? { ...x, status: e.error ? "error" : "done" } : x
+              );
+        });
+      } else {
+        appendToAssistant(convId, msgId, `\n\n> ${e.text}`);
+      }
+    },
+    [appendToAssistant, updateTools]
   );
 
   const streamDemo = useCallback(
@@ -500,6 +746,7 @@ export function AiPage() {
           body: JSON.stringify({
             model: chosenModel,
             messages: history.map(({ role, content }) => ({ role, content })),
+            connectors: notionActive ? ["notion"] : [],
           }),
           signal: controller.signal,
         });
@@ -517,19 +764,7 @@ export function AiPage() {
           );
           return;
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          appendToAssistant(
-            convId,
-            assistantId,
-            decoder.decode(value, { stream: true })
-          );
-        }
+        await readNdjson(res.body, (e) => handleEvent(convId, assistantId, e));
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setDemoMode(true);
@@ -540,7 +775,14 @@ export function AiPage() {
         abortRef.current = null;
       }
     },
-    [appendToAssistant, demoMode, streamDemo, updateConversation]
+    [
+      appendToAssistant,
+      demoMode,
+      handleEvent,
+      streamDemo,
+      updateConversation,
+      notionActive,
+    ]
   );
 
   const send = useCallback(
@@ -610,6 +852,14 @@ export function AiPage() {
       setActiveId(null);
     }
   };
+
+  const connectorsMenu = (
+    <ConnectorsMenu
+      notionEnabled={notionEnabled}
+      onNotionChange={changeNotion}
+      status={connectors}
+    />
+  );
 
   const history = (
     <HistoryList
@@ -689,6 +939,7 @@ export function AiPage() {
             <div className="w-full max-w-2xl">
               <Composer
                 autoFocus
+                connectors={connectorsMenu}
                 model={model}
                 onChange={setDraft}
                 onModelChange={setModel}
@@ -744,7 +995,8 @@ export function AiPage() {
                         spinning={pending && m.content === ""}
                       />
                       <div className="min-w-0 flex-1">
-                        {m.content === "" ? (
+                        {m.tools?.length ? <ToolChips tools={m.tools} /> : null}
+                        {m.content === "" && !m.tools?.length ? (
                           <p className="text-muted-foreground text-sm">
                             Pensando…
                           </p>
@@ -775,6 +1027,7 @@ export function AiPage() {
             </div>
             <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-4">
               <Composer
+                connectors={connectorsMenu}
                 model={model}
                 onChange={setDraft}
                 onModelChange={setModel}
