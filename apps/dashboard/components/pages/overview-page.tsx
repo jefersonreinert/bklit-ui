@@ -65,6 +65,7 @@ import {
   formatCompact,
   formatInt,
 } from "@/lib/format";
+import { firstName, usePreferences } from "@/lib/preferences";
 
 const orderStatusVariant = {
   Pago: "outline",
@@ -116,6 +117,14 @@ function useLiveOrders() {
   return { data, value };
 }
 
+function dayGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) {
+    return "Bom dia";
+  }
+  return h < 18 ? "Boa tarde" : "Boa noite";
+}
+
 export function OverviewPage() {
   const [period, setPeriod] = useState("30d");
   const [goalHover, setGoalHover] = useState<number | null>(null);
@@ -123,13 +132,14 @@ export function OverviewPage() {
   const live = useLiveOrders();
 
   const series = period === "7d" ? dailySales.slice(-7) : dailySales;
+  const profile = usePreferences();
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold text-xl tracking-tight">
-            Bom dia, Gabriela 👋
+            {dayGreeting()}, {firstName(profile.name)} 👋
           </h2>
           <p className="text-muted-foreground text-sm">
             Veja como o restaurante está performando.

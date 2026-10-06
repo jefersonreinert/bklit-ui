@@ -134,8 +134,16 @@ const message = (
   starred: labels.includes("STARRED"),
 });
 
-export function demoThreads(): MailThread[] {
-  return SEEDS.map((s) => ({
+/** The sample inbox greets whoever is set in Configurações. */
+function seedsFor(name: string): DemoSeed[] {
+  const safe = JSON.stringify(name || "Gabriela").slice(1, -1);
+  return JSON.parse(
+    JSON.stringify(SEEDS).replaceAll("Gabriela", safe)
+  ) as DemoSeed[];
+}
+
+export function demoThreads(name = "Gabriela"): MailThread[] {
+  return seedsFor(name).map((s) => ({
     id: s.id,
     subject: s.subject,
     messages: [
@@ -164,8 +172,8 @@ export function demoThreads(): MailThread[] {
   }));
 }
 
-export function demoSummaries(): MailSummary[] {
-  return SEEDS.map((s) => ({
+export function demoSummaries(name = "Gabriela"): MailSummary[] {
+  return seedsFor(name).map((s) => ({
     id: s.id,
     threadId: s.id,
     from: { name: s.from[0], email: s.from[1] },

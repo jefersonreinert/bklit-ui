@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { demoAnswer } from "@/lib/ai-demo";
 import type { ChatStreamEvent } from "@/lib/ai-events";
 import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
+import { firstName, usePreferences } from "@/lib/preferences";
 import {
   BASE_PATH,
   type ConnectorsStatus,
@@ -669,6 +670,7 @@ export function AiPage() {
     youtube: true,
   });
   const { status: connectors } = useConnectors();
+  const profile = usePreferences();
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -829,6 +831,7 @@ export function AiPage() {
             model: chosenModel,
             messages: history.map(({ role, content }) => ({ role, content })),
             connectors: activeKey ? activeKey.split(",") : [],
+            user: { name: profile.name, role: profile.role },
           }),
           signal: controller.signal,
         });
@@ -864,6 +867,8 @@ export function AiPage() {
       streamDemo,
       updateConversation,
       activeKey,
+      profile.name,
+      profile.role,
     ]
   );
 
@@ -1008,11 +1013,12 @@ export function AiPage() {
             <h2
               className="flex items-center gap-3 text-center font-serif text-3xl tracking-tight md:text-4xl"
               style={{
-                fontFamily: "ui-serif, Georgia, 'Times New Roman', serif",
+                fontFamily:
+                  "var(--ai-font, ui-serif, Georgia, 'Times New Roman', serif)",
               }}
             >
               <Spark className="size-8 md:size-9" />
-              {greeting()}, Gabriela
+              {greeting()}, {firstName(profile.name)}
             </h2>
             <div className="w-full max-w-2xl">
               <Composer
@@ -1083,7 +1089,7 @@ export function AiPage() {
                             className="text-[15px]"
                             style={{
                               fontFamily:
-                                "ui-serif, Georgia, 'Times New Roman', serif",
+                                "var(--ai-font, ui-serif, Georgia, 'Times New Roman', serif)",
                             }}
                           >
                             <Markdown text={m.content} />

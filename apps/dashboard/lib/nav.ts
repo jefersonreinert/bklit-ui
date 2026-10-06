@@ -74,6 +74,12 @@ export const navItems: NavItem[] = [
     description: "Licenças, contratos e arquivos",
     icon: "IconFolder1",
   },
+  {
+    href: "/configuracoes",
+    label: "Configurações",
+    description: "Perfil, tema e tipografia",
+    icon: "IconSettingsGear1",
+  },
 ];
 
 const TRAILING_SLASHES = /\/+$/;

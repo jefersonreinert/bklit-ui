@@ -10,11 +10,15 @@ import type {
   MailSummary,
   MailThread,
 } from "@/lib/mail-types";
+import { firstName, getPreferences } from "@/lib/preferences";
 import { BASE_PATH, useConnectors } from "@/lib/use-connectors";
 
 export type MailMode = "loading" | "live" | "demo";
 
 const API = `${BASE_PATH}/api/gmail`;
+
+/** First name from Configurações, used by the sample inbox. */
+const senderName = () => firstName(getPreferences().name);
 
 class MailError extends Error {
   readonly status: number;
@@ -99,7 +103,7 @@ function demoSend(store: DemoStore, input: MailDraftInput, draft: boolean) {
   const summary: MailSummary = {
     id,
     threadId,
-    from: { name: "Gabriela", email: DEMO_ACCOUNT },
+    from: { name: senderName(), email: DEMO_ACCOUNT },
     to: input.to,
     subject: input.subject || "(sem assunto)",
     snippet: input.body.slice(0, 140),
@@ -142,8 +146,8 @@ function demoSend(store: DemoStore, input: MailDraftInput, draft: boolean) {
 export function useMail(folder: MailFolderId, query: string) {
   const { status, refresh: refreshStatus } = useConnectors();
   const demo = useRef<DemoStore>({
-    summaries: demoSummaries(),
-    threads: new Map(demoThreads().map((t) => [t.id, t])),
+    summaries: demoSummaries(senderName()),
+    threads: new Map(demoThreads(senderName()).map((t) => [t.id, t])),
   });
   const [list, setList] = useState<MailSummary[]>([]);
   const [nextPage, setNextPage] = useState<string | null>(null);

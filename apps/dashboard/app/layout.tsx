@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/dashboard/app-header";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ClientOnly } from "@/components/dashboard/client-only";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PreferencesBoot } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           enableSystem={false}
           themes={["dark", "beige", "light"]}
         >
+          <PreferencesBoot />
           <div
             aria-hidden="true"
             className="ambient-glow pointer-events-none fixed inset-0 -z-10"

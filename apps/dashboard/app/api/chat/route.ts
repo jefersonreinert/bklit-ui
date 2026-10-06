@@ -47,6 +47,24 @@ interface ChatRequest {
   model?: string;
   messages?: { role: "user" | "assistant"; content: string }[];
   connectors?: string[];
+  user?: { name?: string; role?: string };
+}
+
+// Names and roles: letters, digits, spaces and light punctuation only
+const NOT_NAME_CHARS = /[^\p{L}\p{N} .,'’()&/-]/gu;
+
+/** Who is using the panel (set in Configurações); short, plain text only. */
+function userBlock(user: ChatRequest["user"]) {
+  const clean = (v: unknown, max: number) =>
+    typeof v === "string"
+      ? v.replace(NOT_NAME_CHARS, "").trim().slice(0, max)
+      : "";
+  const name = clean(user?.name, 60);
+  if (!name) {
+    return null;
+  }
+  const role = clean(user?.role, 60);
+  return `A pessoa usando o painel agora se chama ${name}${role ? ` (${role})` : ""}. Trate-a pelo primeiro nome.`;
 }
 
 type BetaParams = Parameters<Anthropic["beta"]["messages"]["stream"]>[0];
@@ -195,7 +213,8 @@ async function resolveConnectors(
 function buildParams(
   model: AiModelId,
   messages: Anthropic.Beta.BetaMessageParam[],
-  c: Connectors
+  c: Connectors,
+  who: string | null
 ): BetaParams {
   const isHaiku = model === "claude-haiku-4-5";
   const betas = [
@@ -226,6 +245,7 @@ function buildParams(
         text: SYSTEM_PROMPT,
         cache_control: { type: "ephemeral" },
       },
+      ...(who ? [{ type: "text" as const, text: who }] : []),
       ...(c.notion
         ? [{ type: "text" as const, text: NOTION_INSTRUCTIONS }]
         : []),
@@ -395,7 +415,7 @@ export async function POST(request: NextRequest) {
   }
 
   const connectors = await resolveConnectors(request, body.connectors);
-  const params = buildParams(model, history, connectors);
+  const params = buildParams(model, history, connectors, userBlock(body.user));
   const client = new Anthropic();
   const abort = new AbortController();
 
