@@ -1357,8 +1357,9 @@ export function AiPage() {
           </button>
           {/* The app header already says "Assistente IA" */}
           <p className="min-w-0 flex-1 truncate text-center font-medium text-muted-foreground text-sm">
-            {active?.title}
-            {demoMode ? " · demonstração" : ""}
+            {[active?.title, demoMode ? "Modo demonstração" : null]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
           <div className="acrylic flex h-11 items-center gap-1 rounded-full border bg-card/80 px-1.5 shadow-sm">
             <button
@@ -1420,19 +1421,34 @@ export function AiPage() {
         </div>
 
         {messages.length === 0 ? (
-          /* Tela inicial */
-          <div className="flex flex-1 flex-col items-center justify-center gap-8 overflow-y-auto px-4 pb-10">
-            <h2
-              className="flex items-center gap-3 text-center font-serif text-3xl tracking-tight md:text-4xl"
-              style={{
-                fontFamily:
-                  "var(--ai-font, ui-serif, Georgia, 'Times New Roman', serif)",
-              }}
-            >
-              <Spark className="size-8 md:size-9" />
-              {greeting()}, {firstName(profile.name)}
-            </h2>
-            <div className="w-full max-w-2xl">
+          /* Tela inicial: saudação no centro, caixa de mensagem embaixo */
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-1 items-center justify-center overflow-y-auto px-4">
+              <h2
+                className="flex items-center gap-3 text-center font-serif text-3xl tracking-tight md:text-4xl"
+                style={{
+                  fontFamily:
+                    "var(--ai-font, ui-serif, Georgia, 'Times New Roman', serif)",
+                }}
+              >
+                <Spark className="size-8 md:size-9" />
+                {greeting()}, {firstName(profile.name)}
+              </h2>
+            </div>
+            <div className="mx-auto w-full max-w-3xl px-3 pb-3 md:px-4">
+              <div className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 md:mx-0 md:flex-wrap md:justify-center md:px-0">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    className="flex shrink-0 items-center gap-2 rounded-full border bg-card/60 px-3.5 py-2 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
+                    key={s.label}
+                    onClick={() => send(s.prompt)}
+                    type="button"
+                  >
+                    <Icon className="size-4" name={s.icon} />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
               <Composer
                 autoFocus
                 canSend={attachments.length > 0}
@@ -1447,27 +1463,7 @@ export function AiPage() {
                 streaming={streaming}
                 value={draft}
               />
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    className="flex items-center gap-2 rounded-xl border bg-card/60 px-3 py-1.5 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
-                    key={s.label}
-                    onClick={() => send(s.prompt)}
-                    type="button"
-                  >
-                    <Icon className="size-4" name={s.icon} />
-                    {s.label}
-                  </button>
-                ))}
-              </div>
             </div>
-            {demoMode ? (
-              <p className="max-w-md text-center text-muted-foreground text-xs">
-                Modo demonstração: as respostas, com gráficos, são montadas com
-                os dados do painel, sem usar a API nem gastar créditos. Toque em
-                "Modo demonstração ✓" no topo para voltar ao Claude.
-              </p>
-            ) : null}
           </div>
         ) : (
           /* Conversa */
