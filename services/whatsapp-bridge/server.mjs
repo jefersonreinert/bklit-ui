@@ -354,7 +354,9 @@ async function start() {
     },
     logger,
     browser,
-    syncFullHistory: true,
+    // syncFullHistory makes WhatsApp refuse new devices (428); the normal
+    // initial sync brings recent history and older pages come on demand
+    syncFullHistory: process.env.FULL_HISTORY === "1",
     markOnlineOnConnect: false,
     getMessage: async (key) =>
       (await messageRaw(key.remoteJid, key.id).catch(() => null))?.raw
@@ -556,6 +558,28 @@ function chatId(value) {
 const limitOf = (url, fallback, max) =>
   Math.min(Math.max(Number(url.searchParams.get("limit")) || fallback, 1), max);
 
+const olderAsked = new Map();
+
+/** Asks the phone for up to 50 messages older than `oldest` (once a minute per chat). */
+function requestOlder(chat, oldest) {
+  if (state.status !== "ready" || !oldest) {
+    return;
+  }
+  const last = olderAsked.get(chat) ?? 0;
+  if (Date.now() - last < 60_000) {
+    return;
+  }
+  olderAsked.set(chat, Date.now());
+  sock
+    .fetchMessageHistory(
+      50,
+      { remoteJid: chat, id: oldest.id, fromMe: oldest.fromMe },
+      oldest.timestamp
+    )
+    .then(() => console.log(`Asked the phone for older messages of ${chat}`))
+    .catch((e) => console.error("older:", e.message));
+}
+
 const toApiMessage = (row) => ({
   id: row.id,
   body: row.body ?? "",
@@ -600,10 +624,16 @@ const routes = {
   "GET /messages": async (_req, url) => {
     const chat = chatId(url.searchParams.get("chat"));
     const before = Number(url.searchParams.get("before")) || undefined;
+    const limit = limitOf(url, 60, 3000);
     const [chats, messages] = await Promise.all([
       listChats(3000).then((all) => all.find((c) => c.id === chat)),
-      listMessages(chat, limitOf(url, 60, 3000), before),
+      listMessages(chat, limit, before),
     ]);
+    // Fewer than asked: ask the phone for older messages of this chat; they
+    // arrive as an on-demand history batch and the page picks them up
+    if (url.searchParams.get("older") === "1" && messages.length < limit) {
+      requestOlder(chat, messages[0]);
+    }
     return {
       chat: chats ?? {
         id: chat,

@@ -123,9 +123,10 @@ export function signedUrl(action: "media" | "upload", chat: string, id = "") {
   return `${config.url}/${action}?${query}`;
 }
 
-export async function readChat(chat: string, limit = 50) {
+/** `older`: also ask the phone for older messages when the archive runs out. */
+export async function readChat(chat: string, limit = 50, older = false) {
   const data = await bridge<{ chat: WaChat; messages: WaMessage[] }>(
-    `/messages?chat=${encodeURIComponent(chat)}&limit=${limit}`
+    `/messages?chat=${encodeURIComponent(chat)}&limit=${limit}${older ? "&older=1" : ""}`
   );
   return {
     ...data,

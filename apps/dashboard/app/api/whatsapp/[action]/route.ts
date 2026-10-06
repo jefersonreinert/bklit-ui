@@ -61,7 +61,8 @@ const PROTECTED: Record<string, Handler> = {
   "GET messages": (_b, url) =>
     readChat(
       url.searchParams.get("chat") ?? "",
-      Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 2000)
+      Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 3000),
+      url.searchParams.get("older") === "1"
     ),
   "POST upload-url": async (b) => ({ url: signedUrl("upload", str(b.chat)) }),
   "POST send": (b) => sendText(str(b.chat), str(b.text)),

@@ -92,7 +92,7 @@ export function useWhatsapp() {
       return;
     }
     const r = await call<{ messages: WaMessage[] }>(
-      `messages/?chat=${encodeURIComponent(openId)}&limit=${limit}`
+      `messages/?chat=${encodeURIComponent(openId)}&limit=${limit}${limit > PAGE ? "&older=1" : ""}`
     );
     if (r.ok) {
       setMessages(r.data.messages);

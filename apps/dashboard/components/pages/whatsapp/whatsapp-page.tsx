@@ -102,7 +102,7 @@ const PAIR_STEPS: string[] = [
   "Digite este código",
 ];
 
-function Pair({ wa }: { wa: Wa }) {
+function Pair({ wa, onBack }: { wa: Wa; onBack?: () => void }) {
   const [phone, setPhone] = useState("55");
   const [busy, setBusy] = useState(false);
   const code = wa.status?.bridge?.pairingCode ?? null;
@@ -132,6 +132,11 @@ function Pair({ wa }: { wa: Wa }) {
         <Button disabled={busy} type="submit">
           {busy ? "Gerando código…" : "Gerar código de conexão"}
         </Button>
+        {onBack ? (
+          <Button onClick={onBack} type="button" variant="ghost">
+            Ver conversas salvas
+          </Button>
+        ) : null}
       </form>
       {code ? (
         <div className="flex flex-col gap-3 rounded-2xl border bg-muted/30 p-4">
@@ -447,7 +452,10 @@ const TAB_FILTERS: Record<Tab, (c: WaChat) => boolean> = {
   archived: (c) => c.archived,
 };
 
-function Inbox({ wa }: { wa: Wa }) {
+function Inbox({ wa, onConnect }: { wa: Wa; onConnect: () => void }) {
+  const ready = wa.status?.bridge?.state === "ready";
+  /** Disconnect takes two taps. */
+  const [confirmOut, setConfirmOut] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("all");
   const me = wa.status?.bridge?.me;
@@ -468,7 +476,7 @@ function Inbox({ wa }: { wa: Wa }) {
         <div className="flex items-center gap-2 p-3">
           <ServiceLogo brand="whatsapp" className="size-5" />
           <p className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
-            {me?.name ?? "Conectado"}
+            {ready ? (me?.name ?? "Conectado") : "Arquivo do WhatsApp"}
             {me?.number ? ` · +${me.number}` : ""}
             {stats ? (
               <span className="block truncate">
@@ -478,10 +486,31 @@ function Inbox({ wa }: { wa: Wa }) {
               </span>
             ) : null}
           </p>
-          <Button onClick={wa.logout} size="sm" variant="ghost">
-            Desconectar
-          </Button>
+          {ready ? (
+            <Button
+              onClick={() => (confirmOut ? wa.logout() : setConfirmOut(true))}
+              onMouseLeave={() => setConfirmOut(false)}
+              size="sm"
+              variant={confirmOut ? "destructive" : "ghost"}
+            >
+              {confirmOut ? "Confirmar desconexão" : "Desconectar"}
+            </Button>
+          ) : (
+            <Button onClick={onConnect} size="sm">
+              Conectar
+            </Button>
+          )}
         </div>
+        {ready ? null : (
+          <button
+            className="mx-3 mb-2 rounded-xl border border-(--chat-accent)/40 bg-(--chat-accent)/10 px-3 py-2 text-left text-xs"
+            onClick={onConnect}
+            type="button"
+          >
+            <b>WhatsApp desconectado.</b> Você está vendo o arquivo salvo. Toque
+            para conectar e receber as mensagens novas.
+          </button>
+        )}
         <div className="px-3 pb-2">
           <Input
             aria-label="Buscar conversa"
@@ -541,6 +570,8 @@ function Inbox({ wa }: { wa: Wa }) {
 export function WhatsappPage() {
   const wa = useWhatsapp();
   const { status } = wa;
+  /** Showing the connect flow instead of the saved archive. */
+  const [connecting, setConnecting] = useState(false);
   if (!status) {
     return <Panel title="Carregando WhatsApp…" />;
   }
@@ -572,11 +603,13 @@ export function WhatsappPage() {
     );
   }
   const state = status.bridge.state;
-  if (state === "ready") {
-    return <Inbox wa={wa} />;
+  const hasArchive = (status.bridge.stats?.messages ?? 0) > 0;
+  if (state === "ready" || (hasArchive && !connecting)) {
+    return <Inbox onConnect={() => setConnecting(true)} wa={wa} />;
   }
+  const back = hasArchive ? () => setConnecting(false) : undefined;
   if (state === "qr") {
-    return <Pair wa={wa} />;
+    return <Pair onBack={back} wa={wa} />;
   }
   return (
     <Panel
@@ -586,6 +619,12 @@ export function WhatsappPage() {
           : "Abrindo o WhatsApp no servidor e restaurando a sessão…"
       }
       title={state === "disconnected" ? "WhatsApp desconectado" : "Iniciando…"}
-    />
+    >
+      {back ? (
+        <Button onClick={back} variant="outline">
+          Ver conversas salvas
+        </Button>
+      ) : null}
+    </Panel>
   );
 }

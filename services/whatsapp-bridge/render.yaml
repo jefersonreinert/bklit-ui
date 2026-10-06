@@ -2,7 +2,7 @@
 # dashboard setup; kept here as documentation of the service settings.
 services:
   - type: web
-    name: casa-brasa-whatsapp
+    name: casa-brasa-wa
     runtime: docker
     plan: free
     region: oregon

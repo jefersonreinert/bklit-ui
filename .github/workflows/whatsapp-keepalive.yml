@@ -16,5 +16,5 @@ jobs:
     steps:
       - name: Ping bridge
         env:
-          BRIDGE_URL: ${{ vars.WHATSAPP_BRIDGE_URL || 'https://casa-brasa-whatsapp.onrender.com' }}
+          BRIDGE_URL: ${{ vars.WHATSAPP_BRIDGE_URL || 'https://casa-brasa-wa.onrender.com' }}
         run: curl -fsS --max-time 90 --retry 2 "$BRIDGE_URL/health" || true
