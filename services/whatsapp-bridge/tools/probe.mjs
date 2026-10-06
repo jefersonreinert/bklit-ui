@@ -19,6 +19,9 @@ const sock = makeWASocket({
   version,
   browser: Browsers.macOS("Desktop"),
   logger: pino({ level: "silent" }),
+  // Same options as the bridge (PROBE_FULL_HISTORY=0 to compare)
+  syncFullHistory: process.env.PROBE_FULL_HISTORY !== "0",
+  markOnlineOnConnect: false,
 });
 sock.ev.on("connection.update", (u) => {
   const code = u.lastDisconnect?.error?.output?.statusCode;
