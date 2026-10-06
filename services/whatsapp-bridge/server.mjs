@@ -314,7 +314,13 @@ function onConnection(socket, u) {
     state.error = u.lastDisconnect?.error?.message ?? null;
     const loggedOut = code === DisconnectReason.loggedOut;
     console.log(
-      `Connection closed (${code ?? "?"})${loggedOut ? ": logged out" : ""}`
+      `Connection closed (${code ?? "?"})${loggedOut ? ": logged out" : ""}`,
+      u.lastDisconnect?.error?.message ?? "",
+      JSON.stringify(
+        u.lastDisconnect?.error?.data ??
+          u.lastDisconnect?.error?.output?.payload ??
+          {}
+      ).slice(0, 300)
     );
     setTimeout(
       () => {
