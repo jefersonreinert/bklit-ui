@@ -33,6 +33,12 @@ export const navItems: NavItem[] = [
     icon: "IconForkKnife",
   },
   {
+    href: "/bebidas",
+    label: "Bebidas",
+    description: "Vinhos, destilados, cervejas e coquetéis",
+    icon: "IconDrink",
+  },
+  {
     href: "/documentos",
     label: "Documentos",
     description: "Licenças, contratos e arquivos",

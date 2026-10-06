@@ -23,7 +23,7 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/30 px-4 backdrop-blur-xl md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/30 px-4 backdrop-blur-xl md:px-6 print:hidden">
       <Sheet onOpenChange={setOpen} open={open}>
         <SheetTrigger
           render={

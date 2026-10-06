@@ -368,3 +368,27 @@
     cursor: pointer;
   }
 }
+
+/* Printing (Carta completa): always ink on white paper, whatever the theme */
+@media print {
+  :root,
+  .dark,
+  .beige,
+  .light {
+    color-scheme: light;
+    --background: #fff;
+    --foreground: #111;
+    --card: #fff;
+    --card-foreground: #111;
+    --muted: #f2f2f2;
+    --muted-foreground: #555;
+    --border: #ddd;
+  }
+  .ambient-glow {
+    display: none;
+  }
+  .acrylic {
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
