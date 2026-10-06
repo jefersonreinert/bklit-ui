@@ -2,6 +2,7 @@
 
 import { Icon } from "@bklitui/icons";
 import { useEffect, useState } from "react";
+import { ServiceTile } from "@/components/dashboard/service-logos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,9 +122,7 @@ function NotionCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-5" name="IconNotion" />
-        </span>
+        <ServiceTile brand="notion" />
         <div className="min-w-0 flex-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
             Notion
@@ -237,8 +236,9 @@ function GoogleCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-5" name="IconGoogle" />
+        <span className="flex shrink-0 -space-x-2">
+          <ServiceTile brand="gmail" />
+          <ServiceTile brand="drive" />
         </span>
         <div className="min-w-0 flex-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
@@ -298,9 +298,7 @@ function YoutubeCard({ status }: { status: ConnectorsStatus | null }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-5" name="IconYoutube" />
-        </span>
+        <ServiceTile brand="youtube" />
         <div className="min-w-0 flex-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
             YouTube

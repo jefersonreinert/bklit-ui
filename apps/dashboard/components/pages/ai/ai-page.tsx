@@ -10,6 +10,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { BrandLogo } from "@/components/dashboard/brand-logo";
+import {
+  type ServiceBrand,
+  ServiceLogo,
+  ServiceTile,
+} from "@/components/dashboard/service-logos";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -202,7 +208,7 @@ const SUGGESTIONS: { icon: IconName; label: string; prompt: string }[] = [
 /* Peças visuais                                                              */
 /* -------------------------------------------------------------------------- */
 
-/** Clay asterisk mark used as the assistant avatar. */
+/** Assistant avatar: the app logo chosen in Configurações. */
 function Spark({
   className,
   spinning,
@@ -211,28 +217,9 @@ function Spark({
   spinning?: boolean;
 }) {
   return (
-    <svg
-      aria-hidden="true"
-      className={cn(
-        "shrink-0",
-        spinning && "animate-[spin_3s_linear_infinite]",
-        className
-      )}
-      fill={CLAY}
-      viewBox="0 0 24 24"
-    >
-      {[0, 30, 60, 90, 120, 150].map((deg) => (
-        <rect
-          height="22"
-          key={deg}
-          rx="1.6"
-          transform={`rotate(${deg} 12 12)`}
-          width="3.2"
-          x="10.4"
-          y="1"
-        />
-      ))}
-    </svg>
+    <BrandLogo
+      className={cn("rounded-md", spinning && "animate-pulse", className)}
+    />
   );
 }
 
@@ -368,19 +355,16 @@ function Composer({
 type ConnectorKey = "notion" | "gmail" | "drive" | "youtube";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
-const CONNECTOR_ROWS: { key: ConnectorKey; label: string; icon: IconName }[] = [
-  { key: "notion", label: "Notion", icon: "IconNotion" },
-  { key: "gmail", label: "Gmail", icon: "IconEmail1" },
-  { key: "drive", label: "Google Drive", icon: "IconFolder1" },
-  { key: "youtube", label: "YouTube", icon: "IconYoutube" },
+const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
+  { key: "notion", label: "Notion" },
+  { key: "gmail", label: "Gmail" },
+  { key: "drive", label: "Google Drive" },
+  { key: "youtube", label: "YouTube" },
 ];
 
-const SERVER_ICONS: Record<string, IconName> = {
-  notion: "IconNotion",
-  gmail: "IconEmail1",
-  drive: "IconFolder1",
-  youtube: "IconYoutube",
-};
+const SERVICE_KEYS = new Set<string>(["notion", "gmail", "drive", "youtube"]);
+const isService = (server: string): server is ServiceBrand =>
+  SERVICE_KEYS.has(server);
 
 function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (!status) {
@@ -450,7 +434,7 @@ function ConnectorsMenu({
       >
         <Icon className="size-4" name="IconConnectors1" />
         {active.map((r) => (
-          <Icon className="size-3.5" key={r.key} name={r.icon} />
+          <ServiceLogo brand={r.key} className="size-3.5" key={r.key} />
         ))}
         {active.length === 1 ? (
           <span className="text-xs">{active[0]?.label}</span>
@@ -468,9 +452,7 @@ function ConnectorsMenu({
           const connected = isConnected(status, r.key);
           return (
             <div className="flex items-center gap-3" key={r.key}>
-              <span className="flex size-8 items-center justify-center rounded-lg bg-muted">
-                <Icon className="size-4" name={r.icon} />
-              </span>
+              <ServiceTile brand={r.key} className="size-8 rounded-lg" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{r.label}</p>
                 <p className="truncate text-muted-foreground text-xs">
@@ -516,13 +498,23 @@ function ToolChips({ tools }: { tools: ToolUse[] }) {
           )}
           key={`${t.name}-${i}`}
         >
-          <Icon
-            className={cn(
-              "size-3.5",
-              t.status === "running" && "animate-pulse"
-            )}
-            name={SERVER_ICONS[t.server] ?? "IconConnectors1"}
-          />
+          {isService(t.server) ? (
+            <ServiceLogo
+              brand={t.server}
+              className={cn(
+                "size-3.5",
+                t.status === "running" && "animate-pulse"
+              )}
+            />
+          ) : (
+            <Icon
+              className={cn(
+                "size-3.5",
+                t.status === "running" && "animate-pulse"
+              )}
+              name="IconConnectors1"
+            />
+          )}
           {toolLabel(t.name)}
           {t.status === "done" ? (
             <Icon className="size-3" name="IconCheckmark1Small" />
@@ -1025,8 +1017,9 @@ export function AiPage() {
           >
             <Icon className="size-4" name="IconHistory" />
           </Button>
+          {/* The app header already says "Assistente IA" */}
           <p className="min-w-0 flex-1 truncate font-medium text-sm">
-            {active ? active.title : "Assistente IA"}
+            {active?.title}
           </p>
           <button
             aria-pressed={demoMode}
