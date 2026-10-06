@@ -52,7 +52,12 @@ const NOTION_INSTRUCTIONS = `O workspace do Notion da gerente está conectado (s
 
 interface ChatRequest {
   model?: string;
-  messages?: { role: "user" | "assistant"; content: string }[];
+  messages?: {
+    role: "user" | "assistant";
+    content: string;
+    /** Photos (base64) sent with a user message. */
+    images?: { media_type?: string; data?: string }[];
+  }[];
   connectors?: string[];
   user?: { name?: string; role?: string };
   /** "voice" = the reply will be spoken aloud (Voz page). */
@@ -140,16 +145,79 @@ function isModel(id: string | undefined): id is AiModelId {
   return AI_MODELS.some((m) => m.id === id);
 }
 
-function sanitizeHistory(messages: ChatRequest["messages"]) {
-  return (messages ?? [])
+const IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_IMAGES = 10;
+const MAX_IMAGE_B64 = 5_000_000;
+
+type HistoryMessage = Anthropic.Beta.BetaMessageParam;
+type ImageMediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+
+/** Valid photos of a message, as image blocks (newest messages get priority). */
+function imageBlocks(
+  images: NonNullable<ChatRequest["messages"]>[number]["images"],
+  budget: { left: number }
+) {
+  const blocks: Anthropic.Beta.BetaImageBlockParam[] = [];
+  for (const img of images ?? []) {
+    if (
+      budget.left > 0 &&
+      typeof img.data === "string" &&
+      img.data.length > 0 &&
+      img.data.length <= MAX_IMAGE_B64 &&
+      IMAGE_TYPES.has(img.media_type ?? "")
+    ) {
+      budget.left -= 1;
+      blocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: img.media_type as ImageMediaType,
+          data: img.data,
+        },
+      });
+    }
+  }
+  return blocks;
+}
+
+function sanitizeHistory(messages: ChatRequest["messages"]): HistoryMessage[] {
+  const kept = (messages ?? [])
     .filter(
       (m) =>
         (m.role === "user" || m.role === "assistant") &&
         typeof m.content === "string" &&
-        m.content.trim().length > 0
+        (m.content.trim().length > 0 ||
+          (m.role === "user" && (m.images?.length ?? 0) > 0))
     )
-    .slice(-MAX_MESSAGES)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
+    .slice(-MAX_MESSAGES);
+  const budget = { left: MAX_IMAGES };
+  // Walk newest → oldest so recent photos win the image budget
+  const out: HistoryMessage[] = [];
+  for (let i = kept.length - 1; i >= 0; i--) {
+    const m = kept[i];
+    if (!m) {
+      continue;
+    }
+    const text = m.content.slice(0, MAX_CHARS);
+    const images = m.role === "user" ? imageBlocks(m.images, budget) : [];
+    out.unshift(
+      images.length > 0
+        ? {
+            role: m.role,
+            content: [
+              ...images,
+              { type: "text", text: text || "Analise esta imagem." },
+            ],
+          }
+        : { role: m.role, content: text || "(imagem)" }
+    );
+  }
+  return out;
 }
 
 async function resolveNotion(request: NextRequest, out: Connectors) {

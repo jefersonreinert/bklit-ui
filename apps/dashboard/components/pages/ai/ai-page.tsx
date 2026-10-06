@@ -43,6 +43,15 @@ import {
   useConnectors,
 } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
+import {
+  AttachmentStrip,
+  CameraSheet,
+  type ImageAttachment,
+  imageFromFile,
+  MAX_ATTACHMENTS,
+  toApiImage,
+  useDictation,
+} from "./attachments";
 import { Markdown } from "./markdown";
 
 /* -------------------------------------------------------------------------- */
@@ -59,6 +68,8 @@ interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** Photos sent with a user message. */
+  images?: ImageAttachment[];
   /** MCP tool calls made while answering (e.g. Notion search). */
   tools?: ToolUse[];
 }
@@ -160,11 +171,44 @@ function loadConversations(): Conversation[] {
 
 function saveConversations(list: Conversation[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 30)));
+    // Full-size photos stay in memory; the saved history keeps thumbnails
+    const slim = list.slice(0, 30).map((c) => ({
+      ...c,
+      messages: c.messages.map((m) =>
+        m.images
+          ? { ...m, images: m.images.map(({ id, thumb }) => ({ id, thumb })) }
+          : m
+      ),
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
   } catch {
     // storage unavailable (private mode) — history just won't persist
   }
 }
+
+/**
+ * Messages for /api/chat. Photos of the two most recent photo messages go in
+ * full size; older ones as thumbnails (keeps the request small).
+ */
+function toApiMessages(history: ChatMessage[]) {
+  const withPhotos = history
+    .map((m, i) => (m.images?.length ? i : -1))
+    .filter((i) => i >= 0);
+  const recent = new Set(withPhotos.slice(-2));
+  return history.map((m, i) => ({
+    role: m.role,
+    content: m.content,
+    ...(m.images?.length
+      ? {
+          images: m.images.map((a) =>
+            toApiImage((recent.has(i) && a.full) || a.thumb)
+          ),
+        }
+      : {}),
+  }));
+}
+
+const IMAGE_EXT = /\.(heic|heif|jpe?g|png|webp|gif)$/i;
 
 const uid = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -209,6 +253,33 @@ const SUGGESTIONS: { icon: IconName; label: string; prompt: string }[] = [
 /* -------------------------------------------------------------------------- */
 
 /** Assistant avatar: the app logo chosen in Configurações. */
+function UserBubble({ message: m }: { message: ChatMessage }) {
+  return (
+    <div className="flex max-w-[85%] flex-col items-end gap-1.5">
+      {m.images?.length ? (
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {m.images.map((a) => (
+            // biome-ignore lint/performance/noImgElement: local data URL
+            <img
+              alt="Imagem enviada"
+              className="max-h-48 rounded-2xl border object-cover"
+              height={192}
+              key={a.id}
+              src={a.full ?? a.thumb}
+              width={192}
+            />
+          ))}
+        </div>
+      ) : null}
+      {m.content ? (
+        <div className="whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-[15px] leading-relaxed">
+          {m.content}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function Spark({
   className,
   spinning,
@@ -270,8 +341,17 @@ function Composer({
   onModelChange,
   connectors,
   autoFocus,
+  extras,
+  preview,
+  canSend,
 }: {
   connectors: ReactNode;
+  /** Attach / camera / microphone buttons. */
+  extras?: ReactNode;
+  /** Attached photos and live dictation, above the text box. */
+  preview?: ReactNode;
+  /** Something besides text can be sent (photos). */
+  canSend?: boolean;
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
@@ -296,7 +376,7 @@ function Composer({
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (!streaming && value.trim()) {
+      if (!streaming && (value.trim() || canSend)) {
         onSubmit();
       }
     }
@@ -306,7 +386,7 @@ function Composer({
     e.preventDefault();
     if (streaming) {
       onStop();
-    } else if (value.trim()) {
+    } else if (value.trim() || canSend) {
       onSubmit();
     }
   };
@@ -316,6 +396,7 @@ function Composer({
       className="acrylic flex flex-col gap-2 rounded-[20px] border bg-card p-3 shadow-sm transition-shadow focus-within:shadow-md"
       onSubmit={submit}
     >
+      {preview}
       <textarea
         aria-label="Mensagem para o assistente"
         autoFocus={autoFocus}
@@ -329,15 +410,16 @@ function Composer({
       />
       <div className="flex items-center gap-1">
         {connectors}
+        {extras}
         <div className="ml-auto flex items-center gap-1">
           <ModelSelect onChange={onModelChange} value={model} />
           <button
             aria-label={streaming ? "Parar resposta" : "Enviar mensagem"}
             className={cn(
               "flex size-8 items-center justify-center rounded-lg text-white transition-opacity",
-              !(streaming || value.trim()) && "opacity-40"
+              !(streaming || value.trim() || canSend) && "opacity-40"
             )}
-            disabled={!(streaming || value.trim())}
+            disabled={!(streaming || value.trim() || canSend)}
             style={{ backgroundColor: CLAY }}
             type="submit"
           >
@@ -677,6 +759,12 @@ export function AiPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const dictation = useDictation((text) =>
+    setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+  );
   const [model, setModel] = useState<AiModelId>(DEFAULT_MODEL);
   const [streaming, setStreaming] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
@@ -859,7 +947,7 @@ export function AiPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: chosenModel,
-            messages: history.map(({ role, content }) => ({ role, content })),
+            messages: toApiMessages(history),
             connectors: activeKey ? activeKey.split(",") : [],
             user: { name: profile.name, role: profile.role },
           }),
@@ -918,10 +1006,16 @@ export function AiPage() {
   const send = useCallback(
     (text: string) => {
       const content = text.trim();
-      if (!content || streaming) {
+      const images = attachments;
+      if (!(content || images.length) || streaming) {
         return;
       }
-      const userMsg: ChatMessage = { id: uid(), role: "user", content };
+      const userMsg: ChatMessage = {
+        id: uid(),
+        role: "user",
+        content,
+        ...(images.length ? { images } : {}),
+      };
       let convId = activeId;
       let history: ChatMessage[];
       if (active && convId) {
@@ -931,7 +1025,9 @@ export function AiPage() {
         history = [userMsg];
         const conv: Conversation = {
           id: convId,
-          title: content.length > 48 ? `${content.slice(0, 48)}…` : content,
+          title:
+            (content.length > 48 ? `${content.slice(0, 48)}…` : content) ||
+            "Imagem",
           model,
           updatedAt: Date.now(),
           messages: history,
@@ -944,10 +1040,12 @@ export function AiPage() {
         setActiveId(convId);
       }
       setDraft("");
+      setAttachments([]);
+      dictation.stop();
       // Let the new conversation land in state before streaming into it
       setTimeout(() => run(convId as string, history, model), 0);
     },
-    [active, activeId, model, run, streaming]
+    [active, activeId, model, run, streaming, attachments, dictation.stop]
   );
 
   const retry = () => {
@@ -994,6 +1092,97 @@ export function AiPage() {
     <ConnectorsMenu onChange={changePref} prefs={prefs} status={connectors} />
   );
 
+  const addFiles = async (files: FileList | null) => {
+    setAttachError(null);
+    const room = MAX_ATTACHMENTS - attachments.length;
+    const picked = Array.from(files ?? [])
+      .filter((f) => f.type.startsWith("image/") || f.name.match(IMAGE_EXT))
+      .slice(0, Math.max(0, room));
+    if (files && files.length > picked.length) {
+      setAttachError(`Até ${MAX_ATTACHMENTS} imagens por mensagem.`);
+    }
+    for (const file of picked) {
+      try {
+        const a = await imageFromFile(file);
+        setAttachments((list) => [...list, a].slice(0, MAX_ATTACHMENTS));
+      } catch {
+        setAttachError("Não consegui abrir uma das imagens.");
+      }
+    }
+  };
+
+  const composerExtras = (
+    <>
+      <label
+        className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        title="Enviar fotos ou imagens"
+      >
+        <span className="sr-only">Enviar fotos ou imagens</span>
+        <input
+          accept="image/*"
+          className="sr-only"
+          multiple
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
+          }}
+          type="file"
+        />
+        <Icon className="size-4" name="IconImages1" />
+      </label>
+      <button
+        aria-label="Abrir a câmera"
+        className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        onClick={() => setCameraOpen(true)}
+        title="Abrir a câmera"
+        type="button"
+      >
+        <Icon className="size-4" name="IconCamera1" />
+      </button>
+      <button
+        aria-label={
+          dictation.listening ? "Parar o ditado" : "Ditar pelo microfone"
+        }
+        aria-pressed={dictation.listening}
+        className={cn(
+          "flex size-8 items-center justify-center rounded-lg transition-colors",
+          dictation.listening
+            ? "animate-pulse text-white"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+        onClick={dictation.toggle}
+        style={dictation.listening ? { backgroundColor: CLAY } : undefined}
+        title="Ditar pelo microfone"
+        type="button"
+      >
+        <Icon className="size-4" name="IconMicrophone" />
+      </button>
+    </>
+  );
+
+  const composerPreview = (
+    <>
+      <AttachmentStrip
+        items={attachments}
+        onRemove={(id) => setAttachments((l) => l.filter((a) => a.id !== id))}
+      />
+      {dictation.listening ? (
+        <p className="flex items-center gap-2 px-1.5 text-muted-foreground text-xs">
+          <span
+            className="size-2 animate-pulse rounded-full"
+            style={{ backgroundColor: CLAY }}
+          />
+          {dictation.interim || "Ouvindo… fale normalmente"}
+        </p>
+      ) : null}
+      {dictation.error || attachError ? (
+        <p className="px-1.5 text-destructive text-xs">
+          {dictation.error ?? attachError}
+        </p>
+      ) : null}
+    </>
+  );
+
   const history = (
     <HistoryList
       activeId={activeId}
@@ -1009,6 +1198,14 @@ export function AiPage() {
 
   return (
     <div className="-m-4 flex h-[calc(100dvh-var(--header-h)-env(safe-area-inset-bottom))] md:-m-6">
+      {cameraOpen ? (
+        <CameraSheet
+          onCapture={(a) =>
+            setAttachments((l) => [...l, a].slice(0, MAX_ATTACHMENTS))
+          }
+          onClose={() => setCameraOpen(false)}
+        />
+      ) : null}
       {/* Histórico (desktop) */}
       <aside className="hidden w-64 shrink-0 border-r p-3 xl:block">
         {history}
@@ -1084,12 +1281,15 @@ export function AiPage() {
             <div className="w-full max-w-2xl">
               <Composer
                 autoFocus
+                canSend={attachments.length > 0}
                 connectors={connectorsMenu}
+                extras={composerExtras}
                 model={model}
                 onChange={setDraft}
                 onModelChange={setModel}
                 onStop={() => abortRef.current?.abort()}
                 onSubmit={() => send(draft)}
+                preview={composerPreview}
                 streaming={streaming}
                 value={draft}
               />
@@ -1125,9 +1325,7 @@ export function AiPage() {
                   if (m.role === "user") {
                     return (
                       <div className="flex justify-end" key={m.id}>
-                        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-[15px] leading-relaxed">
-                          {m.content}
-                        </div>
+                        <UserBubble message={m} />
                       </div>
                     );
                   }
@@ -1171,12 +1369,15 @@ export function AiPage() {
             </div>
             <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-4">
               <Composer
+                canSend={attachments.length > 0}
                 connectors={connectorsMenu}
+                extras={composerExtras}
                 model={model}
                 onChange={setDraft}
                 onModelChange={setModel}
                 onStop={() => abortRef.current?.abort()}
                 onSubmit={() => send(draft)}
+                preview={composerPreview}
                 streaming={streaming}
                 value={draft}
               />
