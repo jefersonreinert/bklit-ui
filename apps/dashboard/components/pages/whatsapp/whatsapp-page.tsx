@@ -95,6 +95,18 @@ function Unlock({ wa }: { wa: Wa }) {
   );
 }
 
+/** "Gerado agora · vale por ~3 min" style hint for the pairing code. */
+function pairingAge(at: number | null | undefined) {
+  if (!at) {
+    return "Vale por cerca de 3 minutos.";
+  }
+  const min = Math.floor((Date.now() - at) / 60_000);
+  const left = Math.max(0, 3 - min);
+  return min < 1
+    ? "Gerado agora · vale por cerca de 3 minutos."
+    : `Gerado há ${min} min · ${left > 0 ? `vale por mais ~${left} min.` : "pode ter expirado."}`;
+}
+
 const PAIR_STEPS: string[] = [
   "Abra o WhatsApp no iPhone",
   "Toque em Configurações → Aparelhos conectados → Conectar um aparelho",
@@ -149,7 +161,9 @@ function Pair({ wa, onBack }: { wa: Wa; onBack?: () => void }) {
             ))}
           </ol>
           <p className="text-muted-foreground text-xs">
-            O código vale por alguns minutos; se expirar, gere outro.
+            {pairingAge(wa.status?.bridge?.pairingAt)} Se o WhatsApp disser “Não
+            foi possível conectar”, gere um código novo e digite logo em
+            seguida.
           </p>
         </div>
       ) : null}

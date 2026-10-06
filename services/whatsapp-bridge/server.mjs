@@ -309,10 +309,14 @@ function onConnection(socket, u) {
     };
     retryMs = 3000;
     console.log("WhatsApp ready");
+    state.pairingAt = null;
   }
   if (u.connection === "close") {
     const code = u.lastDisconnect?.error?.output?.statusCode;
     state.status = "disconnected";
+    // A pairing code belongs to the socket that issued it
+    state.pairingCode = null;
+    state.pairingAt = null;
     state.me = null;
     state.error = u.lastDisconnect?.error?.message ?? null;
     const loggedOut = code === DisconnectReason.loggedOut;
@@ -357,6 +361,9 @@ async function start() {
     // syncFullHistory makes WhatsApp refuse new devices (428); the normal
     // initial sync brings recent history and older pages come on demand
     syncFullHistory: process.env.FULL_HISTORY === "1",
+    // Each QR/pairing ref lives 3 min, so a pairing code stays valid long
+    // enough to type it (the socket restarts when the refs run out)
+    qrTimeout: 180_000,
     markOnlineOnConnect: false,
     getMessage: async (key) =>
       (await messageRaw(key.remoteJid, key.id).catch(() => null))?.raw
@@ -597,6 +604,7 @@ const routes = {
     state: state.status,
     qr: null,
     pairingCode: state.pairingCode,
+    pairingAt: state.pairingAt ?? null,
     me: state.me,
     error: state.error,
     sync: state.sync,
@@ -612,6 +620,8 @@ const routes = {
     }
     const code = await sock.requestPairingCode(phone);
     state.pairingCode = code;
+    state.pairingAt = Date.now();
+    console.log("Pairing code issued");
     return { code };
   },
   "POST /logout": async () => {

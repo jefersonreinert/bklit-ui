@@ -8,6 +8,8 @@ export interface WaBridgeStatus {
   qr: string | null;
   /** 8-character code for "Link with phone number". */
   pairingCode: string | null;
+  /** When the code was issued (ms); it is valid for a few minutes. */
+  pairingAt?: number | null;
   me: { name: string | null; number: string | null } | null;
   error: string | null;
   /** History sync from the phone. */
