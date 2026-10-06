@@ -1,6 +1,11 @@
 # WhatsApp bridge (Baileys, no browser) — Render free web service
 FROM node:22-bookworm-slim
 
+# git: some Baileys dependencies are fetched from GitHub
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production \
     PORT=10000
 
