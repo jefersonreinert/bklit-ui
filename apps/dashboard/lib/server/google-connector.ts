@@ -20,7 +20,11 @@ export const GOOGLE_SCOPES = [
   // Read, label, draft and send (no permanent delete)
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/drive.readonly",
+  // Your channel, playlists (incl. private), subscriptions and likes
+  "https://www.googleapis.com/auth/youtube.readonly",
 ];
+
+export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
 
 export const GOOGLE_COOKIE = "cb_conn_google";
 export const GOOGLE_PENDING_COOKIE = "cb_oauth_google";
@@ -35,7 +39,12 @@ export interface GoogleConnection {
   email: string;
   name: string | null;
   connectedAt: number;
+  /** Scopes the user actually granted (older connections: undefined). */
+  scopes?: string[];
 }
+
+export const hasScope = (c: GoogleConnection | null, scope: string) =>
+  Boolean(c?.scopes?.includes(scope));
 
 interface PendingAuth {
   state: string;
@@ -145,8 +154,8 @@ export async function finishGoogleAuthorization(request: NextRequest) {
     code_verifier: pending.verifier,
   });
   const scopes = (params.get("scope") ?? "").split(" ");
-  if (!scopes.some((s) => s.endsWith("/gmail.modify"))) {
-    // The user unticked Gmail on the consent screen
+  if (!scopes.some((s) => GOOGLE_SCOPES.slice(3).includes(s))) {
+    // The user unticked every service on the consent screen
     throw new Error("missing_scopes");
   }
   const info = await fetch(USERINFO_URL, {
@@ -162,6 +171,7 @@ export async function finishGoogleAuthorization(request: NextRequest) {
     email: profile.email ?? "",
     name: profile.name ?? null,
     connectedAt: Date.now(),
+    scopes,
   };
   return { connection, returnTo: pending.returnTo };
 }
@@ -188,6 +198,8 @@ export type GoogleSession =
       token: string;
       updated: GoogleConnection | null;
       email: string;
+      /** The login includes YouTube (youtube.readonly). */
+      youtube: boolean;
     }
   | { status: "none" }
   | { status: "revoked" }
@@ -210,6 +222,7 @@ export async function googleSession(
       token: connection.accessToken,
       updated: null,
       email: connection.email,
+      youtube: hasScope(connection, YOUTUBE_SCOPE),
     };
   }
   if (!connection.refreshToken) {
@@ -231,6 +244,7 @@ export async function googleSession(
       token: updated.accessToken,
       updated,
       email: updated.email,
+      youtube: hasScope(updated, YOUTUBE_SCOPE),
     };
   } catch (error) {
     return error instanceof GoogleTokenError && error.code === "invalid_grant"

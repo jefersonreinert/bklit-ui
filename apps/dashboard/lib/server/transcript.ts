@@ -9,6 +9,9 @@ import type { YtTranscript, YtTranscriptSegment } from "@/lib/youtube-types";
 
 const API = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-3.8-flash";
+/** Tried in order when a model is overloaded (503) or rate limited (429). */
+const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.7-flash"];
+const RETRYABLE = new Set([429, 500, 503]);
 const LINE = /^\s*\[?(\d{1,2}:)?(\d{1,2}):(\d{2})\]?\s*[-–—:]?\s*(.*)$/;
 
 const PROMPT = `Transcreva INTEGRALMENTE a fala deste vídeo, do início ao fim, no idioma original falado.
@@ -57,42 +60,39 @@ interface GeminiResponse {
   error?: { message?: string; status?: string };
 }
 
-export async function transcribeVideo(videoId: string): Promise<YtTranscript> {
-  const key = geminiKey();
-  if (!key) {
-    throw new TranscriptError(503, "GEMINI_API_KEY não configurada");
-  }
-  const model = geminiModel();
+function requestBody(videoId: string) {
+  return JSON.stringify({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            file_data: {
+              file_uri: `https://www.youtube.com/watch?v=${videoId}`,
+            },
+          },
+          { text: PROMPT },
+        ],
+      },
+    ],
+    generationConfig: { temperature: 0, maxOutputTokens: 65_536 },
+  });
+}
+
+async function callModel(model: string, key: string, videoId: string) {
   const res = await fetch(
     `${API}/${encodeURIComponent(model)}:generateContent`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                file_data: {
-                  file_uri: `https://www.youtube.com/watch?v=${videoId}`,
-                },
-              },
-              { text: PROMPT },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0, maxOutputTokens: 65_536 },
-      }),
+      body: requestBody(videoId),
     }
   );
   const body = (await res.json().catch(() => ({}))) as GeminiResponse;
-  if (!res.ok) {
-    throw new TranscriptError(
-      res.status,
-      body.error?.message ?? `Gemini respondeu ${res.status}`
-    );
-  }
+  return { status: res.status, ok: res.ok, body };
+}
+
+function extractText(model: string, videoId: string, body: GeminiResponse) {
   if (body.promptFeedback?.blockReason) {
     throw new TranscriptError(
       422,
@@ -107,9 +107,36 @@ export async function transcribeVideo(videoId: string): Promise<YtTranscript> {
   if (!text) {
     throw new TranscriptError(502, "O Gemini não devolveu a transcrição.");
   }
-  const truncated = candidate?.finishReason === "MAX_TOKENS";
-  const full = truncated
-    ? `${text}\n[transcrição cortada: vídeo muito longo]`
-    : text;
+  const full =
+    candidate?.finishReason === "MAX_TOKENS"
+      ? `${text}\n[transcrição cortada: vídeo muito longo]`
+      : text;
   return { videoId, segments: parseSegments(full), text: full, model };
+}
+
+export async function transcribeVideo(videoId: string): Promise<YtTranscript> {
+  const key = geminiKey();
+  if (!key) {
+    throw new TranscriptError(503, "GEMINI_API_KEY não configurada");
+  }
+  const models = [...new Set([geminiModel(), ...FALLBACK_MODELS])];
+  let last: { status: number; body: GeminiResponse } | null = null;
+  for (const model of models) {
+    const res = await callModel(model, key, videoId);
+    if (res.ok) {
+      return extractText(model, videoId, res.body);
+    }
+    last = res;
+    // Overloaded or retired model → try the next one; anything else is final
+    if (!(RETRYABLE.has(res.status) || res.status === 404)) {
+      break;
+    }
+  }
+  const status = last?.status ?? 502;
+  throw new TranscriptError(
+    status,
+    status === 503
+      ? "O Gemini está sobrecarregado agora. Tente de novo em instantes."
+      : (last?.body.error?.message ?? `Gemini respondeu ${status}`)
+  );
 }

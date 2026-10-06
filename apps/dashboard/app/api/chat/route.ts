@@ -54,7 +54,7 @@ type BetaMessage = Anthropic.Beta.BetaMessage;
 
 interface Connectors {
   notion: { token: string } | null;
-  google: { token: string; email: string } | null;
+  google: { token: string; email: string; youtube: boolean } | null;
   gmail: boolean;
   drive: boolean;
   /** Public YouTube data; needs only the server's API key. */
@@ -138,7 +138,11 @@ async function resolveGoogle(
 ) {
   const session = await googleSession(request);
   if (session.status === "ok") {
-    out.google = { token: session.token, email: session.email };
+    out.google = {
+      token: session.token,
+      email: session.email,
+      youtube: session.youtube,
+    };
     out.gmail = wants.gmail;
     out.drive = wants.drive;
     if (session.updated) {
@@ -181,7 +185,9 @@ async function resolveConnectors(
   };
   await Promise.all([
     wants.notion ? resolveNotion(request, out) : null,
-    wants.gmail || wants.drive ? resolveGoogle(request, out, wants) : null,
+    wants.gmail || wants.drive || out.youtube
+      ? resolveGoogle(request, out, wants)
+      : null,
   ]);
   return out;
 }
@@ -208,7 +214,7 @@ function buildParams(
       ? [{ type: "mcp_toolset" as const, mcp_server_name: "notion" }]
       : []),
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
-    ...(c.youtube ? youtubeTools() : []),
+    ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
   ];
   return {
     model,
@@ -288,7 +294,11 @@ async function streamOnce(
 
 function runClientTool(c: Connectors, name: string, input: unknown) {
   if (c.youtube && isYoutubeTool(name)) {
-    return runYoutubeTool(name, input);
+    return runYoutubeTool(
+      name,
+      input,
+      c.google?.youtube ? c.google.token : undefined
+    );
   }
   if (c.google && isGoogleTool(name)) {
     return runGoogleTool(c.google.token, name, input);

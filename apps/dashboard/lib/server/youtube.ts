@@ -31,20 +31,31 @@ export class YoutubeError extends Error {
 
 export const youtubeKey = () => process.env.YOUTUBE_API_KEY || null;
 
-async function yt<T>(path: string, params: Record<string, string | undefined>) {
+/**
+ * `token` = the user's Google OAuth token (their own channel, private
+ * playlists, subscriptions); otherwise the server API key is used.
+ */
+async function yt<T>(
+  path: string,
+  params: Record<string, string | undefined>,
+  token?: string
+) {
   const key = youtubeKey();
-  if (!key) {
+  if (!(key || token)) {
     throw new YoutubeError(503, "YOUTUBE_API_KEY não configurada");
   }
-  const query = new URLSearchParams({ key });
+  const query = new URLSearchParams(token ? {} : { key: key ?? "" });
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== "") {
       query.set(k, v);
     }
   }
-  const res = await fetch(`${API}/${path}?${query}`, {
-    next: { revalidate: 600 },
-  });
+  const res = await fetch(
+    `${API}/${path}?${query}`,
+    token
+      ? { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
+      : { next: { revalidate: 600 } }
+  );
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as {
       error?: { message?: string; errors?: { reason?: string }[] };
@@ -119,15 +130,22 @@ function toVideo(v: RawVideo): YtVideo {
 }
 
 /** Full details for up to 50 ids per call (1 unit each call). */
-export async function videosByIds(ids: string[]): Promise<YtVideo[]> {
+export async function videosByIds(
+  ids: string[],
+  token?: string
+): Promise<YtVideo[]> {
   const out: YtVideo[] = [];
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
-    const res = await yt<{ items?: RawVideo[] }>("videos", {
-      part: "snippet,contentDetails,statistics",
-      id: chunk.join(","),
-      maxResults: "50",
-    });
+    const res = await yt<{ items?: RawVideo[] }>(
+      "videos",
+      {
+        part: "snippet,contentDetails,statistics",
+        id: chunk.join(","),
+        maxResults: "50",
+      },
+      token
+    );
     const byId = new Map((res.items ?? []).map((v) => [v.id, toVideo(v)]));
     for (const id of chunk) {
       const video = byId.get(id);
@@ -289,15 +307,21 @@ const toPlaylist = (p: RawPlaylist): YtPlaylistSummary => ({
   publishedAt: p.snippet?.publishedAt ?? "",
 });
 
-export async function channelPlaylists(channelId: string, pageToken?: string) {
+export async function channelPlaylists(
+  channelId: string,
+  pageToken?: string,
+  token?: string
+) {
   const res = await yt<{ items?: RawPlaylist[]; nextPageToken?: string }>(
     "playlists",
     {
       part: "snippet,contentDetails",
-      channelId,
+      // "mine" lists private playlists too (needs the user's token)
+      ...(channelId === "mine" ? { mine: "true" } : { channelId }),
       maxResults: "50",
       pageToken,
-    }
+    },
+    token
   );
   return {
     playlists: (res.items ?? []).map(toPlaylist),
@@ -308,12 +332,14 @@ export async function channelPlaylists(channelId: string, pageToken?: string) {
 /** Playlist info plus its videos (with durations) and the total length. */
 export async function playlistDetails(
   id: string,
-  limit = MAX_PLAYLIST_ITEMS
+  limit = MAX_PLAYLIST_ITEMS,
+  token?: string
 ): Promise<YtPlaylist> {
-  const meta = await yt<{ items?: RawPlaylist[] }>("playlists", {
-    part: "snippet,contentDetails",
-    id,
-  });
+  const meta = await yt<{ items?: RawPlaylist[] }>(
+    "playlists",
+    { part: "snippet,contentDetails", id },
+    token
+  );
   const raw = meta.items?.[0];
   if (!raw) {
     throw new YoutubeError(404, "Playlist não encontrada ou privada");
@@ -324,12 +350,11 @@ export async function playlistDetails(
     const page = await yt<{
       items?: { contentDetails?: { videoId?: string } }[];
       nextPageToken?: string;
-    }>("playlistItems", {
-      part: "contentDetails",
-      playlistId: id,
-      maxResults: "50",
-      pageToken,
-    });
+    }>(
+      "playlistItems",
+      { part: "contentDetails", playlistId: id, maxResults: "50", pageToken },
+      token
+    );
     for (const item of page.items ?? []) {
       if (item.contentDetails?.videoId) {
         ids.push(item.contentDetails.videoId);
@@ -337,7 +362,7 @@ export async function playlistDetails(
     }
     pageToken = page.nextPageToken;
   } while (pageToken && ids.length < limit);
-  const videos = await videosByIds(ids.slice(0, limit));
+  const videos = await videosByIds(ids.slice(0, limit), token);
   const summary = toPlaylist(raw);
   return {
     ...summary,
@@ -345,5 +370,67 @@ export async function playlistDetails(
     videos,
     totalDuration: videos.reduce((sum, v) => sum + v.duration, 0),
     truncated: summary.itemCount > videos.length,
+  };
+}
+
+export interface YtSubscription {
+  channelId: string;
+  title: string;
+  thumbnail: string;
+}
+
+/** The signed-in user's channel, playlists, subscriptions and liked videos. */
+export async function myLibrary(token: string) {
+  const [channels, playlists, subs, liked] = await Promise.all([
+    yt<{ items?: RawChannel[] }>(
+      "channels",
+      { part: "snippet,statistics,contentDetails", mine: "true" },
+      token
+    ),
+    channelPlaylists("mine", undefined, token),
+    yt<{
+      items?: {
+        snippet?: {
+          title?: string;
+          thumbnails?: Thumbs;
+          resourceId?: { channelId?: string };
+        };
+      }[];
+    }>(
+      "subscriptions",
+      { part: "snippet", mine: "true", maxResults: "50", order: "relevance" },
+      token
+    ),
+    yt<{ items?: RawVideo[] }>(
+      "videos",
+      {
+        part: "snippet,contentDetails,statistics",
+        myRating: "like",
+        maxResults: "24",
+      },
+      token
+    ).catch(() => ({ items: [] })),
+  ]);
+  const c = channels.items?.[0];
+  return {
+    channel: c
+      ? {
+          id: c.id,
+          title: c.snippet?.title ?? "",
+          handle: c.snippet?.customUrl ?? null,
+          thumbnail: thumb(c.snippet?.thumbnails),
+          subscribers: num(c.statistics?.subscriberCount),
+          videoCount: Number(c.statistics?.videoCount ?? 0),
+        }
+      : null,
+    playlists: playlists.playlists,
+    subscriptions: (subs.items ?? []).map(
+      (i): YtSubscription => ({
+        channelId: i.snippet?.resourceId?.channelId ?? "",
+        title: i.snippet?.title ?? "",
+        thumbnail: thumb(i.snippet?.thumbnails),
+      })
+    ),
+    liked: (liked.items ?? []).map(toVideo),
   };
 }

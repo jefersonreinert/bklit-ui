@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useConnectors } from "@/lib/use-connectors";
+import { BASE_PATH, googleStartUrl, useConnectors } from "@/lib/use-connectors";
 import {
   parseYtLink,
   YT_DURATIONS,
@@ -22,6 +22,7 @@ import {
   type YtVideo,
 } from "@/lib/youtube-types";
 import { ChannelView, PlaylistView } from "./collection-views";
+import { LibraryView } from "./library-view";
 import { ytGet } from "./use-youtube";
 import { GridSkeleton, VideoCard } from "./video-card";
 import { VideoView } from "./video-view";
@@ -30,7 +31,8 @@ type View =
   | { kind: "search" }
   | { kind: "video"; id: string }
   | { kind: "channel"; id?: string; handle?: string }
-  | { kind: "playlist"; id: string };
+  | { kind: "playlist"; id: string }
+  | { kind: "me" };
 
 const SUGGESTIONS = [
   "técnicas de churrasco picanha",
@@ -48,6 +50,9 @@ function viewToQuery(v: View) {
   if (v.kind === "playlist") {
     return `?list=${v.id}`;
   }
+  if (v.kind === "me") {
+    return "?me=1";
+  }
   if (v.kind === "channel") {
     return v.id
       ? `?channel=${v.id}`
@@ -61,6 +66,9 @@ function viewFromQuery(search: string): View | null {
   const v = p.get("v");
   const list = p.get("list");
   const channel = p.get("channel");
+  if (p.get("me") || p.get("connected") === "google") {
+    return { kind: "me" };
+  }
   if (v) {
     return { kind: "video", id: v };
   }
@@ -130,6 +138,54 @@ function SearchResults({
           {loading ? "Carregando…" : "Mais resultados"}
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+/** "Minha conta" entry: opens the library, or connects the Google login. */
+function AccountBar({
+  hasAccount,
+  canConnect,
+  open,
+  onOpen,
+}: {
+  hasAccount: boolean;
+  canConnect: boolean;
+  open: boolean;
+  onOpen: () => void;
+}) {
+  if (open) {
+    return null;
+  }
+  if (hasAccount) {
+    return (
+      <button
+        className="flex w-fit items-center gap-2 rounded-xl border bg-card/60 px-3 py-2 text-sm hover:bg-muted"
+        onClick={onOpen}
+        type="button"
+      >
+        <Icon className="size-4" name="IconYoutube" />
+        Minha conta: playlists, inscrições e curtidos
+        <Icon className="size-4 text-muted-foreground" name="IconArrowRight" />
+      </button>
+    );
+  }
+  if (!canConnect) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card/60 px-3 py-2 text-sm">
+      <Icon className="size-4 shrink-0" name="IconYoutube" />
+      <span className="flex-1 text-muted-foreground">
+        Conecte a sua conta para ver suas playlists (inclusive privadas),
+        inscrições e vídeos curtidos.
+      </span>
+      <a
+        className="rounded-md bg-foreground px-2.5 py-1 font-medium text-background text-xs"
+        href={googleStartUrl(`${BASE_PATH}/youtube/`)}
+      >
+        Conectar com Google
+      </a>
     </div>
   );
 }
@@ -309,6 +365,13 @@ export function YoutubePage() {
         ) : null}
       </form>
 
+      <AccountBar
+        canConnect={Boolean(status?.configured && status.google.available)}
+        hasAccount={Boolean(status?.google.youtube)}
+        onOpen={() => push({ kind: "me" })}
+        open={view.kind === "me"}
+      />
+
       {unavailable ? (
         <p className="rounded-xl border bg-muted/30 p-4 text-muted-foreground text-sm">
           Configure{" "}
@@ -372,6 +435,13 @@ export function YoutubePage() {
           onPlaylist={(id) => push({ kind: "playlist", id })}
           onVideo={openVideo}
           target={view}
+        />
+      ) : null}
+      {view.kind === "me" ? (
+        <LibraryView
+          onChannel={openChannel}
+          onPlaylist={(id) => push({ kind: "playlist", id })}
+          onVideo={openVideo}
         />
       ) : null}
       {view.kind === "playlist" ? (

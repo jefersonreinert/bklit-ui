@@ -329,7 +329,21 @@ function YoutubeCard({ status }: { status: ConnectorsStatus | null }) {
             Vercel e faça um novo deploy.
           </p>
         )}
-        <div className="flex justify-end border-t pt-3">
+        <p>
+          {status?.google.youtube
+            ? `Conta do YouTube conectada (${status.google.email ?? "Google"}): playlists privadas, inscrições e curtidos liberados.`
+            : "Opcional: conecte a sua conta pelo login do Google para ver suas playlists privadas, inscrições e vídeos curtidos."}
+        </p>
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+          {ready && !status?.google.youtube && status?.google.available ? (
+            <Button
+              nativeButton={false}
+              render={<a href={googleStartUrl(`${BASE_PATH}/youtube/`)} />}
+              size="sm"
+            >
+              Conectar conta do YouTube
+            </Button>
+          ) : null}
           <Button
             disabled={!ready}
             nativeButton={false}

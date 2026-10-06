@@ -19,6 +19,8 @@ export interface ConnectorsStatus {
     connected: boolean;
     email?: string;
     connectedAt?: number;
+    /** The login also granted YouTube (your channel, playlists, likes). */
+    youtube?: boolean;
   };
   /** Public YouTube data (server API key); transcripts need Gemini. */
   youtube: { available: boolean; transcripts: boolean };
