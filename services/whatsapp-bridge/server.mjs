@@ -338,8 +338,14 @@ function onConnection(socket, u) {
 async function start() {
   state.status = "starting";
   const { state: auth, saveCreds } = await useDbAuthState();
-  // WhatsApp refuses outdated clients (428): use the current Web version
-  const { version } = await fetchLatestWaWebVersion({}).catch(() => ({}));
+  // WA_VERSION=auto (default) advertises the current WhatsApp Web build;
+  // "lib" keeps the library's bundled one. WA_BROWSER picks the device name.
+  const version =
+    process.env.WA_VERSION === "lib"
+      ? undefined
+      : (await fetchLatestWaWebVersion({}).catch(() => ({}))).version;
+  const [os, app] = (process.env.WA_BROWSER ?? "macOS:Desktop").split(":");
+  const browser = (Browsers[os] ?? Browsers.macOS)(app || "Desktop");
   const socket = makeWASocket({
     ...(version ? { version } : {}),
     auth: {
@@ -347,7 +353,7 @@ async function start() {
       keys: makeCacheableSignalKeyStore(auth.keys, logger),
     },
     logger,
-    browser: Browsers.macOS("Desktop"),
+    browser,
     syncFullHistory: true,
     markOnlineOnConnect: false,
     getMessage: async (key) =>
