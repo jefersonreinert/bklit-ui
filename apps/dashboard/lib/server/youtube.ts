@@ -434,3 +434,28 @@ export async function myLibrary(token: string) {
     liked: (liked.items ?? []).map(toVideo),
   };
 }
+
+/** One page (50) of a channel's uploads, newest first. */
+export async function uploadsPage(
+  uploadsPlaylistId: string,
+  pageToken?: string
+) {
+  const page = await yt<{
+    items?: { contentDetails?: { videoId?: string } }[];
+    nextPageToken?: string;
+    pageInfo?: { totalResults?: number };
+  }>("playlistItems", {
+    part: "contentDetails",
+    playlistId: uploadsPlaylistId,
+    maxResults: "50",
+    pageToken,
+  });
+  const ids = (page.items ?? [])
+    .map((i) => i.contentDetails?.videoId)
+    .filter((id): id is string => Boolean(id));
+  return {
+    videos: await videosByIds(ids),
+    nextPageToken: page.nextPageToken ?? null,
+    total: page.pageInfo?.totalResults ?? ids.length,
+  };
+}

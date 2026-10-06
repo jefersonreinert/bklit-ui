@@ -31,11 +31,13 @@ import { Thumb } from "../youtube/video-card";
 import {
   addToPlaylist,
   deletePlaylist,
+  followChannel,
   type Progress,
   removeFromPlaylist,
   renamePlaylist,
   setPrivacy,
 } from "./library-store";
+import { resolveChannel } from "./resolve-channel";
 
 const PRIVACY_ITEMS = (Object.keys(PRIVACY_LABELS) as LibPrivacy[]).map(
   (p) => ({
@@ -171,6 +173,53 @@ function AddVideo({
   );
 }
 
+/** An empty playlist named "@canal" usually means "show me this channel". */
+function FollowHint({
+  handle,
+  onOpenChannel,
+}: {
+  handle: string;
+  onOpenChannel: (channelId: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const channel = await resolveChannel(handle);
+      await followChannel({
+        channelId: channel.id,
+        title: channel.title,
+        thumbnail: channel.thumbnail,
+      });
+      onOpenChannel(channel.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Canal não encontrado");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border bg-card/60 p-4 text-sm">
+      <p>
+        Esta é uma playlist sua com o nome <b>{handle}</b>, por isso está vazia.
+        Para ver <b>todos os vídeos e playlists do canal</b>, siga o canal:
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={busy} onClick={go} size="sm">
+          <Icon className="size-4" name="IconYoutube" />
+          {busy ? "Abrindo…" : `Seguir o canal ${handle}`}
+        </Button>
+        <span className="text-muted-foreground text-xs">
+          Depois você pode excluir esta playlist vazia na lixeira acima.
+        </span>
+      </div>
+      {error ? <p className="text-destructive text-xs">{error}</p> : null}
+    </div>
+  );
+}
+
 export function PlaylistPanel({
   playlist,
   items,
@@ -180,7 +229,9 @@ export function PlaylistPanel({
   onPlay,
   onReload,
   onDeleted,
+  onOpenChannel,
 }: {
+  onOpenChannel?: (channelId: string) => void;
   playlist: LibPlaylist;
   items: LibItem[];
   loading: boolean;
@@ -287,6 +338,12 @@ export function PlaylistPanel({
         <p className="py-6 text-center text-muted-foreground text-sm">
           Carregando vídeos…
         </p>
+      ) : null}
+      {!loading &&
+      items.length === 0 &&
+      playlist.title.startsWith("@") &&
+      onOpenChannel ? (
+        <FollowHint handle={playlist.title} onOpenChannel={onOpenChannel} />
       ) : null}
       {!loading && items.length === 0 ? (
         <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground text-sm">

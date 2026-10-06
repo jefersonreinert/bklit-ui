@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { BASE_PATH, type ConnectorsStatus } from "@/lib/use-connectors";
 import {
+  type LibChannel,
   type LibItem,
   type LibPlaylist,
   type LibPrivacy,
@@ -27,16 +28,21 @@ interface State {
   playlists: LibPlaylist[];
   /** Videos in "Salvos" (for the bookmark toggle). */
   saved: Map<string, string>;
+  /** Followed channels (YouTube subscriptions when signed in). */
+  followed: LibChannel[];
   error: string | null;
 }
 
 const LOCAL_KEY = "casa-brasa-video-library-v1";
+const FOLLOWS_KEY = "casa-brasa-video-follows";
+const SEEN_KEY = "casa-brasa-channel-seen";
 const API = `${BASE_PATH}/api/youtube/library/`;
 
 let state: State = {
   mode: "loading",
   playlists: [],
   saved: new Map(),
+  followed: [],
   error: null,
 };
 const listeners = new Set<() => void>();
@@ -117,7 +123,28 @@ async function api<T>(init?: { method: "POST"; body: unknown }, query = "") {
   return body;
 }
 
+function readLocalFollows(): LibChannel[] {
+  try {
+    return JSON.parse(
+      localStorage.getItem(FOLLOWS_KEY) ?? "[]"
+    ) as LibChannel[];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalFollows(list: LibChannel[]) {
+  try {
+    localStorage.setItem(FOLLOWS_KEY, JSON.stringify(list));
+  } catch {
+    // storage unavailable
+  }
+}
+
 async function loadYoutube() {
+  api<{ channels: LibChannel[] }>(undefined, "?subscriptions=1")
+    .then(({ channels }) => set({ followed: channels }))
+    .catch(() => undefined);
   const { playlists } = await api<{ playlists: LibPlaylist[] }>();
   const savedList = playlists.find((p) => p.title === SAVED_TITLE);
   const items = savedList ? await fetchItems(savedList.id) : [];
@@ -151,6 +178,7 @@ export function initLibrary(status: ConnectorsStatus | null) {
   set({ mode, error: null });
   if (mode === "local") {
     publishLocal(readLocal());
+    set({ followed: readLocalFollows() });
     return;
   }
   loadYoutube().catch((e: unknown) =>
@@ -313,6 +341,68 @@ export async function toggleSaved(video: YtVideo) {
     await removeFromPlaylist(id, itemId);
   } else {
     await addToPlaylist(id, video);
+  }
+}
+
+/** Follow a channel: a YouTube subscription when signed in. */
+export async function followChannel(
+  channel: Omit<LibChannel, "subscriptionId">
+) {
+  if (state.followed.some((c) => c.channelId === channel.channelId)) {
+    return;
+  }
+  if (state.mode === "local") {
+    const next = [...state.followed, channel];
+    writeLocalFollows(next);
+    set({ followed: next });
+    return;
+  }
+  const { subscriptionId } = await api<{ subscriptionId: string }>({
+    method: "POST",
+    body: { action: "follow", channelId: channel.channelId },
+  });
+  set({ followed: [...state.followed, { ...channel, subscriptionId }] });
+}
+
+export async function unfollowChannel(channelId: string) {
+  const channel = state.followed.find((c) => c.channelId === channelId);
+  if (!channel) {
+    return;
+  }
+  if (state.mode === "youtube" && channel.subscriptionId) {
+    await api({
+      method: "POST",
+      body: { action: "unfollow", subscriptionId: channel.subscriptionId },
+    });
+  }
+  const next = state.followed.filter((c) => c.channelId !== channelId);
+  if (state.mode === "local") {
+    writeLocalFollows(next);
+  }
+  set({ followed: next });
+}
+
+/** Publish date (ISO) of the newest video seen per channel. */
+export function readSeen(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}") as Record<
+      string,
+      string
+    >;
+  } catch {
+    return {};
+  }
+}
+
+export function markSeen(channelId: string, newestIso: string) {
+  try {
+    const all = readSeen();
+    if (!all[channelId] || all[channelId] < newestIso) {
+      all[channelId] = newestIso;
+      localStorage.setItem(SEEN_KEY, JSON.stringify(all));
+    }
+  } catch {
+    // storage unavailable
   }
 }
 

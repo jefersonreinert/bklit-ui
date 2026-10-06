@@ -15,8 +15,10 @@ import {
 import { formatDuration, type YtVideo } from "@/lib/youtube-types";
 import { relativeDate, shortNumber } from "../youtube/use-youtube";
 import { Thumb } from "../youtube/video-card";
+import { ChannelPanel } from "./channel-panel";
 import {
   createPlaylist,
+  followChannel,
   loadItems,
   type Progress,
   readProgress,
@@ -24,9 +26,11 @@ import {
 } from "./library-store";
 import { Player } from "./player";
 import { PlaylistPanel } from "./playlist-panel";
+import { resolveChannel } from "./resolve-channel";
 import { SaveMenu } from "./save-menu";
 
 const CONTINUE = "continue";
+const CHANNEL = "ch:";
 const AUTOPLAY_KEY = "casa-brasa-video-autoplay";
 
 interface NowPlaying {
@@ -43,6 +47,59 @@ function Kpi({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-muted-foreground text-xs">{label}</p>
     </div>
+  );
+}
+
+function FollowChannel({ onFollowed }: { onFollowed: (id: string) => void }) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!value.trim()) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const channel = await resolveChannel(value);
+      await followChannel({
+        channelId: channel.id,
+        title: channel.title,
+        thumbnail: channel.thumbnail,
+      });
+      setValue("");
+      onFollowed(channel.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Canal não encontrado");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="flex flex-col gap-1" onSubmit={submit}>
+      <div className="flex gap-1">
+        <Input
+          aria-label="Seguir canal"
+          className="h-8"
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="@canal ou link do canal"
+          value={value}
+        />
+        <Button
+          aria-label="Seguir canal"
+          disabled={busy || !value.trim()}
+          size="icon-sm"
+          type="submit"
+        >
+          <Icon
+            className={cn("size-4", busy && "animate-spin")}
+            name={busy ? "IconLoader" : "IconPlusSmall"}
+          />
+        </Button>
+      </div>
+      {error ? <p className="text-destructive text-xs">{error}</p> : null}
+    </form>
   );
 }
 
@@ -98,7 +155,7 @@ function NavItem({
   onClick,
 }: {
   active: boolean;
-  icon: "IconHistory" | "IconBookmark" | "IconPlaylist";
+  icon: "IconHistory" | "IconBookmark" | "IconPlaylist" | "IconYoutube";
   label: string;
   count?: number;
   onClick: () => void;
@@ -348,7 +405,9 @@ export function VideosPage() {
     }
     if (
       selected &&
-      (selected === CONTINUE || lib.playlists.some((p) => p.id === selected))
+      (selected === CONTINUE ||
+        selected.startsWith(CHANNEL) ||
+        lib.playlists.some((p) => p.id === selected))
     ) {
       return;
     }
@@ -495,6 +554,25 @@ export function VideosPage() {
             ))}
           </div>
           <NewPlaylist />
+          <div className="flex flex-col gap-1 border-t pt-3">
+            <p className="px-1 text-[11px] text-muted-foreground uppercase tracking-wide">
+              Canais seguidos
+            </p>
+            <div className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+              {lib.followed.map((c) => (
+                <NavItem
+                  active={selected === `${CHANNEL}${c.channelId}`}
+                  icon="IconYoutube"
+                  key={c.channelId}
+                  label={c.title}
+                  onClick={() => setSelected(`${CHANNEL}${c.channelId}`)}
+                />
+              ))}
+            </div>
+            <FollowChannel
+              onFollowed={(id) => setSelected(`${CHANNEL}${id}`)}
+            />
+          </div>
           {lib.mode === "youtube" ? (
             <p className="text-[11px] text-muted-foreground">
               Sincronizado com a sua conta do YouTube ({status?.google.email}).
@@ -502,6 +580,15 @@ export function VideosPage() {
           ) : null}
         </nav>
 
+        {selected?.startsWith(CHANNEL) ? (
+          <ChannelPanel
+            channelId={selected.slice(CHANNEL.length)}
+            key={selected}
+            onPlay={play}
+            playingId={now?.queue[now.index]?.id ?? null}
+            progress={progress}
+          />
+        ) : null}
         {selected === CONTINUE ? (
           <ContinueWatching
             onPlay={(videos, i) => play(videos, i, "Continuar assistindo")}
@@ -513,6 +600,7 @@ export function VideosPage() {
             items={items}
             loading={loadingItems}
             onDeleted={() => setSelected(null)}
+            onOpenChannel={(id) => setSelected(`${CHANNEL}${id}`)}
             onPlay={(i) =>
               play(
                 items.map((it) => it.video),

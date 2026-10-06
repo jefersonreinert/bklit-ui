@@ -1,4 +1,5 @@
 import type {
+  LibChannel,
   LibItem,
   LibPlaylist,
   LibPrivacy,
@@ -222,4 +223,58 @@ export async function addVideo(
 
 export function removeItem(token: string, itemId: string) {
   return call(token, "DELETE", "playlistItems", { id: itemId });
+}
+
+export async function listSubscriptions(token: string) {
+  const out: LibChannel[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await call<{
+      items?: {
+        id: string;
+        snippet?: {
+          title?: string;
+          thumbnails?: { default?: { url: string }; medium?: { url: string } };
+          resourceId?: { channelId?: string };
+        };
+      }[];
+      nextPageToken?: string;
+    }>(token, "GET", "subscriptions", {
+      part: "snippet",
+      mine: "true",
+      maxResults: "50",
+      order: "alphabetical",
+      pageToken,
+    });
+    for (const s of page.items ?? []) {
+      if (s.snippet?.resourceId?.channelId) {
+        out.push({
+          channelId: s.snippet.resourceId.channelId,
+          title: s.snippet.title ?? "",
+          thumbnail:
+            s.snippet.thumbnails?.medium?.url ??
+            s.snippet.thumbnails?.default?.url ??
+            "",
+          subscriptionId: s.id,
+        });
+      }
+    }
+    pageToken = page.nextPageToken;
+  } while (pageToken && out.length < 300);
+  return out;
+}
+
+export async function subscribe(token: string, channelId: string) {
+  const sub = await call<{ id: string }>(
+    token,
+    "POST",
+    "subscriptions",
+    { part: "snippet" },
+    { snippet: { resourceId: { kind: "youtube#channel", channelId } } }
+  );
+  return sub.id;
+}
+
+export function unsubscribe(token: string, subscriptionId: string) {
+  return call(token, "DELETE", "subscriptions", { id: subscriptionId });
 }

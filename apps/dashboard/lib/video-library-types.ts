@@ -27,7 +27,18 @@ export type LibAction =
   | { action: "privacy"; id: string; privacy: LibPrivacy }
   | { action: "delete"; id: string }
   | { action: "add"; id: string; videoId: string }
-  | { action: "remove"; itemId: string };
+  | { action: "remove"; itemId: string }
+  | { action: "follow"; channelId: string }
+  | { action: "unfollow"; subscriptionId: string };
+
+/** A followed channel (a YouTube subscription when signed in). */
+export interface LibChannel {
+  channelId: string;
+  title: string;
+  thumbnail: string;
+  /** Present when the follow is a YouTube subscription. */
+  subscriptionId?: string;
+}
 
 export const PRIVACY_LABELS: Record<LibPrivacy, string> = {
   private: "Privada",
