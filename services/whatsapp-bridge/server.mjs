@@ -4,6 +4,7 @@ import makeWASocket, {
   Browsers,
   DisconnectReason,
   downloadMediaMessage,
+  fetchLatestWaWebVersion,
   getContentType,
   makeCacheableSignalKeyStore,
   normalizeMessageContent,
@@ -329,7 +330,10 @@ function onConnection(socket, u) {
 async function start() {
   state.status = "starting";
   const { state: auth, saveCreds } = await useDbAuthState();
+  // WhatsApp refuses outdated clients (428): use the current Web version
+  const { version } = await fetchLatestWaWebVersion({}).catch(() => ({}));
   const socket = makeWASocket({
+    ...(version ? { version } : {}),
     auth: {
       creds: auth.creds,
       keys: makeCacheableSignalKeyStore(auth.keys, logger),
