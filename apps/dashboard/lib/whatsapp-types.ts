@@ -16,6 +16,7 @@ export interface WaChat {
   id: string;
   name: string;
   isGroup: boolean;
+  archived: boolean;
   unread: number;
   /** Unix seconds. */
   timestamp: number;
@@ -31,6 +32,17 @@ export interface WaMessage {
   /** Unix seconds. */
   timestamp: number;
   hasMedia: boolean;
+  media: {
+    mimetype: string | null;
+    filename: string | null;
+    size: number | null;
+    /** Seconds (audio/video). */
+    duration: number | null;
+    /** Base64 JPEG preview for images, videos and stickers. */
+    thumb: string | null;
+  } | null;
+  /** Short-lived signed URL to the full file on the bridge. */
+  mediaUrl?: string;
 }
 
 /** What /api/whatsapp/status tells the page. */

@@ -63,7 +63,9 @@ const chatLine = (c: WaChat) =>
 
 const messageLine = (m: WaMessage) => {
   const who = m.fromMe ? "Você" : (m.author ?? "Contato");
-  const body = m.body || (m.hasMedia ? `[${m.type}]` : "");
+  const file = m.media?.filename ? ` ${m.media.filename}` : "";
+  const media = m.hasMedia ? `[${m.type}${file}] ` : "";
+  const body = `${media}${m.body}`.trim();
   return `[${when(m.timestamp)}] ${who}: ${body}`;
 };
 
@@ -79,7 +81,7 @@ export async function runWhatsappTool(
   const args = (input ?? {}) as Record<string, unknown>;
   try {
     if (name === "whatsapp_list_chats") {
-      const { chats } = await listChats(60);
+      const { chats } = await listChats(300);
       const query =
         typeof args.query === "string" ? args.query.toLowerCase() : "";
       const rows = chats.filter(

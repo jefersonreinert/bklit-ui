@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import type { WaBridgeStatus, WaChat, WaMessage } from "@/lib/whatsapp-types";
 import { seal, unseal } from "./sealed-cookie";
@@ -12,6 +12,8 @@ import { seal, unseal } from "./sealed-cookie";
 export const WA_COOKIE = "cb_wa_access";
 export const WA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const TIMEOUT_MS = 25_000;
+/** Lifetime of signed media/upload URLs. */
+const SIGNED_TTL_S = 30 * 60;
 const TRAILING_SLASHES = /\/+$/;
 const SPACES = /\s+/g;
 
@@ -99,12 +101,39 @@ export const bridgeStatus = () => bridge<WaBridgeStatus>("/status");
 export const pairPhone = (phone: string) =>
   bridge<{ code: string }>("/pair", post({ phone }));
 export const logout = () => bridge<{ ok: boolean }>("/logout", post({}));
-export const listChats = (limit = 40) =>
+export const listChats = (limit = 500) =>
   bridge<{ chats: WaChat[] }>(`/chats?limit=${limit}`);
-export const readChat = (chat: string, limit = 50) =>
-  bridge<{ chat: WaChat; messages: WaMessage[] }>(
+/**
+ * URL the browser can use directly on the bridge for a few minutes:
+ * /media (download) or /upload (send a file). Signed with the bridge secret,
+ * which never leaves the server.
+ */
+export function signedUrl(action: "media" | "upload", chat: string, id = "") {
+  const config = whatsappConfig();
+  if (!config) {
+    throw new WhatsappError("WhatsApp não configurado", 503);
+  }
+  // Fixed 30-min windows keep the URL stable across polls (no image reloads)
+  const now = Math.floor(Date.now() / 1000);
+  const exp = (Math.floor(now / SIGNED_TTL_S) + 2) * SIGNED_TTL_S;
+  const sig = createHmac("sha256", config.secret)
+    .update(`${action}:${chat}:${id}:${exp}`)
+    .digest("hex");
+  const query = new URLSearchParams({ chat, id, exp: String(exp), sig });
+  return `${config.url}/${action}?${query}`;
+}
+
+export async function readChat(chat: string, limit = 50) {
+  const data = await bridge<{ chat: WaChat; messages: WaMessage[] }>(
     `/messages?chat=${encodeURIComponent(chat)}&limit=${limit}`
   );
+  return {
+    ...data,
+    messages: data.messages.map((m) =>
+      m.hasMedia ? { ...m, mediaUrl: signedUrl("media", chat, m.id) } : m
+    ),
+  };
+}
 export const sendText = (chat: string, text: string) =>
   bridge<{ message: WaMessage }>("/send", post({ chat, text }));
 export const markSeen = (chat: string) =>

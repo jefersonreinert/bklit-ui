@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { WaChat, WaMessage } from "@/lib/whatsapp-types";
+import { MessageMedia } from "./media";
 import { useWhatsapp } from "./use-whatsapp";
 
 type Wa = ReturnType<typeof useWhatsapp>;
@@ -151,6 +152,18 @@ function Pair({ wa }: { wa: Wa }) {
   );
 }
 
+const PREVIEW: Record<string, string> = {
+  image: "📷 Foto",
+  video: "🎥 Vídeo",
+  audio: "🎵 Áudio",
+  ptt: "🎤 Áudio",
+  document: "📄 Documento",
+  sticker: "Figurinha",
+  location: "📍 Localização",
+  vcard: "👤 Contato",
+  revoked: "Mensagem apagada",
+};
+
 function ChatRow({
   chat,
   active,
@@ -193,7 +206,8 @@ function ChatRow({
         <span className="flex items-center gap-2">
           <span className="flex-1 truncate text-muted-foreground text-xs">
             {chat.last?.fromMe ? "Você: " : ""}
-            {chat.last?.body || (chat.last ? `[${chat.last.type}]` : "")}
+            {chat.last?.body ||
+              (chat.last ? (PREVIEW[chat.last.type] ?? "Mensagem") : "")}
           </span>
           {chat.unread ? (
             <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-(--chat-accent) px-1.5 font-semibold text-(--chat-accent-foreground) text-[11px]">
@@ -206,32 +220,45 @@ function ChatRow({
   );
 }
 
+const NO_TEXT_TYPES: Record<string, string> = {
+  location: "📍 Localização",
+  vcard: "👤 Contato",
+  multi_vcard: "👥 Contatos",
+  call_log: "📞 Chamada",
+  revoked: "🚫 Mensagem apagada",
+  poll_creation: "📊 Enquete",
+};
+
 function Bubble({ m, group }: { m: WaMessage; group: boolean }) {
-  const body = m.body || (m.hasMedia ? `📎 ${m.type}` : `[${m.type}]`);
+  const label = m.hasMedia ? "" : (NO_TEXT_TYPES[m.type] ?? "");
+  const text = m.body || label;
   return (
     <div className={cn("flex", m.fromMe ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
+          "flex max-w-[85%] flex-col gap-1.5 whitespace-pre-wrap break-words rounded-2xl px-2 py-1.5 text-sm",
           m.fromMe
             ? "rounded-br-md bg-(--chat-out) text-(--chat-out-foreground)"
             : "rounded-bl-md border bg-(--chat-in)"
         )}
       >
         {group && !m.fromMe && m.author ? (
-          <p className="mb-0.5 font-medium text-(--chat-name) text-xs">
+          <p className="px-1 font-medium text-(--chat-name) text-xs">
             {m.author.split("@")[0]}
           </p>
         ) : null}
-        {body}
-        <span
-          className={cn(
-            "ml-2 align-bottom text-[10px]",
-            m.fromMe ? "text-(--chat-out-muted)" : "text-muted-foreground"
-          )}
-        >
-          {time(m.timestamp)}
-        </span>
+        <MessageMedia m={m} />
+        <p className="px-1">
+          {text}
+          <span
+            className={cn(
+              "ml-2 align-bottom text-[10px]",
+              m.fromMe ? "text-(--chat-out-muted)" : "text-muted-foreground"
+            )}
+          >
+            {time(m.timestamp)}
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -239,28 +266,33 @@ function Bubble({ m, group }: { m: WaMessage; group: boolean }) {
 
 function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
   const [text, setText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
-  const count = wa.messages?.length ?? 0;
+  const lastId = wa.messages?.at(-1)?.id;
 
+  // Follow new messages, not older pages loaded at the top
   useEffect(() => {
-    if (count > 0) {
+    if (lastId) {
       scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
     }
-  }, [count]);
+  }, [lastId]);
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     const value = text.trim();
-    if (!value || sending) {
+    if (!(value || file) || sending) {
       return;
     }
     setSending(true);
-    if (await wa.send(value)) {
+    const ok = file ? await wa.sendFile(file, value) : await wa.send(value);
+    if (ok) {
       setText("");
+      setFile(null);
     }
     setSending(false);
   };
+  const hasMore = (wa.messages?.length ?? 0) >= wa.limit;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -282,6 +314,17 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
         className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3"
         ref={scroller}
       >
+        {hasMore ? (
+          <Button
+            className="mx-auto mb-2"
+            disabled={wa.loadingMore}
+            onClick={wa.loadMore}
+            size="sm"
+            variant="outline"
+          >
+            {wa.loadingMore ? "Carregando…" : "Carregar mensagens anteriores"}
+          </Button>
+        ) : null}
         {wa.messages === null ? (
           <p className="m-auto text-muted-foreground text-sm">Carregando…</p>
         ) : (
@@ -290,10 +333,36 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
           ))
         )}
       </div>
+      {file ? (
+        <div className="flex items-center gap-2 border-t px-3 py-2 text-sm">
+          <Icon className="size-4 shrink-0" name="IconPaperclip1" />
+          <span className="min-w-0 flex-1 truncate">{file.name}</span>
+          <Button
+            aria-label="Remover anexo"
+            onClick={() => setFile(null)}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Icon className="size-4" name="IconCrossSmall" />
+          </Button>
+        </div>
+      ) : null}
       <form
         className="flex items-end gap-2 border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         onSubmit={submit}
       >
+        <label className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+          <span className="sr-only">Anexar foto ou arquivo</span>
+          <input
+            className="sr-only"
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+            type="file"
+          />
+          <Icon className="size-5" name="IconPaperclip1" />
+        </label>
         <Textarea
           aria-label="Mensagem"
           className="max-h-32 min-h-10 flex-1 resize-none"
@@ -308,14 +377,14 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
               submit();
             }
           }}
-          placeholder="Mensagem"
+          placeholder={file ? "Legenda (opcional)" : "Mensagem"}
           rows={1}
           value={text}
         />
         <Button
           aria-label="Enviar"
           className="rounded-full bg-(--chat-accent) text-(--chat-accent-foreground) hover:opacity-90"
-          disabled={sending || !text.trim()}
+          disabled={sending || !(text.trim() || file)}
           size="icon"
           type="submit"
         >
@@ -326,11 +395,54 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
   );
 }
 
+function ChatList({ wa, list }: { wa: Wa; list: WaChat[] }) {
+  if (wa.chats === null) {
+    return (
+      <p className="p-4 text-center text-muted-foreground text-sm">
+        Carregando conversas…
+      </p>
+    );
+  }
+  if (list.length === 0) {
+    return (
+      <p className="p-4 text-center text-muted-foreground text-sm">
+        Nenhuma conversa aqui.
+      </p>
+    );
+  }
+  return list.map((c) => (
+    <ChatRow
+      active={c.id === wa.openId}
+      chat={c}
+      key={c.id}
+      onOpen={() => wa.open(c.id)}
+    />
+  ));
+}
+
+type Tab = "all" | "unread" | "groups" | "archived";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "all", label: "Todas" },
+  { id: "unread", label: "Não lidas" },
+  { id: "groups", label: "Grupos" },
+  { id: "archived", label: "Arquivadas" },
+];
+
+const TAB_FILTERS: Record<Tab, (c: WaChat) => boolean> = {
+  all: (c) => !c.archived,
+  unread: (c) => c.unread > 0,
+  groups: (c) => c.isGroup && !c.archived,
+  archived: (c) => c.archived,
+};
+
 function Inbox({ wa }: { wa: Wa }) {
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<Tab>("all");
   const me = wa.status?.bridge?.me;
-  const list = (wa.chats ?? []).filter((c) =>
-    c.name.toLowerCase().includes(query.trim().toLowerCase())
+  const q = query.trim().toLowerCase();
+  const list = (wa.chats ?? []).filter(
+    (c) => (!q || c.name.toLowerCase().includes(q)) && TAB_FILTERS[tab](c)
   );
   const openChat = wa.chats?.find((c) => c.id === wa.openId);
   return (
@@ -359,21 +471,29 @@ function Inbox({ wa }: { wa: Wa }) {
             value={query}
           />
         </div>
+        <div className="flex gap-1.5 overflow-x-auto px-3 pb-2">
+          {TABS.map((t) => (
+            <button
+              aria-pressed={tab === t.id}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1 text-xs transition-colors",
+                tab === t.id
+                  ? "border-transparent bg-(--chat-accent) text-(--chat-accent-foreground)"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              type="button"
+            >
+              {t.label}
+              {t.id === "unread" && wa.chats
+                ? ` (${wa.chats.filter((c) => c.unread > 0).length})`
+                : ""}
+            </button>
+          ))}
+        </div>
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3">
-          {wa.chats === null ? (
-            <p className="p-4 text-center text-muted-foreground text-sm">
-              Carregando conversas…
-            </p>
-          ) : (
-            list.map((c) => (
-              <ChatRow
-                active={c.id === wa.openId}
-                chat={c}
-                key={c.id}
-                onOpen={() => wa.open(c.id)}
-              />
-            ))
-          )}
+          <ChatList list={list} wa={wa} />
         </div>
       </aside>
       <section

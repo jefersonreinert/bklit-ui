@@ -13,6 +13,7 @@ import {
   pairPhone,
   readChat,
   sendText,
+  signedUrl,
   WA_COOKIE,
   WA_COOKIE_MAX_AGE,
   WhatsappError,
@@ -57,7 +58,12 @@ const PROTECTED: Record<string, Handler> = {
   "POST pair": (b) => pairPhone(str(b.phone)),
   "POST logout": () => logout(),
   "GET chats": () => listChats(),
-  "GET messages": (_b, url) => readChat(url.searchParams.get("chat") ?? ""),
+  "GET messages": (_b, url) =>
+    readChat(
+      url.searchParams.get("chat") ?? "",
+      Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 2000)
+    ),
+  "POST upload-url": async (b) => ({ url: signedUrl("upload", str(b.chat)) }),
   "POST send": (b) => sendText(str(b.chat), str(b.text)),
   "POST seen": (b) => markSeen(str(b.chat)),
 };

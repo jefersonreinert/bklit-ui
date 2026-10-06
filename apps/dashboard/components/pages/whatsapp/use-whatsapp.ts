@@ -8,6 +8,7 @@ const API = `${BASE_PATH}/api/whatsapp`;
 const STATUS_MS = 5000;
 const CHATS_MS = 12_000;
 const MESSAGES_MS = 4000;
+const PAGE = 60;
 
 async function call<T>(
   path: string,
@@ -58,6 +59,8 @@ export function useWhatsapp() {
   const [chats, setChats] = useState<WaChat[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<WaMessage[] | null>(null);
+  const [limit, setLimit] = useState(PAGE);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
@@ -89,12 +92,22 @@ export function useWhatsapp() {
       return;
     }
     const r = await call<{ messages: WaMessage[] }>(
-      `messages/?chat=${encodeURIComponent(openId)}`
+      `messages/?chat=${encodeURIComponent(openId)}&limit=${limit}`
     );
     if (r.ok) {
       setMessages(r.data.messages);
     }
-  }, [openId]);
+  }, [openId, limit]);
+
+  /** Fetches older messages (the next page back in the history). */
+  const loadMore = () => {
+    setLoadingMore(true);
+    setLimit((n) => n + PAGE * 2);
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clear once the bigger page arrives
+  useEffect(() => {
+    setLoadingMore(false);
+  }, [messages]);
 
   usePoll(refreshStatus, STATUS_MS, true);
   usePoll(refreshChats, CHATS_MS, ready);
@@ -129,6 +142,7 @@ export function useWhatsapp() {
   const open = async (id: string | null) => {
     setOpenId(id);
     setMessages(null);
+    setLimit(PAGE);
     if (id) {
       await call("seen/", { chat: id });
       setChats((list) =>
@@ -155,6 +169,45 @@ export function useWhatsapp() {
     return true;
   };
 
+  /** Sends a photo/video/file straight to the bridge (signed upload URL). */
+  const sendFile = async (file: File, caption: string) => {
+    if (!openId) {
+      return false;
+    }
+    setError(null);
+    const signed = await call<{ url: string }>("upload-url/", { chat: openId });
+    if (!signed.ok) {
+      setError(`Não foi possível enviar: ${signed.error}`);
+      return false;
+    }
+    try {
+      const res = await fetch(signed.data.url, {
+        method: "POST",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          "x-filename": encodeURIComponent(file.name),
+          "x-caption": encodeURIComponent(caption),
+        },
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(
+          data.error === "file too large"
+            ? "Arquivo grande demais (máx. 64 MB)."
+            : `Não foi possível enviar: ${data.error ?? res.status}`
+        );
+        return false;
+      }
+    } catch {
+      setError("Não foi possível enviar o arquivo. Verifique a conexão.");
+      return false;
+    }
+    await refreshMessages();
+    refreshChats();
+    return true;
+  };
+
   const logout = async () => {
     await call("logout/", {});
     setChats(null);
@@ -173,6 +226,10 @@ export function useWhatsapp() {
     pair,
     open,
     send,
+    sendFile,
     logout,
+    limit,
+    loadMore,
+    loadingMore,
   };
 }

@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import http from "node:http";
 import wwebjs from "whatsapp-web.js";
 import { HfStore } from "./hf-store.mjs";
@@ -15,15 +15,24 @@ import { HfStore } from "./hf-store.mjs";
  *   GET  /messages?chat=&limit=   messages of a chat
  *   POST /send       { chat, text }
  *   POST /seen       { chat }
+ *
+ * Media goes straight between the browser and the bridge through short-lived
+ * URLs signed by the dashboard (HMAC with BRIDGE_SECRET), so files are not
+ * limited by the dashboard's request size and the secret stays server-side:
+ *   GET  /media?chat=&id=&exp=&sig=     download a message's media
+ *   POST /upload?chat=&exp=&sig=        send a file (raw body; x-filename,
+ *                                       x-caption headers)
  */
 
-const { Client, LocalAuth, RemoteAuth } = wwebjs;
+const { Client, LocalAuth, MessageMedia, RemoteAuth } = wwebjs;
 
 const PORT = Number(process.env.PORT ?? 7860);
 const SECRET = process.env.BRIDGE_SECRET ?? "";
 const SESSION_REPO = process.env.HF_SESSION_REPO;
 const HF_TOKEN = process.env.HF_TOKEN;
 const MAX_BODY = 64 * 1024;
+const MAX_UPLOAD = 64 * 1024 * 1024;
+const MAX_THUMB = 120_000;
 const PHONE = /^\d{10,15}$/;
 
 if (SECRET.length < 24) {
@@ -118,8 +127,104 @@ function authorized(req) {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-function send(res, status, body) {
+/** Checks a URL signed by the dashboard: sig = HMAC(secret, action:chat:id:exp). */
+function signedOk(action, url) {
+  const chat = url.searchParams.get("chat") ?? "";
+  const id = url.searchParams.get("id") ?? "";
+  const exp = Number(url.searchParams.get("exp"));
+  const sig = Buffer.from(url.searchParams.get("sig") ?? "");
+  if (!(exp && exp * 1000 > Date.now())) {
+    return false;
+  }
+  const expected = Buffer.from(
+    createHmac("sha256", SECRET)
+      .update(`${action}:${chat}:${id}:${exp}`)
+      .digest("hex")
+  );
+  return sig.length === expected.length && timingSafeEqual(sig, expected);
+}
+
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type, x-filename, x-caption",
+  "access-control-max-age": "600",
+};
+
+function readRaw(req, max) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on("data", (c) => {
+      size += c.length;
+      if (size > max) {
+        reject(Object.assign(new Error("file too large"), { status: 413 }));
+        req.destroy();
+      } else {
+        chunks.push(c);
+      }
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+async function serveMedia(res, url) {
+  requireReady();
+  const msg = await client.getMessageById(url.searchParams.get("id") ?? "");
+  if (!msg?.hasMedia) {
+    send(res, 404, { error: "no media" }, CORS);
+    return;
+  }
+  const media = await msg.downloadMedia();
+  if (!media?.data) {
+    send(res, 410, { error: "media unavailable" }, CORS);
+    return;
+  }
+  const bytes = Buffer.from(media.data, "base64");
+  const name = media.filename ?? `${msg.type}-${msg.timestamp}`;
+  res.writeHead(200, {
+    ...CORS,
+    "content-type": media.mimetype || "application/octet-stream",
+    "content-length": bytes.length,
+    "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "cache-control": "private, max-age=3600",
+  });
+  res.end(bytes);
+}
+
+async function receiveUpload(req, res, url) {
+  requireReady();
+  const chat = await chatFrom(url.searchParams.get("chat"));
+  const bytes = await readRaw(req, MAX_UPLOAD);
+  if (bytes.length === 0) {
+    send(res, 400, { error: "empty file" }, CORS);
+    return;
+  }
+  const filename = decodeURIComponent(
+    String(req.headers["x-filename"] ?? "arquivo")
+  );
+  const caption = decodeURIComponent(String(req.headers["x-caption"] ?? ""));
+  const mimetype = String(
+    req.headers["content-type"] || "application/octet-stream"
+  );
+  const media = new MessageMedia(
+    mimetype,
+    bytes.toString("base64"),
+    filename,
+    bytes.length
+  );
+  const asDocument = !INLINE_MEDIA.test(mimetype);
+  const sent = await chat.sendMessage(media, {
+    caption: caption || undefined,
+    sendMediaAsDocument: asDocument,
+  });
+  send(res, 200, { message: messageSummary(sent) }, CORS);
+}
+
+function send(res, status, body, extra = {}) {
   res.writeHead(status, {
+    ...extra,
     "content-type": "application/json",
     "cache-control": "no-store",
   });
@@ -168,7 +273,18 @@ function chatSummary(chat) {
   };
 }
 
+const THUMB_TYPES = new Set(["image", "video", "sticker"]);
+const INLINE_MEDIA = /^(image|video|audio)\//;
+
 function messageSummary(m) {
+  const raw = m._data ?? {};
+  const thumb =
+    m.hasMedia &&
+    THUMB_TYPES.has(m.type) &&
+    typeof raw.body === "string" &&
+    raw.body.length < MAX_THUMB
+      ? raw.body
+      : null;
   return {
     id: m.id._serialized,
     body: m.body ?? "",
@@ -177,6 +293,15 @@ function messageSummary(m) {
     author: m.author ?? null,
     timestamp: m.timestamp,
     hasMedia: m.hasMedia,
+    media: m.hasMedia
+      ? {
+          mimetype: raw.mimetype ?? null,
+          filename: raw.filename ?? null,
+          size: raw.size ?? null,
+          duration: m.duration ?? null,
+          thumb,
+        }
+      : null,
   };
 }
 
@@ -230,16 +355,17 @@ const routes = {
     const chats = await client.getChats();
     return {
       chats: chats
-        .filter((c) => !c.archived)
         .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
-        .slice(0, limitOf(url, 40, 100))
+        .slice(0, limitOf(url, 500, 2000))
         .map(chatSummary),
     };
   },
   "GET /messages": async (_req, url) => {
     requireReady();
     const chat = await chatFrom(url.searchParams.get("chat"));
-    const messages = await chat.fetchMessages({ limit: limitOf(url, 50, 200) });
+    const messages = await chat.fetchMessages({
+      limit: limitOf(url, 50, 2000),
+    });
     return { chat: chatSummary(chat), messages: messages.map(messageSummary) };
   },
   "POST /send": async (_req, _url, body) => {
@@ -262,11 +388,38 @@ const routes = {
   },
 };
 
+async function signedRoute(req, res, url) {
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, CORS);
+    res.end();
+    return;
+  }
+  const action = url.pathname.slice(1);
+  const method = action === "media" ? "GET" : "POST";
+  if (req.method !== method || !signedOk(action, url)) {
+    send(res, 403, { error: "forbidden" }, CORS);
+    return;
+  }
+  try {
+    if (action === "media") {
+      await serveMedia(res, url);
+    } else {
+      await receiveUpload(req, res, url);
+    }
+  } catch (error) {
+    send(res, error.status ?? 500, { error: error.message }, CORS);
+  }
+}
+
 http
   .createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://bridge");
     if (url.pathname === "/health" || url.pathname === "/") {
       send(res, 200, { ok: true, state: state.status });
+      return;
+    }
+    if (url.pathname === "/media" || url.pathname === "/upload") {
+      await signedRoute(req, res, url);
       return;
     }
     const handler = routes[`${req.method} ${url.pathname}`];
