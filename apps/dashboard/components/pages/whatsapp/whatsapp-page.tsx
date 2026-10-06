@@ -355,7 +355,7 @@ function ChatView({ wa, chat }: { wa: Wa; chat: WaChat | undefined }) {
           ))
         )}
       </div>
-      <div className="shrink-0 px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="shrink-0 px-3 pt-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.75rem))]">
         <WaComposer
           onSend={(value, file) =>
             file ? wa.sendFile(file, value) : wa.send(value)
@@ -421,7 +421,7 @@ function Inbox({ wa, onConnect }: { wa: Wa; onConnect: () => void }) {
   );
   const openChat = wa.chats?.find((c) => c.id === wa.openId);
   return (
-    <div className="-m-4 flex h-[calc(100dvh-var(--header-h)-env(safe-area-inset-bottom))] md:-m-6">
+    <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
       <aside
         className={cn(
           "flex w-full min-w-0 flex-col border-r md:w-80 md:shrink-0",
