@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { MenuPage } from "@/components/pages/menu/menu-page";
 
 export default function Page() {
-  return <ComingSoon icon="IconForkKnife" title="Cardápio" />;
+  return <MenuPage />;
 }

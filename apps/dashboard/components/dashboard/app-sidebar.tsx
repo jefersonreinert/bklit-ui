@@ -7,13 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { documentStats, RESTAURANT_NAME } from "@/lib/data";
 import { navItems, normalizePath } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "./brand-logo";
 
 export function SidebarBrand() {
   return (
     <div className="flex items-center gap-3 px-2">
-      <div className="flex size-9 items-center justify-center rounded-lg bg-foreground text-background">
-        <Icon className="size-5" name="IconForkKnife" />
-      </div>
+      <BrandLogo className="size-9" />
       <div className="flex flex-col leading-tight">
         <span className="font-semibold">{RESTAURANT_NAME}</span>
         <span className="text-muted-foreground text-xs">

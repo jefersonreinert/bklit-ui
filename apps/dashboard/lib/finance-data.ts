@@ -147,7 +147,8 @@ export function summarize(period: FinancePeriod) {
   const n = periodMonths[period];
   const current = financeMonths.slice(-n);
   const previous = financeMonths.slice(-2 * n, -n);
-  const prevOrSame = previous.length > 0 ? previous : current;
+  const hasPrevious = previous.length > 0;
+  const prevOrSame = hasPrevious ? previous : current;
 
   const agg = (months: FinanceMonth[]) => {
     const keys: SummableKey[] = [
@@ -193,15 +194,24 @@ export function summarize(period: FinancePeriod) {
     ebitdaMargin: margin(cur.ebitda, cur.netRevenue),
     netMargin: margin(cur.netIncome, cur.netRevenue),
     cmvRatio: margin(cur.cmv, cur.netRevenue),
-    trends: {
-      netRevenue: pct(cur.netRevenue, prev.netRevenue),
-      netIncome: pct(cur.netIncome, prev.netIncome),
-      opex: pct(cur.opex, prev.opex),
-      ebitdaMargin:
-        margin(cur.ebitda, cur.netRevenue) -
-        margin(prev.ebitda, prev.netRevenue),
-      cash: pct(last.cashBalance, prevLast.cashBalance),
-    },
+    // No comparable prior window (e.g. 12 months of history) → no trend badge.
+    trends: hasPrevious
+      ? {
+          netRevenue: pct(cur.netRevenue, prev.netRevenue),
+          netIncome: pct(cur.netIncome, prev.netIncome),
+          opex: pct(cur.opex, prev.opex),
+          ebitdaMargin:
+            margin(cur.ebitda, cur.netRevenue) -
+            margin(prev.ebitda, prev.netRevenue),
+          cash: pct(last.cashBalance, prevLast.cashBalance),
+        }
+      : {
+          netRevenue: undefined,
+          netIncome: undefined,
+          opex: undefined,
+          ebitdaMargin: undefined,
+          cash: pct(last.cashBalance, financeMonths[0]?.cashBalance ?? 1),
+        },
     cashBalance: last.cashBalance,
   };
 }

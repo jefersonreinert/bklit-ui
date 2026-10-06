@@ -13,6 +13,7 @@ import {
 import { TODAY } from "@/lib/data";
 import { type NavItem, navItems, normalizePath } from "@/lib/nav";
 import { SidebarBrand, SidebarFooterCard, SidebarNav } from "./app-sidebar";
+import { BrandLogo } from "./brand-logo";
 import { ThemeToggle } from "./theme-toggle";
 
 export function AppHeader() {
@@ -34,7 +35,7 @@ export function AppHeader() {
             />
           }
         >
-          <Icon className="size-5" name="IconSidebar" />
+          <BrandLogo className="size-8" />
         </SheetTrigger>
         <SheetContent
           className="acrylic w-72! gap-6 bg-sidebar p-4"
