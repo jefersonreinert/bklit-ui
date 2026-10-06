@@ -16,7 +16,7 @@ const REGISTER_URL = `${ISSUER}/register`;
 
 export const CONNECTION_COOKIE = "cb_conn_notion";
 export const PENDING_COOKIE = "cb_oauth_notion";
-const CONNECTION_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
+const CONNECTION_MAX_AGE = 60 * 60 * 24 * 180; // Notion refresh tokens live up to 180 days
 const PENDING_MAX_AGE = 60 * 10; // 10 minutes to finish the consent screen
 
 export interface NotionConnection {
@@ -106,6 +106,7 @@ export async function startAuthorization(
   url.searchParams.set("code_challenge", await pkceChallenge(verifier));
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("resource", NOTION_MCP_URL);
+  url.searchParams.set("prompt", "consent");
 
   const pending: PendingAuth = {
     state,
@@ -128,10 +129,27 @@ async function tokenRequest(params: Record<string, string>) {
     body: new URLSearchParams(params),
   });
   if (!res.ok) {
-    throw new Error(`Notion token request failed (${res.status})`);
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new TokenError(res.status, body.error);
   }
   return (await res.json()) as TokenResponse;
 }
+
+class TokenError extends Error {
+  readonly code: string | undefined;
+  constructor(status: number, code?: string) {
+    super(`Notion token request failed (${status}${code ? `: ${code}` : ""})`);
+    this.code = code;
+  }
+}
+
+export type FreshToken =
+  | { status: "ok"; token: string; updated: NotionConnection | null }
+  | { status: "none" }
+  /** Grant is dead (revoked/expired): the cookie must be cleared. */
+  | { status: "revoked" }
+  /** Transient failure: skip Notion this turn, keep the cookie. */
+  | { status: "unavailable" };
 
 function toConnection(
   token: TokenResponse,
@@ -195,17 +213,24 @@ export async function sealConnection(connection: NotionConnection) {
 
 /**
  * Returns a usable access token, refreshing it when it expires within the
- * next minute. `updated` is set when the cookie must be rewritten.
+ * next minute. Notion rotates the refresh token on every refresh, so the
+ * caller must persist `updated`, and must clear the cookie on "revoked"
+ * (replaying a retired refresh token makes Notion revoke the whole grant).
  */
-export async function ensureFreshToken(request: NextRequest) {
+export async function ensureFreshToken(
+  request: NextRequest
+): Promise<FreshToken> {
   const connection = await readConnection(request);
   if (!connection) {
-    return null;
+    return { status: "none" };
   }
   const expiring =
     connection.expiresAt !== null && connection.expiresAt - Date.now() < 60_000;
-  if (!(expiring && connection.refreshToken)) {
-    return { token: connection.accessToken, updated: null };
+  if (!expiring) {
+    return { status: "ok", token: connection.accessToken, updated: null };
+  }
+  if (!connection.refreshToken) {
+    return { status: "revoked" };
   }
   try {
     const token = await tokenRequest({
@@ -220,9 +245,10 @@ export async function ensureFreshToken(request: NextRequest) {
       connection.redirectUri,
       connection
     );
-    return { token: updated.accessToken, updated };
-  } catch {
-    // Refresh failed (revoked) → caller treats Notion as disconnected
-    return null;
+    return { status: "ok", token: updated.accessToken, updated };
+  } catch (error) {
+    return error instanceof TokenError && error.code === "invalid_grant"
+      ? { status: "revoked" }
+      : { status: "unavailable" };
   }
 }

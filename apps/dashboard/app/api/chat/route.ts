@@ -50,6 +50,16 @@ function errorMessage(error: unknown) {
   return "Erro ao falar com o Claude.";
 }
 
+function notionProblem(status: string | undefined) {
+  if (status === "revoked") {
+    return "A conexão com o Notion expirou ou foi removida. Conecte novamente em Conectores.";
+  }
+  if (status === "unavailable") {
+    return "Não foi possível falar com o Notion agora; respondi sem ele.";
+  }
+  return null;
+}
+
 function isModel(id: string | undefined): id is AiModelId {
   return AI_MODELS.some((m) => m.id === id);
 }
@@ -115,8 +125,10 @@ export async function POST(request: NextRequest) {
 
   // Notion MCP: only when this browser connected it and the user enabled it
   const wantsNotion = body.connectors?.includes("notion") ?? false;
-  const notion =
+  const fresh =
     wantsNotion && connectorsSecret() ? await ensureFreshToken(request) : null;
+  const notion = fresh?.status === "ok" ? fresh : null;
+  const notionNotice = notionProblem(fresh?.status);
 
   const isHaiku = model === "claude-haiku-4-5";
   const betas = [
@@ -169,6 +181,9 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       const emit = (e: ChatStreamEvent) =>
         controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`));
+      if (notionNotice) {
+        emit({ type: "notice", text: notionNotice });
+      }
       try {
         for (let turn = 0; turn <= MAX_CONTINUATIONS; turn++) {
           const final = await streamOnce(
@@ -220,6 +235,12 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  if (fresh?.status === "revoked") {
+    response.headers.append(
+      "Set-Cookie",
+      `${CONNECTION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
+    );
+  }
   if (notion?.updated) {
     // Persist the refreshed Notion token
     const sealed = await sealConnection(notion.updated);

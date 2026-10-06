@@ -142,7 +142,7 @@ function NotionCard({
           <p className="text-muted-foreground text-xs">
             {connected && since
               ? `Conectado em ${since}. O acesso fica salvo neste navegador.`
-              : "Você escolhe no Notion quais páginas o assistente pode ver."}
+              : "Sem token nem integração: basta entrar com a sua conta. O assistente vê o mesmo que você vê no Notion."}
           </p>
           {action}
         </div>
