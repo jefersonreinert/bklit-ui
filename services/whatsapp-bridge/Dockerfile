@@ -8,14 +8,16 @@ RUN apt-get update \
 ENV PUPPETEER_SKIP_DOWNLOAD=1 \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
-    PORT=7860
+    PORT=10000
 
-RUN useradd -m -u 1000 app || true
-WORKDIR /home/app/bridge
-COPY --chown=1000 package.json ./
+# Run as the image's unprivileged "node" user; it must own the working dir
+# (whatsapp-web.js writes the session and its cache there)
+WORKDIR /home/node/bridge
+RUN chown node:node /home/node/bridge
+USER node
+COPY --chown=node:node package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
-COPY --chown=1000 . .
-USER 1000
+COPY --chown=node:node . .
 
-EXPOSE 7860
+EXPOSE 10000
 CMD ["node", "server.mjs"]
