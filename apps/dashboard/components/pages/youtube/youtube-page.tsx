@@ -21,6 +21,7 @@ import {
   type YtSearchResult,
   type YtVideo,
 } from "@/lib/youtube-types";
+import { useLibraryWith } from "../videos/library-store";
 import { ChannelView, PlaylistView } from "./collection-views";
 import { LibraryView } from "./library-view";
 import { ytGet } from "./use-youtube";
@@ -192,6 +193,8 @@ function AccountBar({
 
 export function YoutubePage() {
   const { status } = useConnectors();
+  // Enables the "Salvar" buttons (shared video library)
+  useLibraryWith(status);
   const [stack, setStack] = useState<View[]>([{ kind: "search" }]);
   const [input, setInput] = useState("");
   const [order, setOrder] = useState<YtOrder>("relevance");

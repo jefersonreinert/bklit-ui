@@ -11,6 +11,7 @@ import {
   type YtTranscript,
   type YtVideoDetails,
 } from "@/lib/youtube-types";
+import { SaveMenu } from "../videos/save-menu";
 import {
   relativeDate,
   shortNumber,
@@ -294,6 +295,7 @@ export function VideoView({
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          <SaveMenu video={video} />
           <Button
             nativeButton={false}
             render={

@@ -2,8 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import {
   googleConfig,
   hasScope,
+  hasYoutube,
   readGoogleConnection,
-  YOUTUBE_SCOPE,
+  YOUTUBE_MANAGE_SCOPE,
 } from "@/lib/server/google-connector";
 import { readConnection } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
         ...(google
           ? { email: google.email, connectedAt: google.connectedAt }
           : {}),
-        youtube: hasScope(google, YOUTUBE_SCOPE),
+        youtube: hasYoutube(google),
+        youtubeManage: hasScope(google, YOUTUBE_MANAGE_SCOPE),
       },
       youtube: {
         available: Boolean(youtubeKey()),

@@ -20,11 +20,13 @@ export const GOOGLE_SCOPES = [
   // Read, label, draft and send (no permanent delete)
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/drive.readonly",
-  // Your channel, playlists (incl. private), subscriptions and likes
-  "https://www.googleapis.com/auth/youtube.readonly",
+  // Your channel, playlists (incl. private), subscriptions and likes, plus
+  // creating/renaming playlists and saving videos to them
+  "https://www.googleapis.com/auth/youtube",
 ];
 
 export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
+export const YOUTUBE_MANAGE_SCOPE = "https://www.googleapis.com/auth/youtube";
 
 export const GOOGLE_COOKIE = "cb_conn_google";
 export const GOOGLE_PENDING_COOKIE = "cb_oauth_google";
@@ -45,6 +47,10 @@ export interface GoogleConnection {
 
 export const hasScope = (c: GoogleConnection | null, scope: string) =>
   Boolean(c?.scopes?.includes(scope));
+
+/** Read access to the user's YouTube (either scope grants it). */
+export const hasYoutube = (c: GoogleConnection | null) =>
+  hasScope(c, YOUTUBE_SCOPE) || hasScope(c, YOUTUBE_MANAGE_SCOPE);
 
 interface PendingAuth {
   state: string;
@@ -198,8 +204,10 @@ export type GoogleSession =
       token: string;
       updated: GoogleConnection | null;
       email: string;
-      /** The login includes YouTube (youtube.readonly). */
+      /** The login includes YouTube (read). */
       youtube: boolean;
+      /** The login can create/rename playlists and save videos. */
+      youtubeManage: boolean;
     }
   | { status: "none" }
   | { status: "revoked" }
@@ -222,7 +230,8 @@ export async function googleSession(
       token: connection.accessToken,
       updated: null,
       email: connection.email,
-      youtube: hasScope(connection, YOUTUBE_SCOPE),
+      youtube: hasYoutube(connection),
+      youtubeManage: hasScope(connection, YOUTUBE_MANAGE_SCOPE),
     };
   }
   if (!connection.refreshToken) {
@@ -244,7 +253,8 @@ export async function googleSession(
       token: updated.accessToken,
       updated,
       email: updated.email,
-      youtube: hasScope(updated, YOUTUBE_SCOPE),
+      youtube: hasYoutube(updated),
+      youtubeManage: hasScope(updated, YOUTUBE_MANAGE_SCOPE),
     };
   } catch (error) {
     return error instanceof GoogleTokenError && error.code === "invalid_grant"

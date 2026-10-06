@@ -27,6 +27,12 @@ export const navItems: NavItem[] = [
     icon: "IconEmail1",
   },
   {
+    href: "/videos",
+    label: "Meus vídeos",
+    description: "Biblioteca: salvos, playlists e player",
+    icon: "IconPlayCircle",
+  },
+  {
     href: "/youtube",
     label: "YouTube",
     description: "Pesquisa, playlists e transcrição de vídeos",

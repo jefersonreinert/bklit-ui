@@ -21,6 +21,8 @@ export interface ConnectorsStatus {
     connectedAt?: number;
     /** The login also granted YouTube (your channel, playlists, likes). */
     youtube?: boolean;
+    /** …and can create/rename playlists and save videos to them. */
+    youtubeManage?: boolean;
   };
   /** Public YouTube data (server API key); transcripts need Gemini. */
   youtube: { available: boolean; transcripts: boolean };
