@@ -92,6 +92,15 @@ interface Connectors {
 
 const encoder = new TextEncoder();
 
+const NO_CREDITS_TEXT =
+  "⚠️ Sem créditos na API do Claude. Respondendo em modo demonstração.";
+const NO_CREDITS = /credit balance|billing|insufficient.*(credit|fund)/i;
+
+/** True when the account has no credits left (400 "credit balance is too low"). */
+function isOutOfCredits(error: unknown) {
+  return error instanceof Anthropic.APIError && NO_CREDITS.test(error.message);
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Anthropic.APIConnectionError) {
     return "Não foi possível conectar à API do Claude. Tente novamente.";
@@ -443,7 +452,11 @@ export async function POST(request: NextRequest) {
         await runConversation(client, params, connectors, emit, abort.signal);
       } catch (error) {
         if (!abort.signal.aborted) {
-          emit({ type: "notice", text: `⚠️ ${errorMessage(error)}` });
+          emit(
+            isOutOfCredits(error)
+              ? { type: "fallback", text: NO_CREDITS_TEXT }
+              : { type: "notice", text: `⚠️ ${errorMessage(error)}` }
+          );
         }
       } finally {
         controller.close();

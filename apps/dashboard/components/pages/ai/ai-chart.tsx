@@ -44,14 +44,14 @@ import { cn } from "@/lib/utils";
 const MONTH = /^(\d{4})-(\d{2})$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 
-/** Same ramp as the panel pages (black in dark, brown in beige, gray in light). */
-const PALETTE = [
-  "var(--chart-1)",
-  "var(--chart-4)",
-  "var(--chart-3)",
-  "var(--chart-5)",
-  "var(--chart-2)",
-];
+/**
+ * The panel ramp (brown in beige, gray in light). The dark theme's ramp is
+ * near-black, which disappears on the chat background, so --ai-chart-* swaps
+ * in a lighter ramp there (globals.css).
+ */
+const PALETTE = [1, 4, 3, 5, 2].map(
+  (n) => `var(--ai-chart-${n}, var(--chart-${n}))`
+);
 const color = (i: number) => PALETTE[i % PALETTE.length] ?? "var(--chart-1)";
 let gradientSeq = 0;
 
@@ -227,17 +227,21 @@ function BarsChart({ spec }: { spec: ChartSpec }) {
   const rows = spec.data?.length ?? 1;
   const gid = useMemo(() => `ai-bar-${++gradientSeq}`, []);
   const single = series.length === 1;
-  return (
+  const chart = (
     <BarChart
-      aspectRatio={
-        horizontal
-          ? `${Math.max(1.1, 3.4 - rows * 0.22).toFixed(2)} / 1`
-          : "2 / 1"
-      }
+      aspectRatio={horizontal ? "auto" : "2 / 1"}
       barGap={0.25}
+      className={horizontal ? "h-full" : undefined}
       data={spec.data ?? []}
       margin={
-        horizontal ? { left: Math.min(24 + longest * 6, 140) } : undefined
+        horizontal
+          ? {
+              top: 4,
+              right: 16,
+              bottom: 4,
+              left: Math.min(16 + longest * 7, 130),
+            }
+          : { top: 16, right: 8, bottom: 32, left: 8 }
       }
       orientation={horizontal ? "horizontal" : "vertical"}
       stacked={Boolean(spec.stacked)}
@@ -245,9 +249,9 @@ function BarsChart({ spec }: { spec: ChartSpec }) {
     >
       {single ? (
         <LinearGradient
-          from="var(--chart-1)"
+          from={color(0)}
           id={gid}
-          to="var(--chart-4)"
+          to={color(1)}
           vertical={!horizontal}
         />
       ) : null}
@@ -267,6 +271,12 @@ function BarsChart({ spec }: { spec: ChartSpec }) {
       {horizontal ? <BarYAxis /> : <BarXAxis />}
       <ChartTooltip rows={tooltipRows(spec)} showCrosshair={false} />
     </BarChart>
+  );
+  // Horizontal bars get a fixed height per row so labels never overlap
+  return horizontal ? (
+    <div style={{ height: rows * 34 + 16 }}>{chart}</div>
+  ) : (
+    chart
   );
 }
 

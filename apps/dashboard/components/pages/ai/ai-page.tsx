@@ -69,6 +69,16 @@ const STORAGE_KEY = "casa-brasa-ai-conversations";
 const CLAY = "#d97757";
 const API_URL = `${BASE_PATH}/api/chat/`;
 const CONNECTOR_PREFS_KEY = "casa-brasa-ai-connectors";
+/** "1" when the person chose to test without the API (no credits used). */
+const DEMO_KEY = "casa-brasa-ai-demo";
+
+function saveDemo(on: boolean) {
+  try {
+    localStorage.setItem(DEMO_KEY, on ? "1" : "0");
+  } catch {
+    // storage unavailable — the choice lasts for this visit only
+  }
+}
 
 const NOTION_PREFIX = /^notion-/;
 
@@ -676,7 +686,18 @@ export function AiPage() {
 
   useEffect(() => {
     // Deep link from other pages: /ia/?prompt=...
-    const prompt = new URLSearchParams(window.location.search).get("prompt");
+    const params = new URLSearchParams(window.location.search);
+    try {
+      if (
+        params.get("demo") === "1" ||
+        localStorage.getItem(DEMO_KEY) === "1"
+      ) {
+        setDemoMode(true);
+      }
+    } catch {
+      // storage unavailable
+    }
+    const prompt = params.get("prompt");
     if (prompt) {
       setDraft(prompt.slice(0, 2000));
       window.history.replaceState(null, "", window.location.pathname);
@@ -849,7 +870,20 @@ export function AiPage() {
           );
           return;
         }
-        await readNdjson(res.body, (e) => handleEvent(convId, assistantId, e));
+        let outOfCredits = false;
+        await readNdjson(res.body, (e) => {
+          if (e.type === "fallback") {
+            outOfCredits = true;
+          } else {
+            handleEvent(convId, assistantId, e);
+          }
+        });
+        if (outOfCredits) {
+          // No credits left: answer from the panel data and stay in demo mode
+          setDemoMode(true);
+          saveDemo(true);
+          await streamDemo(convId, assistantId, question, controller.signal);
+        }
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setDemoMode(true);
@@ -922,6 +956,13 @@ export function AiPage() {
     }
   };
 
+  const toggleDemo = () => {
+    setDemoMode((on) => {
+      saveDemo(!on);
+      return !on;
+    });
+  };
+
   const newChat = () => {
     abortRef.current?.abort();
     setActiveId(null);
@@ -987,14 +1028,24 @@ export function AiPage() {
           <p className="min-w-0 flex-1 truncate font-medium text-sm">
             {active ? active.title : "Assistente IA"}
           </p>
-          {demoMode ? (
-            <span
-              className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
-              title="Configure ANTHROPIC_API_KEY no Vercel para usar o Claude"
-            >
-              Modo demonstração
-            </span>
-          ) : null}
+          <button
+            aria-pressed={demoMode}
+            className={cn(
+              "shrink-0 rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+              demoMode
+                ? "border-primary/40 bg-primary/10 text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+            onClick={toggleDemo}
+            title={
+              demoMode
+                ? "Toque para voltar a usar o Claude"
+                : "Testar sem usar a API (não gasta créditos)"
+            }
+            type="button"
+          >
+            {demoMode ? "Modo demonstração ✓" : "Testar sem API"}
+          </button>
           {active ? (
             <Button
               aria-label="Nova conversa"
@@ -1048,10 +1099,9 @@ export function AiPage() {
             </div>
             {demoMode ? (
               <p className="max-w-md text-center text-muted-foreground text-xs">
-                Modo demonstração: as respostas são montadas com os dados do
-                painel. Adicione a variável{" "}
-                <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code>{" "}
-                no Vercel para conversar com o Claude.
+                Modo demonstração: as respostas, com gráficos, são montadas com
+                os dados do painel, sem usar a API nem gastar créditos. Toque em
+                "Modo demonstração ✓" no topo para voltar ao Claude.
               </p>
             ) : null}
           </div>

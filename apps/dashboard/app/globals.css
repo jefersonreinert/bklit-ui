@@ -124,6 +124,12 @@
   --chart-5: oklch(0.55 0 0);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-3);
+  /* Assistant charts: light ramp that reads on the dark chat background */
+  --ai-chart-1: oklch(0.92 0 0);
+  --ai-chart-2: oklch(0.8 0 0);
+  --ai-chart-3: oklch(0.68 0 0);
+  --ai-chart-4: oklch(0.56 0 0);
+  --ai-chart-5: oklch(0.45 0 0);
   --chart-grid: oklch(1 0 0 / 0.08);
   --chart-label: oklch(0.8 0 0);
   --chart-foreground: oklch(0.8 0 0);

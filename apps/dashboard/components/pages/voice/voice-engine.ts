@@ -380,7 +380,7 @@ export async function askAssistant(opts: {
       if (e.type === "text") {
         text += e.text;
         opts.onText?.(text);
-      } else if (e.type === "notice") {
+      } else if (e.type === "notice" || e.type === "fallback") {
         text += `${text ? "\n" : ""}${e.text}`;
       }
     } catch {
