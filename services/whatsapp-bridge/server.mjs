@@ -84,6 +84,8 @@ const state = {
   sync: { batches: 0, messages: 0, progress: null, lastAt: null },
 };
 let sock = null;
+/** Reconnect backoff: grows while WhatsApp keeps refusing, resets on open. */
+let retryMs = 3000;
 
 /* ------------------------------ messages -------------------------------- */
 
@@ -305,6 +307,7 @@ function onConnection(socket, u) {
       name: socket.user?.name ?? null,
       number: socket.user?.id?.split(":")[0]?.split("@")[0] ?? null,
     };
+    retryMs = 3000;
     console.log("WhatsApp ready");
   }
   if (u.connection === "close") {
@@ -322,14 +325,13 @@ function onConnection(socket, u) {
           {}
       ).slice(0, 300)
     );
-    setTimeout(
-      () => {
-        (loggedOut ? clearAuth() : Promise.resolve())
-          .then(boot)
-          .catch((e) => console.error("restart:", e.message));
-      },
-      loggedOut ? 1000 : 3000
-    );
+    const wait = loggedOut ? 1000 : retryMs;
+    retryMs = Math.min(retryMs * 2, 120_000);
+    setTimeout(() => {
+      (loggedOut ? clearAuth() : Promise.resolve())
+        .then(boot)
+        .catch((e) => console.error("restart:", e.message));
+    }, wait);
   }
 }
 
