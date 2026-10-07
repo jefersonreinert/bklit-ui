@@ -535,7 +535,17 @@ export function apiError(err: unknown) {
           "Sua conta da API ainda não tem acesso aos Managed Agents, ou a sessão não existe.",
       };
     }
-    return { status, message: err.message };
+    const detail =
+      (err.error as { error?: { message?: string } } | undefined)?.error
+        ?.message ?? err.message;
+    if (detail.includes("credit balance")) {
+      return {
+        status: 402,
+        message:
+          "Sua conta da API está sem créditos. Compre créditos em platform.claude.com → Plans & Billing e tente de novo.",
+      };
+    }
+    return { status, message: detail };
   }
   return {
     status: 500,
