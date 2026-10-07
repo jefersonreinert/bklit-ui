@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AiMascot } from "@/components/dashboard/ai-mascot";
 import { Icon } from "@/lib/icons";
 import { childrenOf } from "@/lib/notes/db";
 import { tagsOf } from "@/lib/notes/links";
@@ -188,13 +189,10 @@ function BottomBar({
         <Icon className="size-5" name="IconMagnifyingGlass" />
       </button>
       <Link
-        className="pointer-events-auto flex h-12 min-w-0 flex-1 items-center gap-3 rounded-full border bg-card px-4 text-muted-foreground shadow-md"
+        className="pointer-events-auto flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-full border bg-card pr-4 pl-2.5 text-muted-foreground shadow-md"
         href="/ia/"
       >
-        <Icon
-          className="size-5 shrink-0 text-foreground"
-          name="IconSparklesSoft"
-        />
+        <AiMascot className="size-8" />
         <span className="truncate">Pergunte à IA</span>
       </Link>
       <button
