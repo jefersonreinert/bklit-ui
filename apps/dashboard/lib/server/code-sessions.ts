@@ -412,7 +412,8 @@ export async function createSession(
     mode: CodeMode;
     images: ImageInput[];
     budgetUsd: number | null;
-    githubToken: string;
+    /** Needed for private repos; public ones clone without it. */
+    githubToken: string | null;
   }
 ) {
   const { agentId, environmentId } = await ensureSetup(client);
@@ -431,7 +432,7 @@ export async function createSession(
     resources: input.repos.map(({ repo, branch }) => ({
       type: "github_repository" as const,
       url: `https://github.com/${repo}`,
-      authorization_token: input.githubToken,
+      ...(input.githubToken ? { authorization_token: input.githubToken } : {}),
       ...(branch
         ? { checkout: { type: "branch" as const, name: branch } }
         : {}),

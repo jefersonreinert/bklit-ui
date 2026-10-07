@@ -30,9 +30,6 @@ export async function POST(request: NextRequest) {
     if (repos.length === 0 || repos.length > MAX_REPOS) {
       throw new Error(`Escolha de 1 a ${MAX_REPOS} repositórios.`);
     }
-    if (!githubToken) {
-      throw new Error("Conecte o GitHub em Conectores primeiro.");
-    }
     const budget = Number(body.budgetUsd);
     return createSession(client, {
       prompt: prompt.slice(0, 20_000),
