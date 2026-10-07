@@ -27,6 +27,12 @@ export const navItems: NavItem[] = [
     icon: "IconAgents",
   },
   {
+    href: "/code",
+    label: "Code",
+    description: "Sessões do Claude na nuvem nos seus repositórios do GitHub",
+    icon: "IconCodeAssistant",
+  },
+  {
     href: "/voz",
     label: "Voz",
     description: "Escuta contínua, conversa por voz e anotações",
