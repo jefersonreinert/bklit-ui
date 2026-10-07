@@ -84,7 +84,7 @@ export function Locked({ onDone }: { onDone: () => void }) {
 export function ConnectGithub() {
   return (
     <Link
-      className="flex w-fit items-center gap-2 rounded-full border bg-card px-4 py-2.5 text-sm shadow-xs transition-colors hover:bg-muted"
+      className="flex w-fit shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-card px-4 py-2 text-sm shadow-xs transition-colors hover:bg-muted"
       href="/conectores"
     >
       <Icon className="size-4" name="IconGithub" />

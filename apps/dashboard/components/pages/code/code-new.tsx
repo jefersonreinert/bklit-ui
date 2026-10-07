@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AiMascot } from "@/components/dashboard/ai-mascot";
 import { Button } from "@/components/ui/button";
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/ai-models";
 import { codeFetch, post } from "@/lib/code/client";
 import type { CodeSessionSummary } from "@/lib/code/types";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+import { ClawdWalker } from "./clawd";
 import {
   CodeComposer,
   type CodeMode,
@@ -129,22 +129,16 @@ export function NewSession({
         </Button>
         <h2 className="font-semibold">Nova sessão</h2>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto p-5">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <AiMascot className="size-14" />
-          <p className="max-w-sm text-muted-foreground text-sm">
-            Descreva a tarefa. O Claude clona os repositórios num container na
-            nuvem, trabalha sozinho e faz push num branch{" "}
-            <code className="text-foreground">claude/…</code>.
-          </p>
-        </div>
-        {github ? null : <ConnectGithub />}
-        <div className="flex w-full max-w-xl flex-col gap-2">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-5">
+        <ClawdWalker />
+      </div>
+      <div className="mx-auto w-full max-w-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mb-2 flex flex-col gap-2">
           {repos.map((r) => (
             <div
               className={cn(
-                "flex items-center gap-2 rounded-2xl border p-2 pl-3 transition-colors",
-                chosen.includes(r) ? "bg-card" : "opacity-60"
+                "flex items-center gap-2 rounded-full border bg-card py-1 pr-1 pl-3.5 transition-opacity",
+                chosen.includes(r) ? "" : "opacity-55"
               )}
               key={r}
             >
@@ -169,30 +163,34 @@ export function NewSession({
               ) : null}
             </div>
           ))}
-          <button
-            className="flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-muted"
-            onClick={onPickRepos}
-            type="button"
-          >
-            <Icon className="size-4" name="IconPlusSmall" />
-            {repos.length ? "Outros repositórios" : "Adicionar repositório"}
-          </button>
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex gap-2 overflow-x-auto pb-0.5">
+            {github ? (
+              <button
+                className={cn(SELECT, "flex shrink-0 items-center gap-1.5")}
+                onClick={onPickRepos}
+                type="button"
+              >
+                <Icon className="size-4" name="IconPlusSmall" />
+                {repos.length ? "Repositórios" : "Adicionar repositório"}
+              </button>
+            ) : (
+              <ConnectGithub />
+            )}
             <select
               aria-label="Modelo"
-              className={SELECT}
+              className={cn(SELECT, "shrink-0")}
               onChange={(e) => setModel(e.target.value)}
               value={model}
             >
               {AI_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}
+                  {m.name.replace("Claude ", "")}
                 </option>
               ))}
             </select>
             <select
               aria-label="Limite de gasto"
-              className={SELECT}
+              className={cn(SELECT, "shrink-0")}
               onChange={(e) => setBudget(Number(e.target.value))}
               value={budget}
             >
@@ -204,8 +202,6 @@ export function NewSession({
             </select>
           </div>
         </div>
-      </div>
-      <div className="mx-auto w-full max-w-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {error ? (
           <p className="mb-2 px-2 text-destructive text-sm">{error}</p>
         ) : null}
