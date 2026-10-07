@@ -82,25 +82,50 @@ export function NoteIcon({
   );
 }
 
-function Cover({ note }: { note: Note }) {
-  const att = note.cover?.startsWith("att:") ? note.cover : "";
+/** A page's cover (gradient, image or centered logo) at any size. */
+export function CoverPreview({
+  cover,
+  className,
+  logoClassName,
+  children,
+}: {
+  cover?: string;
+  className?: string;
+  logoClassName?: string;
+  children?: React.ReactNode;
+}) {
+  const att = cover?.startsWith("att:") ? cover : "";
   const { url } = useResolved(att);
-  const logo = isLogo(note.cover) ? note.cover : null;
+  const logo = isLogo(cover) ? cover : null;
   return (
     <div
       className={cn(
-        "group relative h-44 w-full bg-center bg-cover md:h-60",
+        "relative bg-center bg-cover",
         logo &&
-          "flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,color-mix(in_oklab,var(--foreground)_8%,transparent),transparent_70%)] bg-muted/40"
+          "flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,color-mix(in_oklab,var(--foreground)_8%,transparent),transparent_70%)] bg-muted/40",
+        !cover && "bg-muted/50",
+        className
       )}
-      style={logo ? undefined : coverStyle(note.cover, url)}
+      style={logo ? undefined : coverStyle(cover, url)}
     >
       {logo ? (
         <LogoImage
-          className="h-20 w-auto max-w-[50%] drop-shadow-sm md:h-28"
+          className={cn("w-auto drop-shadow-sm", logoClassName)}
           value={logo}
         />
       ) : null}
+      {children}
+    </div>
+  );
+}
+
+function Cover({ note }: { note: Note }) {
+  return (
+    <CoverPreview
+      className="group h-44 w-full md:h-60"
+      cover={note.cover}
+      logoClassName="h-20 max-w-[50%] md:h-28"
+    >
       <div className="absolute right-3 bottom-3 flex gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         <AssetPicker
           hasValue={Boolean(note.cover)}
@@ -115,7 +140,7 @@ function Cover({ note }: { note: Note }) {
           </button>
         </AssetPicker>
       </div>
-    </div>
+    </CoverPreview>
   );
 }
 
