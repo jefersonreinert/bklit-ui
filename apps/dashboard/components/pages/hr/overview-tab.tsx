@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   Bar,
   BarChart,
@@ -35,6 +34,7 @@ import {
   turnoverReasons,
   upcomingEvents,
 } from "@/lib/hr-data";
+import { Icon } from "@/lib/icons";
 import { SectionTitle } from "./hr-shared";
 
 const eventIcon = {

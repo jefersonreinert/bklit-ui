@@ -1,12 +1,12 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { MetricTile } from "@/components/dashboard/metric-tile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/lib/icons";
 import { type StockItem, stock, stockDays } from "@/lib/menu-data";
 import { cn } from "@/lib/utils";
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { AI_MODELS } from "@/lib/ai-models";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Markdown } from "../ai/markdown";
 import {

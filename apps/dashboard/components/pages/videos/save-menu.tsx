@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { SAVED_TITLE } from "@/lib/video-library-types";
 import type { YtVideo } from "@/lib/youtube-types";

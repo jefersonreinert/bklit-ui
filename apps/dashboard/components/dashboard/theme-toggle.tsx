@@ -1,8 +1,8 @@
 "use client";
 
-import { Icon, type IconName } from "@/lib/icons";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { Icon, type IconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 const themeOptions: { value: string; label: string; icon: IconName }[] = [

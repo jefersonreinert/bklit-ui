@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   FunnelChart,
   Legend,
@@ -21,6 +20,7 @@ import {
   RECRUITMENT_STAGES,
   recruitmentFunnel,
 } from "@/lib/hr-data";
+import { Icon } from "@/lib/icons";
 import { Avatar } from "./hr-shared";
 
 type Stage = (typeof RECRUITMENT_STAGES)[number];

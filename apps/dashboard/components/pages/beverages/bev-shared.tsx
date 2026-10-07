@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,7 @@ import {
   kindIcon,
 } from "@/lib/beverage-data";
 import { formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 const toneClass = {

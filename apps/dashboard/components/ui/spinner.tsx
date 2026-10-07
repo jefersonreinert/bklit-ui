@@ -1,5 +1,5 @@
-import { Icon } from "@/lib/icons";
 import type { CSSProperties } from "react";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 function Spinner({

@@ -1,11 +1,11 @@
 "use client";
 
-import { Icon, type IconName } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatBRL, formatPercent } from "@/lib/format";
+import { Icon, type IconName } from "@/lib/icons";
 import {
   type Dish,
   menuEngineering,

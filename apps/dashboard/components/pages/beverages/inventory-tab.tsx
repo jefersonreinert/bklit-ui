@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { MetricTile } from "@/components/dashboard/metric-tile";
@@ -16,6 +15,7 @@ import {
   type MovementType,
 } from "@/lib/beverage-data";
 import { formatBRL, formatBRLCents } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { FilterSelect, normalize, SearchInput, StockBar } from "./bev-shared";
 

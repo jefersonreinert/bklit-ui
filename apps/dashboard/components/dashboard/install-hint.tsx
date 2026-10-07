@@ -1,7 +1,7 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useEffect, useState } from "react";
+import { Icon } from "@/lib/icons";
 
 const DISMISS_KEY = "casa-brasa-install-hint";
 const IOS = /iPhone|iPad|iPod/;

@@ -1,6 +1,6 @@
-import { Icon, type IconName } from "@/lib/icons";
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
+import { Icon, type IconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 export type MetricTone = "good" | "warn" | "bad" | "neutral";

@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon, type IconName } from "@/lib/icons";
 import {
   Area,
   AreaChart,
@@ -18,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDay } from "@/lib/format";
+import { Icon, type IconName } from "@/lib/icons";
 import {
   StatCardHoverBridge,
   type StatCardHoverState,

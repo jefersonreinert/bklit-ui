@@ -1,5 +1,5 @@
-import { Icon, type IconName } from "@/lib/icons";
 import { Card, CardContent } from "@/components/ui/card";
+import { Icon, type IconName } from "@/lib/icons";
 
 export function ComingSoon({ title, icon }: { title: string; icon: IconName }) {
   return (

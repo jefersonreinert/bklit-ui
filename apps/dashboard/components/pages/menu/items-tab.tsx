@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useMemo, useState } from "react";
 import { TrendBadge } from "@/components/dashboard/trend-badge";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatBRL, formatBRLCents, formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import {
   CATEGORIES,
   type Category,

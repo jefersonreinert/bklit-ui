@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ClipRecorder,
@@ -8,6 +7,7 @@ import {
   speechSupported,
   transcribeClip,
 } from "@/components/pages/voice/voice-engine";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**

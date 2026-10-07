@@ -1,10 +1,10 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type DragEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { Icon } from "@/lib/icons";
 import {
   type ImportOutcome,
   importStatement,

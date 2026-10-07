@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -9,6 +8,7 @@ import {
   useState,
 } from "react";
 import { CameraSheet, useDictation } from "@/components/pages/ai/attachments";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 const CLAY = "#d97757";

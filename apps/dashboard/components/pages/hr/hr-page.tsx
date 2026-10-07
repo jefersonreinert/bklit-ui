@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { Gauge } from "@bklitui/ui/charts";
 import { useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
@@ -15,6 +14,7 @@ import {
   hrSummary,
   employees as initialEmployees,
 } from "@/lib/hr-data";
+import { Icon } from "@/lib/icons";
 import { HrDevelopmentTab } from "./development-tab";
 import { HrOverviewTab } from "./overview-tab";
 import { HrPeopleTab, NewEmployeeSheet } from "./people-tab";

@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   Bar,
   BarChart,
@@ -57,6 +56,7 @@ import {
   skillMetrics,
   tenure,
 } from "@/lib/hr-data";
+import { Icon } from "@/lib/icons";
 import { Avatar, ScoreBar, StatusBadge } from "./hr-shared";
 
 const ALL = "todos";

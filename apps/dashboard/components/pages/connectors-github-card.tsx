@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useState } from "react";
 import { ServiceTile } from "@/components/dashboard/service-logos";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Icon } from "@/lib/icons";
 import type { ConnectorsStatus } from "@/lib/use-connectors";
 
 /** Classic token with the scopes the assistant needs, pre-filled. */

@@ -1,10 +1,10 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Icon } from "@/lib/icons";
 import {
   balanceSeries,
   byCategory,

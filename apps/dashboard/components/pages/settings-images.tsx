@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type ReactNode, useState } from "react";
 import { BrandLogo } from "@/components/dashboard/brand-logo";
 import { ProfileAvatar } from "@/components/dashboard/profile-avatar";
@@ -11,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Icon } from "@/lib/icons";
 import { type SaveResult, saveImage, usePreferences } from "@/lib/preferences";
 import type { ImageKind } from "@/lib/settings-types";
 import { imagePngs } from "./settings-icon";

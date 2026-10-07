@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ServiceLogo } from "@/components/dashboard/service-logos";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { WaChat, WaMessage } from "@/lib/whatsapp-types";
 import { MessageMedia } from "./media";

@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon, type IconName } from "@/lib/icons";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -39,6 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { demoAnswer } from "@/lib/ai-demo";
 import type { ChatStreamEvent } from "@/lib/ai-events";
 import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
+import { Icon, type IconName } from "@/lib/icons";
 import { firstName, usePreferences } from "@/lib/preferences";
 import {
   BASE_PATH,

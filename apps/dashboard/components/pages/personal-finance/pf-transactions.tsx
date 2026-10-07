@@ -1,11 +1,11 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Icon } from "@/lib/icons";
 import { flows, merchantName } from "@/lib/personal-finance/analytics";
 import { CATEGORIES } from "@/lib/personal-finance/categorize";
 import { money, shortDate } from "@/lib/personal-finance/format";

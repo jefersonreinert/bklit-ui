@@ -1,8 +1,8 @@
 "use client";
 
-import { Icon, type IconName } from "@/lib/icons";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon, type IconName } from "@/lib/icons";
 import type { MailMessage, MailThread } from "@/lib/mail-types";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";

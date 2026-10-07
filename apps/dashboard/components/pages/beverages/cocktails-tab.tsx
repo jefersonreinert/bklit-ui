@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { type FormEvent, useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,7 @@ import {
   spiritCostPerMl,
 } from "@/lib/beverage-data";
 import { formatBRL, formatBRLCents, formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import {
   AvailabilityRow,
   CmvValue,

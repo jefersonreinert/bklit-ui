@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   Area,
   AreaChart,
@@ -96,6 +95,7 @@ import {
   formatDate,
   formatPercent,
 } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 const billVariant: Record<

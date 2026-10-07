@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   Bar,
   BarChart,
@@ -65,6 +64,7 @@ import {
   formatCompact,
   formatInt,
 } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { firstName, usePreferences } from "@/lib/preferences";
 
 const orderStatusVariant = {

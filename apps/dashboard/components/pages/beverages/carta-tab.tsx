@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import {
   type MenuLine,
 } from "@/lib/beverage-data";
 import { formatBRL, formatBRLCents } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { CmvValue, FilterSelect, normalize, SearchInput } from "./bev-shared";
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -12,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { TODAY } from "@/lib/data";
+import { Icon } from "@/lib/icons";
 import { type NavItem, navItems, normalizePath } from "@/lib/nav";
 import { usePreferences } from "@/lib/preferences";
 import { AnthropicWordmark } from "./anthropic-wordmark";

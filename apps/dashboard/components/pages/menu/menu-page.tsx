@@ -1,12 +1,12 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useMemo, useState } from "react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { MetricTile } from "@/components/dashboard/metric-tile";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brlFormatOptions, formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { type Dish, dailyItems, dishes, menuSummary } from "@/lib/menu-data";
 import { MenuEngineeringTab } from "./engineering-tab";
 import { MenuItemsTab, NewDishSheet } from "./items-tab";

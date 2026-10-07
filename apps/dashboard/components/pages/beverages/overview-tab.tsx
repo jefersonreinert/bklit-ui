@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import {
   Area,
   AreaChart,
@@ -42,6 +41,7 @@ import {
 } from "@/lib/beverage-data";
 import { palette } from "@/lib/data";
 import { formatBRL, formatCompact, formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { CmvValue } from "./bev-shared";
 
 const KINDS: BeverageKind[] = [

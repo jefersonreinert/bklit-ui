@@ -1,11 +1,11 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { Icon } from "@/lib/icons";
 import type { MailDraftInput } from "@/lib/mail-types";
 
 export interface ComposeState extends MailDraftInput {

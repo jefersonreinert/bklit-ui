@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { useCallback, useMemo, useState } from "react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { MetricTile } from "@/components/dashboard/metric-tile";
@@ -18,6 +17,7 @@ import {
   menuLines,
 } from "@/lib/beverage-data";
 import { brlFormatOptions, formatBRL, formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { BeersTab, SoftDrinksTab } from "./beers-tab";
 import { CartaTab } from "./carta-tab";
 import { CocktailsTab } from "./cocktails-tab";

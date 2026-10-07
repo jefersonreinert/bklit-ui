@@ -1,8 +1,8 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { formatPercent } from "@/lib/format";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /** `invert` = lower is better (e.g. expenses, turnover). */

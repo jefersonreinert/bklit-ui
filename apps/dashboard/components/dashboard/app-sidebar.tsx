@@ -1,10 +1,10 @@
 "use client";
 
-import { Icon } from "@/lib/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { documentStats, RESTAURANT_NAME } from "@/lib/data";
+import { Icon } from "@/lib/icons";
 import { navItems, normalizePath } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
