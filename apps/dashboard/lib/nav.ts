@@ -57,6 +57,12 @@ export const navItems: NavItem[] = [
     icon: "IconConnectors1",
   },
   {
+    href: "/pos",
+    label: "POS",
+    description: "Caixa, mesas, pedidos e pagamentos",
+    icon: "IconStore1",
+  },
+  {
     href: "/financas",
     label: "Finanças",
     description: "Receitas, despesas e fluxo de caixa",
