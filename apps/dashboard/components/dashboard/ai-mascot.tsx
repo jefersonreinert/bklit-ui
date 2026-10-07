@@ -1,140 +1,195 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The assistant's little face: blinks, bobs and writes by hand — a pencil
- * traces a squiggle that appears stroke by stroke, then starts over.
- * Clay/beige from the app palette; still when reduced motion is on.
+ * The assistant's face in the Notion AI spirit: a few ink lines (brows,
+ * eyes, nose) in a round badge, drawn like cel animation — the line "boils"
+ * a little, brows wave while thinking, eyes blink — and while writing the
+ * face turns into cursive loops traced by hand. Ink follows the theme; the
+ * little sprout on top is the app's clay.
  */
 
-const CLAY = "#d97757";
-const CLAY_DARK = "#b8573a";
-const INK = "#2b1d16";
-const PAPER = "#f2c4a8";
+type Phase = "idle" | "thinking" | "writing";
 
-const WRITE_S = 2.8;
-// Handwriting squiggle sampled as points; the pencil tip follows them.
-const POINTS = Array.from({ length: 9 }, (_, i) => {
-  const t = i / 8;
-  return { x: 5 + t * 18, y: 28.2 + Math.sin(t * Math.PI * 3) * 1.4 };
-});
-const SQUIGGLE = POINTS.reduce(
-  (d, p, i) =>
-    i === 0 ? `M${p.x} ${p.y}` : `${d} L${p.x.toFixed(2)} ${p.y.toFixed(2)}`,
-  ""
-);
-// Write (0–70%), hold (70–88%), lift and return (88–100%)
-const WRITE_TIMES = [...POINTS.map((_, i) => (i / 8) * 0.7), 0.88, 1];
-const PEN_X = [...POINTS.map((p) => p.x - 5), 18, 0];
-const PEN_Y = [...POINTS.map((p) => p.y - 28.2), -2.5, 0];
+const CYCLE: { phase: Phase; ms: number }[] = [
+  { phase: "idle", ms: 2600 },
+  { phase: "thinking", ms: 1400 },
+  { phase: "writing", ms: 2600 },
+];
+
+const CLAY = "#d97757";
+const LEFT_BROW = "M8.4 12.9 Q11.9 9.4 15.9 11.3";
+const RIGHT_BROW = "M16.1 11.3 Q20.1 9.4 23.6 12.9";
+const NOSE = "M16 11.3 C16.1 14.6 16.9 18 15.1 20.7";
+const CURSIVE =
+  "M6.6 21.2 C9.6 21.3 12.6 15.4 11.8 10.6 C11.2 7.6 8.8 8.9 9.4 13 C10.1 17.9 11.9 22.2 14.3 21.5 C17.1 20.7 18.9 15.3 18.1 10.6 C17.5 7.6 15.1 8.9 15.7 13 C16.4 17.9 18.2 22.2 20.6 21.5 C22.6 20.9 24.3 19.2 25.4 17.4";
+
+function useCycle(still: boolean | null) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (still) {
+      return;
+    }
+    const t = setTimeout(
+      () => setStep((s) => (s + 1) % CYCLE.length),
+      CYCLE[step]?.ms ?? 2000
+    );
+    return () => clearTimeout(t);
+  }, [step, still]);
+  return still ? "idle" : (CYCLE[step]?.phase ?? "idle");
+}
+
+function Face({ phase, still }: { phase: Phase; still: boolean }) {
+  const thinking = phase === "thinking";
+  const wave = (dir: 1 | -1) =>
+    thinking
+      ? {
+          rotate: [0, -8 * dir, 6 * dir, -4 * dir, 0],
+          y: [0, -0.8, 0.2, -0.5, 0],
+        }
+      : { rotate: 0, y: 0 };
+  const waveT = { duration: 1.2, ease: "easeInOut" as const };
+  return (
+    <motion.g
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.92 }}
+      initial={{ opacity: 0, scale: 0.92 }}
+      style={{ transformBox: "fill-box", transformOrigin: "center" }}
+      transition={{ duration: 0.25 }}
+    >
+      <motion.path
+        animate={still ? undefined : wave(1)}
+        d={LEFT_BROW}
+        style={{ transformBox: "fill-box", transformOrigin: "100% 100%" }}
+        transition={waveT}
+      />
+      <motion.path
+        animate={still ? undefined : wave(-1)}
+        d={RIGHT_BROW}
+        style={{ transformBox: "fill-box", transformOrigin: "0% 100%" }}
+        transition={{ ...waveT, delay: 0.08 }}
+      />
+      <path d={NOSE} />
+      {[11.7, 20.3].map((x) => (
+        <motion.path
+          animate={still ? undefined : { scaleY: [1, 1, 0.15, 1] }}
+          d={`M${x} 15.2 v1.6`}
+          key={x}
+          style={{ transformBox: "fill-box", transformOrigin: "center" }}
+          transition={{
+            duration: 2.6,
+            times: [0, 0.86, 0.9, 0.95],
+            repeat: Number.POSITIVE_INFINITY,
+          }}
+        />
+      ))}
+    </motion.g>
+  );
+}
+
+function Writing() {
+  return (
+    <motion.path
+      animate={{ pathLength: 1, opacity: 1 }}
+      d={CURSIVE}
+      exit={{ opacity: 0 }}
+      initial={{ pathLength: 0, opacity: 1 }}
+      transition={{
+        pathLength: { duration: 1.9, ease: [0.45, 0, 0.3, 1] },
+        opacity: { duration: 0.25 },
+      }}
+    />
+  );
+}
 
 export function AiMascot({ className }: { className?: string }) {
-  const still = useReducedMotion();
-  const loop = { repeat: Number.POSITIVE_INFINITY };
+  const still = Boolean(useReducedMotion());
+  const phase = useCycle(still);
+  const id = useId().replace(/:/g, "");
+  const boil = `ai-boil-${id}`;
   return (
     <svg
       aria-hidden="true"
-      className={cn("size-7 shrink-0 overflow-visible", className)}
+      className={cn(
+        "size-8 shrink-0 overflow-visible text-foreground",
+        className
+      )}
       viewBox="0 0 32 32"
     >
-      {/* Head */}
+      {/* Hand-drawn "boil": the ink line wobbles a little, 8 times a second */}
+      <defs>
+        <filter height="140%" id={boil} width="140%" x="-20%" y="-20%">
+          <feTurbulence
+            baseFrequency="0.9"
+            numOctaves={1}
+            result="noise"
+            seed={1}
+            type="fractalNoise"
+          >
+            {still ? null : (
+              <animate
+                attributeName="seed"
+                calcMode="discrete"
+                dur="0.375s"
+                repeatCount="indefinite"
+                values="1;4;7"
+              />
+            )}
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale={0.55} />
+        </filter>
+      </defs>
+
+      <circle
+        className="fill-card stroke-border"
+        cx={16}
+        cy={16}
+        r={15}
+        strokeWidth={1}
+      />
+
+      {/* Clay sprout on top, swaying */}
       <motion.g
-        animate={still ? undefined : { y: [0, -0.7, 0] }}
-        transition={{ duration: WRITE_S / 2, ease: "easeInOut", ...loop }}
+        animate={still ? undefined : { rotate: [0, 8, -4, 0] }}
+        style={{ transformBox: "fill-box", transformOrigin: "50% 100%" }}
+        transition={{
+          duration: 3.2,
+          ease: "easeInOut",
+          repeat: Number.POSITIVE_INFINITY,
+        }}
       >
         <path
-          d="M16 3.5c6.6 0 10.5 4.2 10.5 9.6 0 5.5-4.3 9.2-10.5 9.2S5.5 18.6 5.5 13.1C5.5 7.7 9.4 3.5 16 3.5Z"
+          d="M16 2.2 C16.2 0.6 17.6 -0.6 19.6 -0.7 C19.4 1.2 18 2.3 16 2.2 Z"
           fill={CLAY}
         />
         <path
-          d="M16 3.5c6.6 0 10.5 4.2 10.5 9.6 0 1.4-.3 2.7-.8 3.8C24.6 11 21 7.6 15.6 7.6c-3.6 0-6.6 1.5-8.6 3.9C7.6 6.9 11 3.5 16 3.5Z"
-          fill="#fff"
-          opacity={0.14}
-        />
-        {/* Cheeks */}
-        <circle cx={9.6} cy={15.4} fill={PAPER} opacity={0.55} r={1.5} />
-        <circle cx={22.4} cy={15.4} fill={PAPER} opacity={0.55} r={1.5} />
-        {/* Eyes looking down at the writing, blinking */}
-        {[12.2, 19.8].map((cx) => (
-          <motion.ellipse
-            animate={still ? undefined : { scaleY: [1, 1, 0.12, 1, 1] }}
-            cx={cx}
-            cy={13.2}
-            fill={INK}
-            key={cx}
-            rx={1.35}
-            ry={1.75}
-            style={{ transformBox: "fill-box", transformOrigin: "center" }}
-            transition={{
-              duration: 3.4,
-              times: [0, 0.82, 0.86, 0.9, 1],
-              ...loop,
-            }}
-          />
-        ))}
-        <path
-          d="M13.8 17.2q2.2 1.6 4.4 0"
+          d="M16 2.2 V0.4"
           fill="none"
-          stroke={INK}
+          stroke={CLAY}
           strokeLinecap="round"
-          strokeWidth={1.1}
+          strokeWidth={0.9}
         />
       </motion.g>
 
-      {/* Handwriting */}
-      <motion.path
-        animate={
-          still
-            ? undefined
-            : { pathLength: [0, 1, 1, 0], opacity: [1, 1, 1, 0] }
-        }
-        d={SQUIGGLE}
+      <g
         fill="none"
-        initial={{ pathLength: still ? 1 : 0 }}
-        stroke={CLAY_DARK}
+        filter={still ? undefined : `url(#${boil})`}
+        stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth={1.4}
-        transition={{
-          duration: WRITE_S,
-          times: [0, 0.7, 0.88, 1],
-          ease: "linear",
-          ...loop,
-        }}
-      />
-
-      {/* Pencil; its tip rides along the squiggle */}
-      <motion.g
-        animate={still ? undefined : { x: PEN_X, y: PEN_Y }}
-        transition={{
-          duration: WRITE_S,
-          times: WRITE_TIMES,
-          ease: "linear",
-          ...loop,
-        }}
+        strokeWidth={1.25}
       >
-        <g transform="translate(5 28.2) rotate(-38)">
-          <rect
-            fill={PAPER}
-            height={2.6}
-            rx={0.5}
-            width={8.5}
-            x={1.6}
-            y={-1.3}
-          />
-          <rect
-            fill={CLAY}
-            height={2.6}
-            rx={0.5}
-            width={1.6}
-            x={8.6}
-            y={-1.3}
-          />
-          <path d="M1.6 -1.3 L0 0 L1.6 1.3 Z" fill={INK} />
-        </g>
-      </motion.g>
+        <AnimatePresence initial={false} mode="wait">
+          {phase === "writing" ? (
+            <Writing key="writing" />
+          ) : (
+            <Face key="face" phase={phase} still={still} />
+          )}
+        </AnimatePresence>
+      </g>
     </svg>
   );
 }
