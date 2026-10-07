@@ -126,15 +126,56 @@ Leia também: [[Rotina de abertura]], [[Treinamento de vinhos]].
   ],
 ];
 
+export const HUB_ID = "seed-hub";
+
+/** Icon, cover and parent page for each starter note (by seed id). */
+export const SEED_LOOKS: Record<
+  string,
+  Pick<Note, "icon" | "cover" | "parentId">
+> = {
+  "seed-1": { icon: "👋", cover: "grad:6", parentId: null },
+  "seed-2": { icon: "💡", cover: "grad:0", parentId: null },
+  "seed-3": { icon: "📦", parentId: HUB_ID },
+  "seed-4": { icon: "💰", cover: "grad:1", parentId: null },
+  "seed-5": { icon: "⏰", parentId: HUB_ID },
+  "seed-6": { icon: "🧑‍🍳", parentId: HUB_ID },
+  "seed-7": { icon: "🍷", parentId: HUB_ID },
+  "seed-8": { icon: "🗓️", cover: "grad:2", parentId: null },
+  [HUB_ID]: { icon: "🍽️", cover: "grad:3", parentId: null },
+};
+
+export function hubNote(now = Date.now()): Note {
+  return {
+    id: HUB_ID,
+    title: "Restaurante",
+    folder: "",
+    content: `Tudo sobre a operação da casa. As páginas acima vivem **dentro** desta página.
+
+Veja também [[Ideias de cardápio]] e [[Custos e margens]]. #gestao`,
+    pinned: true,
+    ...SEED_LOOKS[HUB_ID],
+    createdAt: now - 10 * DAY,
+    updatedAt: now - 10 * DAY,
+  };
+}
+
 export function seedNotes(): Note[] {
   const now = Date.now();
-  return NOTES.map(([title, folder, content], i) => ({
-    id: `seed-${i + 1}`,
-    title,
-    folder,
-    content,
-    pinned: i === 0,
-    createdAt: now - (NOTES.length - i) * DAY,
-    updatedAt: now - (NOTES.length - i) * DAY,
-  }));
+  return [
+    hubNote(now),
+    ...NOTES.map(([title, folder, content], i) => {
+      const id = `seed-${i + 1}`;
+      const looks = SEED_LOOKS[id];
+      return {
+        id,
+        title,
+        folder: looks?.parentId ? "" : folder,
+        content,
+        pinned: i === 0,
+        ...looks,
+        createdAt: now - (NOTES.length - i) * DAY,
+        updatedAt: now - (NOTES.length - i) * DAY,
+      };
+    }),
+  ];
 }

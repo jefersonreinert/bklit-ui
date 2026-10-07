@@ -42,7 +42,7 @@ function kindOf(src: string, type: string | undefined): MediaKind {
 }
 
 /** att:<id> → object URL from IndexedDB; other URLs pass through. */
-function useResolved(src: string) {
+export function useResolved(src: string) {
   const isAtt = src.startsWith("att:");
   const [url, setUrl] = useState<string | null>(isAtt ? null : src);
   useEffect(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { seedNotes } from "./seed";
+import { HUB_ID, hubNote, SEED_LOOKS, seedNotes } from "./seed";
 import type { Note, NoteFile, NoteFileMeta } from "./types";
 
 /**
@@ -75,6 +75,7 @@ async function load() {
   loading = true;
   try {
     let notes = await run<Note[]>("notes", "readonly", (s) => s.getAll());
+    notes = await upgradeSeed(notes);
     if (notes.length === 0) {
       notes = seedNotes();
       await Promise.all(
@@ -93,6 +94,30 @@ async function load() {
   } finally {
     loading = false;
   }
+}
+
+/**
+ * One-time upgrade of the starter notes saved before pages had icons,
+ * covers and sub-pages. Notes the person created are never touched.
+ */
+async function upgradeSeed(notes: Note[]) {
+  const old = notes.filter((n) => n.id in SEED_LOOKS && !("icon" in n));
+  if (old.length === 0) {
+    return notes;
+  }
+  const changed = old.map((n) => ({
+    ...n,
+    ...SEED_LOOKS[n.id],
+    folder: SEED_LOOKS[n.id]?.parentId ? "" : n.folder,
+  }));
+  const added = notes.some((n) => n.id === HUB_ID) ? [] : [hubNote()];
+  await Promise.all(
+    [...changed, ...added].map((n) =>
+      run("notes", "readwrite", (s) => s.put(n))
+    )
+  );
+  const byId = new Map(changed.map((n) => [n.id, n]));
+  return [...notes.map((n) => byId.get(n.id) ?? n), ...added];
 }
 
 function subscribe(listener: () => void) {
@@ -135,15 +160,41 @@ export function createNote(init: Partial<Note> = {}) {
     folder: init.folder ?? "",
     content: init.content ?? "",
     pinned: false,
+    icon: init.icon,
+    cover: init.cover,
+    parentId: init.parentId ?? null,
     createdAt: now,
     updatedAt: now,
   });
 }
 
+/** Deletes a page; its sub-pages move up to the deleted page's parent. */
 export function deleteNote(id: string) {
+  const removed = state.notes.find((n) => n.id === id);
+  for (const child of state.notes.filter((n) => n.parentId === id)) {
+    saveNote({ ...child, parentId: removed?.parentId ?? null });
+  }
   emit({ ...state, notes: state.notes.filter((n) => n.id !== id) });
   run("notes", "readwrite", (s) => s.delete(id)).catch(() => null);
 }
+
+/** Parent chain from the root down to (not including) the note. */
+export function ancestors(notes: Note[], note: Note) {
+  const chain: Note[] = [];
+  const seen = new Set([note.id]);
+  let parent = notes.find((n) => n.id === note.parentId);
+  while (parent && !seen.has(parent.id)) {
+    chain.unshift(parent);
+    seen.add(parent.id);
+    parent = notes.find((n) => n.id === parent?.parentId);
+  }
+  return chain;
+}
+
+export const childrenOf = (notes: Note[], id: string) =>
+  notes
+    .filter((n) => n.parentId === id)
+    .sort((a, b) => a.createdAt - b.createdAt);
 
 /* --------------------------------- files --------------------------------- */
 

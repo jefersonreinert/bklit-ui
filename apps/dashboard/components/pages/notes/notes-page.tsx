@@ -22,6 +22,7 @@ import {
 import type { Note } from "@/lib/notes/types";
 import { cn } from "@/lib/utils";
 import { NoteEditor } from "./note-editor";
+import { NoteHero, NoteIcon } from "./note-hero";
 import { type MarkdownActions, NoteMarkdown } from "./note-markdown";
 import { NoteRadial } from "./note-radial";
 import { NotesExplorer } from "./notes-explorer";
@@ -115,6 +116,7 @@ function NoteHeader({
   onMode,
   onBack,
   onDeleted,
+  onOpenNote,
 }: {
   note: Note;
   notes: Note[];
@@ -122,11 +124,11 @@ function NoteHeader({
   onMode: (m: Mode) => void;
   onBack: () => void;
   onDeleted: () => void;
+  onOpenNote: (n: Note) => void;
 }) {
-  const [title, setTitle] = useState(note.title);
-  useEffect(() => setTitle(note.title), [note.title]);
+  const parent = notes.find((n) => n.id === note.parentId);
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 md:px-5">
+    <div className="flex items-center gap-2 border-b px-3 py-2 md:px-5">
       <Button
         aria-label="Voltar"
         className="lg:hidden"
@@ -136,14 +138,17 @@ function NoteHeader({
       >
         <Icon className="size-4" name="IconChevronLeft" />
       </Button>
-      <input
-        aria-label="Título da nota"
-        className="min-w-0 flex-1 bg-transparent font-semibold text-xl tracking-tight outline-none"
-        onBlur={() => rename(notes, note, title)}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        value={title}
-      />
+      <p className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-muted-foreground text-sm">
+        {parent ? (
+          <>
+            <NoteIcon icon={parent.icon} />
+            <span className="truncate">{parent.title}</span>
+            <span>/</span>
+          </>
+        ) : null}
+        <NoteIcon icon={note.icon} />
+        <span className="truncate text-foreground">{note.title}</span>
+      </p>
       <ModeSwitch mode={mode} onMode={onMode} />
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -158,6 +163,15 @@ function NoteHeader({
             onClick={() => saveNote({ ...note, pinned: !note.pinned })}
           >
             {note.pinned ? "Desafixar" : "Fixar no topo"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() =>
+              onOpenNote(
+                createNote({ title: "Nova página", parentId: note.id })
+              )
+            }
+          >
+            Nova subpágina
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => download(note)}>
             Exportar .md
@@ -342,9 +356,17 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
   };
   const showEditor = s.mode === "edit" || s.mode === "split";
   const showReader = s.mode === "read" || s.mode === "split";
+  const hero = (
+    <NoteHero
+      note={note}
+      notes={s.notes}
+      onOpen={(n) => s.open(n.id)}
+      onRename={(title) => rename(s.notes, note, title)}
+    />
+  );
   return (
     <>
-      <div className="flex min-h-0 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-col">
         <NoteHeader
           mode={s.mode}
           note={note}
@@ -352,6 +374,7 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
           onBack={() => s.open(null)}
           onDeleted={() => s.open(null)}
           onMode={s.changeMode}
+          onOpenNote={(n) => s.open(n.id)}
         />
         <div
           className={cn(
@@ -361,6 +384,7 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
         >
           {showEditor ? (
             <NoteEditor
+              header={s.mode === "edit" ? hero : null}
               note={note}
               onChange={(content) => saveNote({ ...note, content })}
               titles={s.notes.map((n) => n.title)}
@@ -369,11 +393,12 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
           {showReader ? (
             <div
               className={cn(
-                "min-h-0 overflow-y-auto px-5 py-4 md:px-10",
+                "min-h-0 overflow-y-auto",
                 s.mode === "split" && "hidden border-l lg:block"
               )}
             >
-              <article className="mx-auto max-w-3xl pb-24">
+              {hero}
+              <article className="mx-auto max-w-3xl px-5 pb-24 md:px-10">
                 <NoteMarkdown actions={actions} text={note.content} />
                 {note.content.trim() === "" ? (
                   <button
@@ -444,7 +469,7 @@ export function NotesPage() {
 
   const graph = s.view === "graph";
   return (
-    <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] grid h-[calc(100dvh-var(--header-h))] md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))] lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
+    <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] grid h-[calc(100dvh-var(--header-h))] grid-cols-1 md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))] lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
       <div
         className={cn(
           "min-h-0 border-r p-3",

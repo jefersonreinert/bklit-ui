@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/lib/icons";
+import { childrenOf } from "@/lib/notes/db";
 import { tagsOf } from "@/lib/notes/links";
 import type { Note } from "@/lib/notes/types";
 import { cn } from "@/lib/utils";
+import { NoteIcon } from "./note-hero";
 
 const ago = (ts: number) => {
   const m = Math.round((Date.now() - ts) / 60_000);
@@ -20,35 +22,95 @@ const ago = (ts: number) => {
   return h < 24 ? `${h} h` : new Date(ts).toLocaleDateString("pt-BR");
 };
 
+/** The whole note list, for nesting sub-pages under their parents. */
+const TreeContext = createContext<{ all: Note[]; tree: boolean }>({
+  all: [],
+  tree: false,
+});
+
 function NoteRow({
   note,
   active,
   onOpen,
+  activeId,
+  onOpenId,
 }: {
   note: Note;
   active: boolean;
   onOpen: () => void;
+  activeId?: string | null;
+  onOpenId?: (id: string) => void;
 }) {
+  const { all, tree } = useContext(TreeContext);
+  const children = tree ? childrenOf(all, note.id) : [];
+  const [open, setOpen] = useState(false);
+  // Keep the branch with the open page expanded
+  const containsActive = children.some(
+    (c) =>
+      c.id === activeId ||
+      all.some((x) => x.id === activeId && x.parentId === c.id)
+  );
+  const expanded = open || containsActive;
   return (
-    <button
-      className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
-        active ? "bg-muted font-medium" : "text-foreground/85 hover:bg-muted/60"
-      )}
-      onClick={onOpen}
-      type="button"
-    >
-      <Icon
-        className="size-3.5 shrink-0 text-muted-foreground"
-        name="IconFileText"
-      />
-      <span className="min-w-0 flex-1 truncate">
-        {note.title || "Sem título"}
-      </span>
-      <span className="shrink-0 text-[10px] text-muted-foreground">
-        {ago(note.updatedAt)}
-      </span>
-    </button>
+    <div>
+      <div
+        className={cn(
+          "flex w-full items-center gap-1 rounded-lg pr-2 text-sm transition-colors",
+          active
+            ? "bg-muted font-medium"
+            : "text-foreground/85 hover:bg-muted/60"
+        )}
+      >
+        {children.length > 0 ? (
+          <button
+            aria-label={expanded ? "Recolher subpáginas" : "Mostrar subpáginas"}
+            className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+            onClick={() => setOpen(!expanded)}
+            type="button"
+          >
+            <Icon
+              className={cn(
+                "size-3 transition-transform",
+                expanded && "rotate-90"
+              )}
+              name="IconChevronRight"
+            />
+          </button>
+        ) : (
+          <span className="w-6 shrink-0" />
+        )}
+        <button
+          className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left"
+          onClick={onOpen}
+          type="button"
+        >
+          <NoteIcon
+            className="shrink-0 text-[15px] text-muted-foreground"
+            icon={note.icon}
+          />
+          <span className="min-w-0 flex-1 truncate">
+            {note.title || "Sem título"}
+          </span>
+          <span className="shrink-0 text-[10px] text-muted-foreground">
+            {ago(note.updatedAt)}
+          </span>
+        </button>
+      </div>
+      {expanded && children.length > 0 ? (
+        <div className="ml-4 border-l pl-1">
+          {children.map((c) => (
+            <NoteRow
+              active={c.id === activeId}
+              activeId={activeId}
+              key={c.id}
+              note={c}
+              onOpen={() => onOpenId?.(c.id)}
+              onOpenId={onOpenId}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -84,9 +146,11 @@ function Folder({
           {notes.map((n) => (
             <NoteRow
               active={n.id === activeId}
+              activeId={activeId}
               key={n.id}
               note={n}
               onOpen={() => onOpen(n.id)}
+              onOpenId={onOpen}
             />
           ))}
         </div>
@@ -139,15 +203,18 @@ export function NotesExplorer({
     }
     return [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 24);
   }, [notes]);
+  const browsing = !(q || tag);
+  const ids = useMemo(() => new Set(notes.map((n) => n.id)), [notes]);
+  const isRoot = (n: Note) => !(n.parentId && ids.has(n.parentId));
   const folders = useMemo(() => {
     const map = new Map<string, Note[]>();
     for (const n of filtered) {
-      if (!n.pinned) {
+      if (!n.pinned && (!browsing || isRoot(n))) {
         map.set(n.folder, [...(map.get(n.folder) ?? []), n]);
       }
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [filtered]);
+  }, [filtered, browsing, isRoot]);
   const pinned = filtered.filter((n) => n.pinned);
 
   return (
@@ -198,48 +265,54 @@ export function NotesExplorer({
           <Icon className="size-3" name="IconCrossSmall" />
         </button>
       ) : null}
-      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-        {pinned.length > 0 ? (
-          <div className="mb-2">
-            <p className="px-2 py-1 text-muted-foreground text-xs uppercase tracking-wide">
-              Fixadas
+      <TreeContext.Provider value={{ all: notes, tree: browsing }}>
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+          {pinned.length > 0 ? (
+            <div className="mb-2">
+              <p className="px-2 py-1 text-muted-foreground text-xs uppercase tracking-wide">
+                Fixadas
+              </p>
+              {pinned.map((n) => (
+                <NoteRow
+                  active={n.id === activeId}
+                  activeId={activeId}
+                  key={n.id}
+                  note={n}
+                  onOpen={() => onOpen(n.id)}
+                  onOpenId={onOpen}
+                />
+              ))}
+            </div>
+          ) : null}
+          {folders.map(([folder, list]) =>
+            folder ? (
+              <Folder
+                activeId={activeId}
+                key={folder}
+                name={folder}
+                notes={list}
+                onOpen={onOpen}
+              />
+            ) : (
+              list.map((n) => (
+                <NoteRow
+                  active={n.id === activeId}
+                  activeId={activeId}
+                  key={n.id}
+                  note={n}
+                  onOpen={() => onOpen(n.id)}
+                  onOpenId={onOpen}
+                />
+              ))
+            )
+          )}
+          {filtered.length === 0 ? (
+            <p className="px-2 py-6 text-center text-muted-foreground text-sm">
+              Nenhuma nota encontrada.
             </p>
-            {pinned.map((n) => (
-              <NoteRow
-                active={n.id === activeId}
-                key={n.id}
-                note={n}
-                onOpen={() => onOpen(n.id)}
-              />
-            ))}
-          </div>
-        ) : null}
-        {folders.map(([folder, list]) =>
-          folder ? (
-            <Folder
-              activeId={activeId}
-              key={folder}
-              name={folder}
-              notes={list}
-              onOpen={onOpen}
-            />
-          ) : (
-            list.map((n) => (
-              <NoteRow
-                active={n.id === activeId}
-                key={n.id}
-                note={n}
-                onOpen={() => onOpen(n.id)}
-              />
-            ))
-          )
-        )}
-        {filtered.length === 0 ? (
-          <p className="px-2 py-6 text-center text-muted-foreground text-sm">
-            Nenhuma nota encontrada.
-          </p>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      </TreeContext.Provider>
       {tags.length > 0 ? (
         <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto border-t pt-3">
           {tags.map(([t, n]) => (

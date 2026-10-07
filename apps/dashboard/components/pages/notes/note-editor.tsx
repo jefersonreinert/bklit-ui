@@ -5,6 +5,7 @@ import {
   type DragEvent,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   useRef,
   useState,
 } from "react";
@@ -255,6 +256,7 @@ function LinkMenu({ onInsert }: { onInsert: (block: string) => void }) {
 }
 
 export function NoteEditor({
+  header,
   note,
   titles,
   onChange,
@@ -262,6 +264,8 @@ export function NoteEditor({
   note: Note;
   titles: string[];
   onChange: (content: string) => void;
+  /** Page header (cover, icon, title) shown above the text. */
+  header?: ReactNode;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -395,9 +399,10 @@ export function NoteEditor({
           over && "bg-[#d97757]/5 ring-2 ring-[#d97757]/40 ring-inset"
         )}
       >
+        {header}
         <textarea
           aria-label="Conteúdo da nota em Markdown"
-          className="block min-h-full w-full resize-none bg-transparent px-5 py-4 font-mono text-[14px] leading-7 outline-none placeholder:text-muted-foreground md:px-8"
+          className="mx-auto block min-h-[60vh] w-full max-w-3xl resize-none bg-transparent px-5 py-4 font-mono text-[14px] leading-7 outline-none placeholder:text-muted-foreground md:px-8"
           onChange={(e) => onInput(e.target.value, e.target.selectionStart)}
           onDragLeave={() => setOver(false)}
           onDragOver={(e) => {
