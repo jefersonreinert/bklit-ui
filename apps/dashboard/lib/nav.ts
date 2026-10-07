@@ -21,6 +21,12 @@ export const navItems: NavItem[] = [
     icon: "IconSparklesSoft",
   },
   {
+    href: "/agentes",
+    label: "Agentes",
+    description: "Crie, salve e edite agentes automáticos (Claude Agent SDK)",
+    icon: "IconAgents",
+  },
+  {
     href: "/voz",
     label: "Voz",
     description: "Escuta contínua, conversa por voz e anotações",
