@@ -57,6 +57,12 @@ export const navItems: NavItem[] = [
     icon: "IconConnectors1",
   },
   {
+    href: "/notas",
+    label: "Notas",
+    description: "Notas em Markdown, gráficos, mídias e grafo de conexões",
+    icon: "IconNotebook",
+  },
+  {
     href: "/pos",
     label: "POS",
     description: "Caixa, mesas, pedidos e pagamentos",
