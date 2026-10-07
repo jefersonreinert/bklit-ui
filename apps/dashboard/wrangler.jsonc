@@ -11,6 +11,8 @@
   "observability": { "enabled": true },
   // Keep variables added in the Cloudflare dashboard across deploys
   "keep_vars": true,
+  // Wrangler's __name() helpers break server functions inlined as <script>
+  "keep_names": false,
   // Non-secret settings; secrets are set in the Cloudflare dashboard
   "vars": {
     "WHATSAPP_BRIDGE_URL": "https://casa-brasa-wa.onrender.com"
