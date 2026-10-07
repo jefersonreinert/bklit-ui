@@ -1,4 +1,4 @@
-import type { IconName } from "@bklitui/icons";
+import type { IconName } from "@/lib/icons";
 
 /**
  * Beverage program for the Bebidas page: wine list, spirits, beers,

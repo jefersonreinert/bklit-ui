@@ -15,7 +15,10 @@ const nextConfig = {
   trailingSlash: true,
   reactStrictMode: true,
   // Lets the app notice a newer deployment (components/dashboard/update-checker)
-  env: { NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev" },
+  env: {
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? "dev",
+  },
   images: { unoptimized: true },
   transpilePackages: ["@bklitui/ui", "@bklitui/icons", "geist"],
   experimental: {

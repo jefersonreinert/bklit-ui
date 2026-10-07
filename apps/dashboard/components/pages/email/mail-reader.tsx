@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { MailMessage, MailThread } from "@/lib/mail-types";

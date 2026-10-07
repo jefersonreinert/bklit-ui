@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { type DragEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

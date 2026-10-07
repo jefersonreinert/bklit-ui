@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ServiceLogo } from "@/components/dashboard/service-logos";
 import { Button } from "@/components/ui/button";

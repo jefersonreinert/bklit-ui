@@ -1,4 +1,4 @@
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 

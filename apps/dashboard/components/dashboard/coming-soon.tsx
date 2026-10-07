@@ -1,4 +1,4 @@
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function ComingSoon({ title, icon }: { title: string; icon: IconName }) {

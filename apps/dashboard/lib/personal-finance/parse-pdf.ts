@@ -310,13 +310,17 @@ export function parsePdfItems(pages: PdfItem[][]): ParseResult {
   };
 }
 
+/** Same version as the pdfjs-dist dev dependency (used for types). */
+const PDFJS_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build";
+
 /** Browser: PDF file → positioned text items per page (pdf.js). */
 export async function pdfItems(file: File): Promise<PdfItem[][]> {
-  const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
-  ).toString();
+  // Loaded from the CDN only when a PDF is imported: keeps ~400 KB of pdf.js
+  // out of the server bundle (it never runs there) and out of the app
+  const pdfjs = (await import(
+    /* webpackIgnore: true */ /* turbopackIgnore: true */ `${PDFJS_CDN}/pdf.min.mjs`
+  )) as typeof import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
   const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() })
     .promise;
   const pages: PdfItem[][] = [];

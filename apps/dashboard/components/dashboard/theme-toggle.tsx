@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";

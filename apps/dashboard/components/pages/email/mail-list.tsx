@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import type { MailSummary } from "@/lib/mail-types";
 import { cn } from "@/lib/utils";
 import { initials, listDate } from "./mail-format";

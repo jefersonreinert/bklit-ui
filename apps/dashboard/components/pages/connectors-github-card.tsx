@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { type FormEvent, useState } from "react";
 import { ServiceTile } from "@/components/dashboard/service-logos";
 import { Badge } from "@/components/ui/badge";

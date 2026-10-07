@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { WaMessage } from "@/lib/whatsapp-types";
 

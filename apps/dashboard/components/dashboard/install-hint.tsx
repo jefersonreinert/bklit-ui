@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { useEffect, useState } from "react";
 
 const DISMISS_KEY = "casa-brasa-install-hint";

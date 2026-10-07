@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { type ReactNode, useState } from "react";
 import { BrandLogo } from "@/components/dashboard/brand-logo";
 import { ProfileAvatar } from "@/components/dashboard/profile-avatar";

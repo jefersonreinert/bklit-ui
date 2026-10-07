@@ -1,4 +1,4 @@
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";

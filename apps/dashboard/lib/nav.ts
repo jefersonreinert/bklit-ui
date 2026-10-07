@@ -1,4 +1,4 @@
-import type { IconName } from "@bklitui/icons";
+import type { IconName } from "@/lib/icons";
 
 export interface NavItem {
   href: string;

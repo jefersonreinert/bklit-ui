@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@bklitui/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import {
   type FormEvent,
   type KeyboardEvent,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ClipRecorder,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { formatDuration, type YtVideo } from "@/lib/youtube-types";
 import { relativeDate, shortNumber } from "./use-youtube";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";

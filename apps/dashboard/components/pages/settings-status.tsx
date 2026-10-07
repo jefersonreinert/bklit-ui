@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@bklitui/icons";
+import { Icon } from "@/lib/icons";
 import type { SaveResult } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 
