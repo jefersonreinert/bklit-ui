@@ -25,6 +25,8 @@ export interface NoteFile {
   size: number;
   blob: Blob;
   createdAt: number;
+  /** Saved in the icon/cover library for reuse on any page. */
+  library?: boolean;
 }
 
 export type NoteFileMeta = Omit<NoteFile, "blob">;

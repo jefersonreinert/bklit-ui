@@ -198,7 +198,10 @@ export const childrenOf = (notes: Note[], id: string) =>
 
 /* --------------------------------- files --------------------------------- */
 
-export async function addFile(file: File): Promise<NoteFileMeta> {
+export async function addFile(
+  file: File,
+  opts: { library?: boolean } = {}
+): Promise<NoteFileMeta> {
   const record: NoteFile = {
     id: newId(),
     name: file.name,
@@ -206,6 +209,7 @@ export async function addFile(file: File): Promise<NoteFileMeta> {
     size: file.size,
     blob: file,
     createdAt: Date.now(),
+    library: opts.library,
   };
   await run("files", "readwrite", (s) => s.put(record));
   const { blob: _blob, ...meta } = record;
@@ -233,3 +237,18 @@ export async function fileUrl(id: string) {
 }
 
 export const fileMeta = (id: string) => state.files.find((f) => f.id === id);
+
+/** Removes an image from the library (pages already using it keep it). */
+export async function removeFromLibrary(id: string) {
+  const record = await run<NoteFile | undefined>("files", "readonly", (s) =>
+    s.get(id)
+  );
+  if (!record) {
+    return;
+  }
+  await run("files", "readwrite", (s) => s.put({ ...record, library: false }));
+  emit({
+    ...state,
+    files: state.files.map((f) => (f.id === id ? { ...f, library: false } : f)),
+  });
+}

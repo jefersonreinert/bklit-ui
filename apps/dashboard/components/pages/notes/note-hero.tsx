@@ -1,80 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { useEffect, useState } from "react";
 import { Icon } from "@/lib/icons";
-import {
-  addFile,
-  ancestors,
-  childrenOf,
-  createNote,
-  saveNote,
-} from "@/lib/notes/db";
+import { ancestors, childrenOf, createNote, saveNote } from "@/lib/notes/db";
+import { isLogo } from "@/lib/notes/svgl";
 import type { Note } from "@/lib/notes/types";
 import { cn } from "@/lib/utils";
+import { AssetPicker, COVER_GRADIENTS, LogoImage } from "./note-assets";
 import { useResolved } from "./note-embeds";
 
 /** Notion-style page header: cover, icon, title, breadcrumbs, sub-pages. */
-
-export const COVER_GRADIENTS = [
-  "linear-gradient(120deg,#d97757,#f2c4a8)",
-  "linear-gradient(120deg,#1f2a1d,#9cc46b)",
-  "linear-gradient(120deg,#0f172a,#475569 60%,#d4a27f)",
-  "linear-gradient(120deg,#5c3d2e,#d4a27f)",
-  "linear-gradient(120deg,#3b2f5c,#c48b9f)",
-  "linear-gradient(120deg,#0e3b43,#5fb3a1)",
-  "radial-gradient(circle at 30% 20%,#f5e6c8,#d97757 55%,#2b1d16)",
-  "linear-gradient(120deg,#111,#333 50%,#111)",
-];
-
-const EMOJIS = [
-  "📝",
-  "📌",
-  "📚",
-  "💡",
-  "🔥",
-  "⭐",
-  "✅",
-  "📈",
-  "💰",
-  "🍽️",
-  "🥩",
-  "🍷",
-  "🧑‍🍳",
-  "🛒",
-  "📦",
-  "🧾",
-  "🗓️",
-  "⏰",
-  "📞",
-  "✉️",
-  "🧠",
-  "🎯",
-  "🚀",
-  "🛠️",
-  "💻",
-  "🤖",
-  "🐙",
-  "🦞",
-  "🐡",
-  "🌱",
-  "🌍",
-  "🏠",
-  "❤️",
-  "🎨",
-  "🎵",
-  "🎬",
-  "📷",
-  "🔒",
-  "🔑",
-  "⚙️",
-];
 
 const GRADIENT = /^grad:(\d+)$/;
 const DEFAULT_ICON_CLASS = "size-[0.7em]";
@@ -100,6 +35,14 @@ export function NoteIcon({
 }) {
   const isImage = Boolean(icon?.startsWith("att:"));
   const { url } = useResolved(isImage ? (icon ?? "") : "");
+  if (isLogo(icon)) {
+    return (
+      <LogoImage
+        className={cn("inline-block size-[1em]", className)}
+        value={icon}
+      />
+    );
+  }
   if (isImage) {
     return url ? (
       // biome-ignore lint/performance/noImgElement: user-uploaded icon (blob URL)
@@ -139,169 +82,38 @@ export function NoteIcon({
   );
 }
 
-function useUpload(onDone: (src: string) => void) {
-  const input = useRef<HTMLInputElement>(null);
-  const field = (
-    <input
-      accept="image/*"
-      className="hidden"
-      onChange={async (e) => {
-        const file = e.target.files?.[0];
-        e.target.value = "";
-        if (file) {
-          const meta = await addFile(file);
-          onDone(`att:${meta.id}`);
-        }
-      }}
-      ref={input}
-      type="file"
-    />
-  );
-  return { field, open: () => input.current?.click() };
-}
-
-function IconPicker({
-  note,
-  children,
-}: {
-  note: Note;
-  children: React.ReactElement;
-}) {
-  const [open, setOpen] = useState(false);
-  const [custom, setCustom] = useState("");
-  const set = (icon: string | undefined) => {
-    saveNote({ ...note, icon });
-    setOpen(false);
-  };
-  const upload = useUpload((src) => set(src));
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger render={children} />
-      <PopoverContent align="start" className="w-80 p-3">
-        <div className="grid grid-cols-8 gap-1">
-          {EMOJIS.map((e) => (
-            <button
-              aria-label={`Ícone ${e}`}
-              className="flex size-8 items-center justify-center rounded-lg text-xl hover:bg-muted"
-              key={e}
-              onClick={() => set(e)}
-              type="button"
-            >
-              {e}
-            </button>
-          ))}
-        </div>
-        <form
-          className="mt-3 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (custom.trim()) {
-              set(custom.trim());
-              setCustom("");
-            }
-          }}
-        >
-          <Input
-            aria-label="Outro emoji"
-            onChange={(e) => setCustom(e.target.value)}
-            placeholder="Outro emoji…"
-            value={custom}
-          />
-          <Button size="sm" type="submit" variant="outline">
-            Usar
-          </Button>
-        </form>
-        <div className="mt-2 flex gap-2">
-          <Button
-            className="flex-1"
-            onClick={upload.open}
-            size="sm"
-            variant="outline"
-          >
-            <Icon className="size-4" name="IconCloudUpload" />
-            Enviar imagem
-          </Button>
-          {note.icon ? (
-            <Button onClick={() => set(undefined)} size="sm" variant="ghost">
-              Remover
-            </Button>
-          ) : null}
-        </div>
-        {upload.field}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function CoverPicker({
-  note,
-  children,
-}: {
-  note: Note;
-  children: React.ReactElement;
-}) {
-  const [open, setOpen] = useState(false);
-  const set = (cover: string | undefined) => {
-    saveNote({ ...note, cover });
-    setOpen(false);
-  };
-  const upload = useUpload((src) => set(src));
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger render={children} />
-      <PopoverContent align="end" className="w-80 p-3">
-        <p className="mb-2 text-muted-foreground text-xs">Degradês</p>
-        <div className="grid grid-cols-4 gap-2">
-          {COVER_GRADIENTS.map((g, i) => (
-            <button
-              aria-label={`Capa ${i + 1}`}
-              className="h-12 rounded-lg ring-foreground/40 hover:ring-2"
-              key={g}
-              onClick={() => set(`grad:${i}`)}
-              style={{ backgroundImage: g }}
-              type="button"
-            />
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <Button
-            className="flex-1"
-            onClick={upload.open}
-            size="sm"
-            variant="outline"
-          >
-            <Icon className="size-4" name="IconCloudUpload" />
-            Enviar imagem
-          </Button>
-          {note.cover ? (
-            <Button onClick={() => set(undefined)} size="sm" variant="ghost">
-              Remover
-            </Button>
-          ) : null}
-        </div>
-        {upload.field}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 function Cover({ note }: { note: Note }) {
   const att = note.cover?.startsWith("att:") ? note.cover : "";
   const { url } = useResolved(att);
+  const logo = isLogo(note.cover) ? note.cover : null;
   return (
     <div
-      className="group relative h-44 w-full bg-center bg-cover md:h-60"
-      style={coverStyle(note.cover, url)}
+      className={cn(
+        "group relative h-44 w-full bg-center bg-cover md:h-60",
+        logo &&
+          "flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,color-mix(in_oklab,var(--foreground)_8%,transparent),transparent_70%)] bg-muted/40"
+      )}
+      style={logo ? undefined : coverStyle(note.cover, url)}
     >
+      {logo ? (
+        <LogoImage
+          className="h-20 w-auto max-w-[50%] drop-shadow-sm md:h-28"
+          value={logo}
+        />
+      ) : null}
       <div className="absolute right-3 bottom-3 flex gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-        <CoverPicker note={note}>
+        <AssetPicker
+          hasValue={Boolean(note.cover)}
+          mode="cover"
+          onPick={(cover) => saveNote({ ...note, cover })}
+        >
           <button
             className="rounded-full bg-background/85 px-3 py-1.5 text-xs shadow-sm backdrop-blur"
             type="button"
           >
             Trocar capa
           </button>
-        </CoverPicker>
+        </AssetPicker>
       </div>
     </div>
   );
@@ -401,7 +213,11 @@ export function NoteHero({
       <div className="mx-auto max-w-3xl px-5 md:px-10">
         <div className={cn("flex flex-col", hasCover ? "-mt-12" : "pt-8")}>
           {note.icon ? (
-            <IconPicker note={note}>
+            <AssetPicker
+              hasValue
+              mode="icon"
+              onPick={(icon) => saveNote({ ...note, icon })}
+            >
               <button
                 aria-label="Trocar ícone"
                 className="relative w-fit rounded-2xl text-[72px] leading-none transition-transform hover:scale-105"
@@ -409,11 +225,15 @@ export function NoteHero({
               >
                 <NoteIcon className="drop-shadow-sm" icon={note.icon} />
               </button>
-            </IconPicker>
+            </AssetPicker>
           ) : null}
           <div className="group mt-3 flex flex-wrap gap-1 text-muted-foreground text-sm">
             {note.icon ? null : (
-              <IconPicker note={note}>
+              <AssetPicker
+                hasValue={false}
+                mode="icon"
+                onPick={(icon) => saveNote({ ...note, icon })}
+              >
                 <button
                   className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-muted"
                   type="button"
@@ -421,10 +241,14 @@ export function NoteHero({
                   <Icon className="size-4" name="IconEmojiGrinning" />
                   Adicionar ícone
                 </button>
-              </IconPicker>
+              </AssetPicker>
             )}
             {hasCover ? null : (
-              <CoverPicker note={note}>
+              <AssetPicker
+                hasValue={Boolean(note.cover)}
+                mode="cover"
+                onPick={(cover) => saveNote({ ...note, cover })}
+              >
                 <button
                   className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-muted"
                   type="button"
@@ -432,7 +256,7 @@ export function NoteHero({
                   <Icon className="size-4" name="IconImages1" />
                   Adicionar capa
                 </button>
-              </CoverPicker>
+              </AssetPicker>
             )}
           </div>
           <Breadcrumbs note={note} notes={notes} onOpen={onOpen} />
