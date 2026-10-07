@@ -41,7 +41,7 @@ export interface OrderItem {
   sent: boolean;
 }
 
-export type PaymentMethod = "card" | "cash" | "link" | "other";
+export type PaymentMethod = "card" | "qr" | "cash" | "link" | "other";
 
 export interface Payment {
   method: PaymentMethod;

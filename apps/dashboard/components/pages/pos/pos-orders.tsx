@@ -54,6 +54,7 @@ const STATUS: Record<OrderStatus, { label: string; className: string }> = {
 
 const METHOD: Record<PaymentMethod, string> = {
   card: "Cartão (aproximação)",
+  qr: "QR code SumUp",
   cash: "Dinheiro",
   link: "Link de pagamento",
   other: "Outro meio",

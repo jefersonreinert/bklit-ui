@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,11 +16,12 @@ import { money, orderTotals, payOrder, updateOrder } from "@/lib/pos/store";
 import type { PaymentMethod, PosData, PosOrder } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { orderLabel } from "./pos-cart";
+import { SumupQrStep, useSumupQrAvailable } from "./pos-qr";
 
 const TIPS = [0, 5, 10, 15];
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-type Step = "choose" | "cash" | "link" | "other" | "done";
+type Step = "choose" | "qr" | "cash" | "link" | "other" | "done";
 
 function MethodButton({
   icon,
@@ -132,6 +133,21 @@ export function CheckoutSheet({
   const tip = Math.round(total * tipRate) / 100;
   const due = total + tip;
 
+  const qrAvailable = useSumupQrAvailable();
+  // Stable so the QR step's status polling isn't restarted on every render
+  const onQrPaid = useCallback(
+    (txCode: string | null) => {
+      payOrder(order.id, {
+        method: "qr",
+        amount: due,
+        tip,
+        ref: txCode ?? undefined,
+      });
+      setStep("done");
+    },
+    [order.id, due, tip]
+  );
+
   const pay = (method: PaymentMethod, ref?: string) => {
     payOrder(order.id, { method, amount: due, tip, ref });
     setStep("done");
@@ -215,6 +231,14 @@ export function CheckoutSheet({
                   </button>
                 ))}
               </div>
+              {qrAvailable ? (
+                <MethodButton
+                  hint="Cliente paga no celular dele: cartão, Apple Pay ou Google Pay"
+                  icon="IconQrCode"
+                  onClick={() => setStep("qr")}
+                  title="QR code SumUp"
+                />
+              ) : null}
               <MethodButton
                 disabled={!settings.sumupAffiliateKey}
                 hint={
@@ -280,6 +304,15 @@ export function CheckoutSheet({
                 Cliente pagou
               </Button>
             </div>
+          ) : null}
+
+          {step === "qr" ? (
+            <SumupQrStep
+              amount={due}
+              currency={currency}
+              onPaid={onQrPaid}
+              order={order}
+            />
           ) : null}
 
           {step === "other" ? (
