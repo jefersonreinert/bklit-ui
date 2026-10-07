@@ -53,7 +53,7 @@ export const navItems: NavItem[] = [
   {
     href: "/conectores",
     label: "Conectores",
-    description: "Notion, Gmail, Drive, YouTube e WhatsApp no assistente",
+    description: "Notion, GitHub, Gmail, Drive, YouTube e WhatsApp",
     icon: "IconConnectors1",
   },
   {

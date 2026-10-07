@@ -460,11 +460,18 @@ function Composer({
   );
 }
 
-type ConnectorKey = "notion" | "gmail" | "drive" | "youtube" | "whatsapp";
+type ConnectorKey =
+  | "notion"
+  | "github"
+  | "gmail"
+  | "drive"
+  | "youtube"
+  | "whatsapp";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
 const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
   { key: "notion", label: "Notion" },
+  { key: "github", label: "GitHub" },
   { key: "gmail", label: "Gmail" },
   { key: "drive", label: "Google Drive" },
   { key: "youtube", label: "YouTube" },
@@ -473,6 +480,7 @@ const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
 
 const SERVICE_KEYS = new Set<string>([
   "notion",
+  "github",
   "gmail",
   "drive",
   "youtube",
@@ -491,6 +499,9 @@ function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "whatsapp") {
     return Boolean(status.whatsapp?.available && status.whatsapp.unlocked);
   }
+  if (key === "github") {
+    return Boolean(status.github?.connected);
+  }
   return key === "notion" ? status.notion.connected : status.google.connected;
 }
 
@@ -506,6 +517,9 @@ function connectorSubtitle(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "whatsapp") {
     return "Ler conversas";
   }
+  if (key === "github") {
+    return status?.github.login ? `@${status.github.login}` : "Conectado";
+  }
   return (key !== "notion" && status?.google.email) || "Conectado";
 }
 
@@ -517,7 +531,7 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "notion") {
     return notionStartUrl(back);
   }
-  if (key === "youtube") {
+  if (key === "youtube" || key === "github") {
     return `${BASE_PATH}/conectores/`;
   }
   if (key === "whatsapp") {
@@ -650,6 +664,7 @@ function PlusMenu({
 
 const SERVICE_NAMES: Record<string, string> = {
   notion: "Notion",
+  github: "GitHub",
   gmail: "Gmail",
   drive: "Google Drive",
   youtube: "YouTube",
@@ -918,6 +933,7 @@ export function AiPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [prefs, setPrefs] = useState<ConnectorPrefs>({
     notion: true,
+    github: true,
     gmail: true,
     drive: true,
     youtube: true,

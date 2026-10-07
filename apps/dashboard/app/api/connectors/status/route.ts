@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { readGithubConnection } from "@/lib/server/github-connector";
 import {
   googleConfig,
   hasScope,
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
   const configured = Boolean(connectorsSecret());
   const notion = configured ? await readConnection(request) : null;
   const google = configured ? await readGoogleConnection(request) : null;
+  const github = configured ? await readGithubConnection(request) : null;
   return NextResponse.json(
     {
       configured,
@@ -35,6 +37,13 @@ export async function GET(request: NextRequest) {
         youtube: hasYoutube(google),
         youtubeManage: hasScope(google, YOUTUBE_MANAGE_SCOPE),
       },
+      github: github
+        ? {
+            connected: true,
+            login: github.login,
+            connectedAt: github.connectedAt,
+          }
+        : { connected: false },
       youtube: {
         available: Boolean(youtubeKey()),
         transcripts: Boolean(geminiKey()),

@@ -24,6 +24,8 @@ export interface ConnectorsStatus {
     /** …and can create/rename playlists and save videos to them. */
     youtubeManage?: boolean;
   };
+  /** GitHub personal access token saved for this browser. */
+  github: { connected: boolean; login?: string; connectedAt?: number };
   /** Public YouTube data (server API key); transcripts need Gemini. */
   youtube: { available: boolean; transcripts: boolean };
   /** WhatsApp bridge configured; `unlocked` = this browser has the access code. */
@@ -36,6 +38,7 @@ const OFFLINE: ConnectorsStatus = {
   ai: false,
   notion: { connected: false },
   google: { available: false, connected: false },
+  github: { connected: false },
   youtube: { available: false, transcripts: false },
   whatsapp: { available: false, unlocked: false },
 };
@@ -94,5 +97,44 @@ export function useConnectors() {
     }
   }, [refresh]);
 
-  return { status, refresh, disconnectNotion, disconnectGoogle };
+  const disconnectGithub = useCallback(async () => {
+    try {
+      await fetch(`${BASE_PATH}/api/connectors/github/disconnect/`, {
+        method: "POST",
+      });
+    } finally {
+      await refresh();
+    }
+  }, [refresh]);
+
+  /** Saves a GitHub token; returns an error message, or null when connected. */
+  const connectGithub = useCallback(
+    async (token: string) => {
+      try {
+        const res = await fetch(`${BASE_PATH}/api/connectors/github/connect/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        return res.ok ? null : (body.error ?? `Erro ${res.status}`);
+      } catch {
+        return "Sem conexão com o servidor.";
+      } finally {
+        await refresh();
+      }
+    },
+    [refresh]
+  );
+
+  return {
+    status,
+    refresh,
+    disconnectNotion,
+    disconnectGoogle,
+    connectGithub,
+    disconnectGithub,
+  };
 }

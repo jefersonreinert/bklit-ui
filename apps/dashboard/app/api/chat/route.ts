@@ -4,6 +4,10 @@ import { SYSTEM_PROMPT } from "@/lib/ai-context";
 import type { ChatStreamEvent } from "@/lib/ai-events";
 import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
 import {
+  GITHUB_MCP_URL,
+  readGithubConnection,
+} from "@/lib/server/github-connector";
+import {
   googleCookieHeader,
   googleSession,
   sealGoogleConnection,
@@ -47,6 +51,9 @@ const MAX_MESSAGES = 40;
 const MAX_CHARS = 12_000;
 /** Tool loops (pause_turn or client tools) before giving up. */
 const MAX_TURNS = 10;
+
+const GITHUB_INSTRUCTIONS = (login: string) =>
+  `A conta do GitHub @${login} está conectada (servidor MCP oficial "github"). Use as ferramentas do GitHub para repositórios, código, issues, pull requests, commits, branches, releases e GitHub Actions: busque e leia antes de responder e cite o repositório e o número da issue/PR. Antes de qualquer ação que altere algo (criar ou editar arquivos, abrir/fechar/mesclar PRs, criar issues, comentar, criar branches), diga exatamente o que será feito e peça confirmação, a menos que a usuária já tenha pedido explicitamente essa ação. Nunca apague repositórios nem force alterações em branches protegidas.`;
 
 const NOTION_INSTRUCTIONS = `O workspace do Notion da gerente está conectado (servidor MCP "notion"). Use as ferramentas do Notion quando a pergunta envolver documentos, fichas, procedimentos, atas, escalas ou qualquer conteúdo que possa estar lá: busque antes de responder e cite o título das páginas usadas. Antes de criar ou alterar páginas, confirme com a usuária o que será escrito, a menos que ela tenha pedido explicitamente.`;
 
@@ -93,6 +100,7 @@ type BetaMessage = Anthropic.Beta.BetaMessage;
 
 interface Connectors {
   notion: { token: string } | null;
+  github: { token: string; login: string } | null;
   google: { token: string; email: string; youtube: boolean } | null;
   gmail: boolean;
   drive: boolean;
@@ -281,6 +289,7 @@ async function resolveConnectors(
 ) {
   const out: Connectors = {
     notion: null,
+    github: null,
     google: null,
     gmail: false,
     drive: false,
@@ -298,11 +307,17 @@ async function resolveConnectors(
   }
   const wants = {
     notion: requested?.includes("notion") ?? false,
+    github: requested?.includes("github") ?? false,
     gmail: requested?.includes("gmail") ?? false,
     drive: requested?.includes("drive") ?? false,
   };
   await Promise.all([
     wants.notion ? resolveNotion(request, out) : null,
+    wants.github
+      ? readGithubConnection(request).then((g) => {
+          out.github = g ? { token: g.token, login: g.login } : null;
+        })
+      : null,
     wants.gmail || wants.drive || out.youtube
       ? resolveGoogle(request, out, wants)
       : null,
@@ -319,7 +334,7 @@ function buildParams(
   const isHaiku = model === "claude-haiku-4-5";
   const betas = [
     ...(isHaiku ? [] : ["server-side-fallback-2026-07-01"]),
-    ...(c.notion ? ["mcp-client-2025-11-20"] : []),
+    ...(c.notion || c.github ? ["mcp-client-2025-11-20"] : []),
   ];
   const google = c.google
     ? googleInstructions({
@@ -331,6 +346,9 @@ function buildParams(
   const tools: BetaParams["tools"] = [
     ...(c.notion
       ? [{ type: "mcp_toolset" as const, mcp_server_name: "notion" }]
+      : []),
+    ...(c.github
+      ? [{ type: "mcp_toolset" as const, mcp_server_name: "github" }]
       : []),
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
     ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
@@ -351,6 +369,9 @@ function buildParams(
         ? [{ type: "text" as const, text: NOTION_INSTRUCTIONS }]
         : []),
       ...(google ? [{ type: "text" as const, text: google }] : []),
+      ...(c.github
+        ? [{ type: "text" as const, text: GITHUB_INSTRUCTIONS(c.github.login) }]
+        : []),
       ...(c.youtube
         ? [{ type: "text" as const, text: YOUTUBE_INSTRUCTIONS }]
         : []),
@@ -369,19 +390,35 @@ function buildParams(
           fallbacks: "default" as const,
         }),
     ...(tools.length > 0 ? { tools } : {}),
-    ...(c.notion
-      ? {
-          mcp_servers: [
-            {
-              type: "url" as const,
-              url: NOTION_MCP_URL,
-              name: "notion",
-              authorization_token: c.notion.token,
-            },
-          ],
-        }
-      : {}),
+    ...mcpServers(c),
   };
+}
+
+/** Remote MCP servers (Notion, GitHub) the Claude API connects to. */
+function mcpServers(c: Connectors) {
+  const servers = [
+    ...(c.notion
+      ? [
+          {
+            type: "url" as const,
+            url: NOTION_MCP_URL,
+            name: "notion",
+            authorization_token: c.notion.token,
+          },
+        ]
+      : []),
+    ...(c.github
+      ? [
+          {
+            type: "url" as const,
+            url: GITHUB_MCP_URL,
+            name: "github",
+            authorization_token: c.github.token,
+          },
+        ]
+      : []),
+  ];
+  return servers.length > 0 ? { mcp_servers: servers } : {};
 }
 
 /** Streams one request, forwarding text and tool activity. */
@@ -558,6 +595,7 @@ export async function POST(request: NextRequest) {
 
   const active = [
     connectors.notion ? "notion" : null,
+    connectors.github ? "github" : null,
     connectors.gmail ? "gmail" : null,
     connectors.drive ? "drive" : null,
     connectors.youtube ? "youtube" : null,

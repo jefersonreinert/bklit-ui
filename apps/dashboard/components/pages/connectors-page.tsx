@@ -20,6 +20,7 @@ import {
   useConnectors,
 } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
+import { GithubCard } from "./connectors-github-card";
 
 const ERRORS: Record<string, string> = {
   missing_secret:
@@ -410,7 +411,13 @@ function WhatsappCard({ status }: { status: ConnectorsStatus | null }) {
 }
 
 export function ConnectorsPage() {
-  const { status, disconnectNotion, disconnectGoogle } = useConnectors();
+  const {
+    status,
+    disconnectNotion,
+    disconnectGoogle,
+    connectGithub,
+    disconnectGithub,
+  } = useConnectors();
   const banner = useRedirectBanner();
 
   return (
@@ -473,6 +480,11 @@ export function ConnectorsPage() {
       ) : null}
 
       <NotionCard onDisconnect={disconnectNotion} status={status} />
+      <GithubCard
+        onConnect={connectGithub}
+        onDisconnect={disconnectGithub}
+        status={status}
+      />
       <GoogleCard onDisconnect={disconnectGoogle} status={status} />
       <YoutubeCard status={status} />
       <WhatsappCard status={status} />
