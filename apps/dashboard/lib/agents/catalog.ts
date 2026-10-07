@@ -151,25 +151,6 @@ export const AGENT_COLORS = [
   "bg-rose-500/15 text-rose-600 dark:text-rose-400",
 ];
 
-export const AGENT_EMOJIS = [
-  "🤖",
-  "🧠",
-  "🔎",
-  "📝",
-  "📊",
-  "📬",
-  "🛠️",
-  "🧾",
-  "🍷",
-  "🍽️",
-  "📅",
-  "🚀",
-  "🛡️",
-  "💡",
-  "📈",
-  "🧹",
-];
-
 /* -------------------------------- triggers ------------------------------- */
 
 export const CRON_PRESETS = [
@@ -316,7 +297,7 @@ export const AGENT_TEMPLATES: {
       ...BLANK_DRAFT,
       name: "Revisor de pull requests",
       description: "Revisa PRs abertos e comenta problemas encontrados.",
-      icon: "🛡️",
+      icon: "logo:https://svgl.app/library/github_light.svg|https://svgl.app/library/github_dark.svg",
       color: 3,
       prompt:
         "Liste os pull requests abertos do repositório, revise cada um e deixe um comentário com os problemas mais importantes. Use o security-reviewer para questões de segurança.",
@@ -379,7 +360,7 @@ export const AGENT_TEMPLATES: {
       ...BLANK_DRAFT,
       name: "Organizador de notas",
       description: "Mantém as notas em Markdown organizadas e ligadas.",
-      icon: "📝",
+      icon: "logo:https://svgl.app/library/markdown-light.svg|https://svgl.app/library/markdown-dark.svg",
       color: 2,
       prompt:
         "Revise as notas em ./notas: corrija títulos, adicione links [[...]] entre notas relacionadas e crie um índice em ./notas/indice.md.",

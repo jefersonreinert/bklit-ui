@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { AGENT_COLORS, AGENT_EMOJIS } from "@/lib/agents/catalog";
+import { AGENT_COLORS } from "@/lib/agents/catalog";
 import { deleteAgent, duplicateAgent, saveAgent } from "@/lib/agents/store";
 import type { Agent } from "@/lib/agents/types";
 import { Icon } from "@/lib/icons";
+import { isLogo } from "@/lib/notes/svgl";
 import { cn } from "@/lib/utils";
+import { AssetPicker } from "../notes/note-assets";
+import { NoteIcon } from "../notes/note-hero";
 import {
   ModelSection,
   PermissionsSection,
@@ -31,6 +29,9 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "code", label: "Código do SDK" },
 ];
 
+const DEFAULT_ICON = "🤖";
+
+/** Agent icon: emoji on its color, or a library image / svgl logo. */
 export function AgentAvatar({
   agent,
   className,
@@ -38,15 +39,21 @@ export function AgentAvatar({
   agent: Pick<Agent, "icon" | "color">;
   className?: string;
 }) {
+  const emoji = !(agent.icon.startsWith("att:") || isLogo(agent.icon));
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-xl",
-        AGENT_COLORS[agent.color % AGENT_COLORS.length],
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-xl",
+        emoji
+          ? AGENT_COLORS[agent.color % AGENT_COLORS.length]
+          : "border bg-background",
         className
       )}
     >
-      {agent.icon}
+      <NoteIcon
+        className={emoji ? undefined : "size-[0.95em]"}
+        icon={agent.icon || DEFAULT_ICON}
+      />
     </span>
   );
 }
@@ -59,52 +66,50 @@ function LookPicker({
   onChange: (patch: Partial<Agent>) => void;
 }) {
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <button
-            aria-label="Trocar ícone e cor"
-            className="rounded-xl transition-transform hover:scale-105"
-            type="button"
-          />
-        }
+    <AssetPicker
+      hasValue={agent.icon !== DEFAULT_ICON}
+      mode="icon"
+      onPick={(icon) => onChange({ icon: icon ?? DEFAULT_ICON })}
+    >
+      <button
+        aria-label="Trocar ícone do agente"
+        className="rounded-xl transition-transform hover:scale-105"
+        type="button"
       >
         <AgentAvatar agent={agent} className="size-12 text-2xl" />
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-72">
-        <div className="grid grid-cols-8 gap-1">
-          {AGENT_EMOJIS.map((e) => (
-            <button
-              aria-label={`Ícone ${e}`}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-lg text-lg hover:bg-muted",
-                agent.icon === e && "bg-muted"
-              )}
-              key={e}
-              onClick={() => onChange({ icon: e })}
-              type="button"
-            >
-              {e}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          {AGENT_COLORS.map((c, i) => (
-            <button
-              aria-label={`Cor ${i + 1}`}
-              className={cn(
-                "size-7 rounded-full ring-offset-2 ring-offset-popover",
-                c,
-                agent.color === i && "ring-2 ring-foreground/60"
-              )}
-              key={c}
-              onClick={() => onChange({ color: i })}
-              type="button"
-            />
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+      </button>
+    </AssetPicker>
+  );
+}
+
+/** Background tint behind emoji icons. */
+function ColorPicker({
+  agent,
+  onChange,
+}: {
+  agent: Agent;
+  onChange: (patch: Partial<Agent>) => void;
+}) {
+  return (
+    <fieldset
+      aria-label="Cor do ícone"
+      className="m-0 flex items-center gap-1.5 border-0 p-0"
+    >
+      {AGENT_COLORS.map((c, i) => (
+        <button
+          aria-label={`Cor ${i + 1}`}
+          aria-pressed={agent.color === i}
+          className={cn(
+            "size-5 rounded-full ring-offset-2 ring-offset-background",
+            c,
+            agent.color === i && "ring-2 ring-foreground/50"
+          )}
+          key={c}
+          onClick={() => onChange({ color: i })}
+          type="button"
+        />
+      ))}
+    </fieldset>
   );
 }
 
@@ -145,6 +150,11 @@ function Header({
             placeholder="Para que serve este agente?"
             value={agent.description}
           />
+          {agent.icon.startsWith("att:") || isLogo(agent.icon) ? null : (
+            <div className="mt-2">
+              <ColorPicker agent={agent} onChange={onChange} />
+            </div>
+          )}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
