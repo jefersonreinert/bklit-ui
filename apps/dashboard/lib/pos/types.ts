@@ -8,6 +8,33 @@ export interface PosProduct {
   /** Tile color in the register grid. */
   color: string;
   available: boolean;
+  /** Unit cost (purchase price), for margin and profit. */
+  cost?: number;
+  sku?: string;
+  barcode?: string;
+  /** Sale unit shown on stock (un, kg, L, garrafa…). */
+  unit?: string;
+  /** Count stock for this product (decrements on each sale). */
+  trackStock?: boolean;
+  stock?: number;
+  /** Alert when stock falls to this level. */
+  minStock?: number;
+  description?: string;
+}
+
+export type StockMoveKind = "sale" | "purchase" | "adjust" | "waste";
+
+export interface StockMove {
+  id: string;
+  productId: string;
+  /** Positive adds, negative removes. */
+  qty: number;
+  kind: StockMoveKind;
+  /** Unit cost of a purchase. */
+  unitCost?: number;
+  note?: string;
+  orderId?: string;
+  at: number;
 }
 
 export type TableShape = "round" | "square" | "rect";
@@ -37,6 +64,8 @@ export interface OrderItem {
   name: string;
   price: number;
   qty: number;
+  /** Unit cost when added, for profit reports. */
+  cost?: number;
   /** Already sent to the kitchen. */
   sent: boolean;
 }
@@ -78,10 +107,63 @@ export interface PosSettings {
   paymentLink: string;
 }
 
+export type ReceiptTemplate = "modern" | "classic" | "compact";
+export type PaperSize = "58" | "80" | "a4";
+export type Align = "left" | "center" | "right";
+
+export interface ReceiptSettings {
+  businessName: string;
+  legalName: string;
+  taxId: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  /** Data URL (PNG/JPEG), "" for none. */
+  logo: string;
+  logoAlign: Align;
+  /** Logo width as a percent of the paper width (10–100). */
+  logoWidth: number;
+  /** Space above the logo in mm (move it down). */
+  logoOffset: number;
+  template: ReceiptTemplate;
+  paper: PaperSize;
+  accent: string;
+  headerNote: string;
+  footer: string;
+  /** Legal line, e.g. "Este documento não serve de fatura". */
+  legalNote: string;
+  showTaxId: boolean;
+  showTable: boolean;
+  showPayment: boolean;
+  /** QR with the business site or review link at the bottom. */
+  qrUrl: string;
+}
+
+export type PrinterKind = "epos" | "share";
+
+export interface PrinterConfig {
+  id: string;
+  name: string;
+  /** epos: Epson Wi-Fi/LAN (ePOS-Print); share: PDF to the Epson app or AirPrint. */
+  kind: PrinterKind;
+  host: string;
+  /** The printer's ePOS device id (local_printer by default). */
+  deviceId: string;
+  paper: "58" | "80";
+  autoPrint: boolean;
+  copies: number;
+  /** Open the cash drawer after printing a cash payment. */
+  drawer: boolean;
+}
+
 export interface PosData {
   products: PosProduct[];
   areas: FloorArea[];
   orders: PosOrder[];
   settings: PosSettings;
   nextOrderNumber: number;
+  stockMoves: StockMove[];
+  receipt: ReceiptSettings;
+  printers: PrinterConfig[];
 }

@@ -1,5 +1,11 @@
 import { dishes } from "@/lib/menu-data";
-import type { FloorArea, PosData, PosProduct, PosTable } from "./types";
+import type {
+  FloorArea,
+  PosData,
+  PosProduct,
+  PosTable,
+  ReceiptSettings,
+} from "./types";
 
 export const TILE_COLORS = [
   "#c96442",
@@ -35,14 +41,23 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 /** The menu in euros (menu-data is in reais): rounded to €0.50. */
 function seedProducts(): PosProduct[] {
-  return dishes.map((d) => ({
-    id: d.id,
-    name: d.name,
-    category: d.category,
-    price: Math.max(1, Math.round((d.price / 5.8) * 2) / 2),
-    color: CATEGORY_COLOR[d.category] ?? TILE_COLORS[0] ?? "#c96442",
-    available: d.available,
-  }));
+  return dishes.map((d) => {
+    const price = Math.max(1, Math.round((d.price / 5.8) * 2) / 2);
+    return {
+      id: d.id,
+      name: d.name,
+      category: d.category,
+      price,
+      color: CATEGORY_COLOR[d.category] ?? TILE_COLORS[0] ?? "#c96442",
+      available: d.available,
+      // Sample cost: about a third of the price
+      cost: Math.round(price * 32) / 100,
+      unit: "un",
+      trackStock: false,
+      stock: 0,
+      minStock: 0,
+    };
+  });
 }
 
 function table(
@@ -99,6 +114,30 @@ function seedAreas(): FloorArea[] {
   ];
 }
 
+export const DEFAULT_RECEIPT: ReceiptSettings = {
+  businessName: "Casa Brasa",
+  legalName: "",
+  taxId: "",
+  address: "",
+  phone: "",
+  email: "",
+  website: "",
+  logo: "",
+  logoAlign: "center",
+  logoWidth: 45,
+  logoOffset: 0,
+  template: "modern",
+  paper: "80",
+  accent: "#c96442",
+  headerNote: "",
+  footer: "Obrigado pela visita!",
+  legalNote: "Este documento não serve de fatura",
+  showTaxId: true,
+  showTable: true,
+  showPayment: true,
+  qrUrl: "",
+};
+
 export function seedData(): PosData {
   return {
     products: seedProducts(),
@@ -111,5 +150,8 @@ export function seedData(): PosData {
       paymentLink: "",
     },
     nextOrderNumber: 1,
+    stockMoves: [],
+    receipt: { ...DEFAULT_RECEIPT },
+    printers: [],
   };
 }

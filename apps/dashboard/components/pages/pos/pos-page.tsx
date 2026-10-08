@@ -14,15 +14,25 @@ import { cn } from "@/lib/utils";
 import { OrdersView } from "./pos-orders";
 import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
+import { ReportsView } from "./pos-reports";
+import { SettingsView } from "./pos-settings";
 import { TablesView } from "./pos-tables";
 
-export type PosTab = "register" | "tables" | "orders" | "products";
+export type PosTab =
+  | "register"
+  | "tables"
+  | "orders"
+  | "products"
+  | "reports"
+  | "settings";
 
 const TABS: { id: PosTab; label: string; icon: IconName }[] = [
   { id: "register", label: "Caixa", icon: "IconCalculator" },
   { id: "tables", label: "Mesas", icon: "IconTable" },
   { id: "orders", label: "Pedidos", icon: "IconReceiptBill" },
   { id: "products", label: "Produtos", icon: "IconTag" },
+  { id: "reports", label: "Relatórios", icon: "IconChart1" },
+  { id: "settings", label: "Ajustes", icon: "IconSettingsGear1" },
 ];
 
 /** Result of a SumUp tap-to-pay coming back through the callback URL. */
@@ -118,19 +128,21 @@ export function PosPage() {
         {tab === "tables" ? <TablesView onOpenOrder={openOrder} /> : null}
         {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
         {tab === "products" ? <ProductsView /> : null}
+        {tab === "reports" ? <ReportsView /> : null}
+        {tab === "settings" ? <SettingsView /> : null}
       </div>
-      <nav className="grid shrink-0 grid-cols-4 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden">
+      <nav className="grid shrink-0 grid-cols-6 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden">
         {TABS.map((t) => (
           <button
             className={cn(
-              "flex flex-col items-center gap-1 py-2 text-xs transition-colors",
+              "flex flex-col items-center gap-1 py-2 text-[10px] transition-colors",
               tab === t.id ? "text-foreground" : "text-muted-foreground"
             )}
             key={t.id}
             onClick={() => setTab(t.id)}
             type="button"
           >
-            <Icon className="size-6" name={t.icon} />
+            <Icon className="size-5" name={t.icon} />
             {t.label}
           </button>
         ))}

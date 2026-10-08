@@ -29,6 +29,7 @@ import type {
 } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { orderLabel } from "./pos-cart";
+import { ReceiptSheet } from "./pos-receipt";
 
 type Filter = "open" | "paying" | "paid" | "all";
 
@@ -99,6 +100,22 @@ function Summary({ data }: { data: PosData }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function ReceiptButton({ order }: { order: PosOrder }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <Icon className="size-4" name="IconPrinter" />
+        Recibo · imprimir ou PDF
+      </Button>
+      <ReceiptSheet
+        onClose={() => setOpen(false)}
+        order={open ? order : null}
+      />
+    </>
   );
 }
 
@@ -216,6 +233,7 @@ function OrderDetail({
               Abrir no caixa
             </Button>
           ) : null}
+          {order.status === "paid" ? <ReceiptButton order={order} /> : null}
           {active ? (
             <Button
               onClick={() => {

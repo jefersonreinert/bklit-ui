@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { seedData } from "./seed";
+import { DEFAULT_RECEIPT, seedData } from "./seed";
 import type {
   FloorArea,
   OrderItem,
@@ -10,6 +10,9 @@ import type {
   PosOrder,
   PosProduct,
   PosSettings,
+  PrinterConfig,
+  ReceiptSettings,
+  StockMove,
 } from "./types";
 
 /**
@@ -36,13 +39,24 @@ function read(): PosData {
   }
   try {
     const raw = localStorage.getItem(KEY);
-    cache = raw
-      ? { ...seedData(), ...(JSON.parse(raw) as PosData) }
-      : seedData();
+    cache = raw ? normalize(JSON.parse(raw) as Partial<PosData>) : seedData();
   } catch {
     cache = seedData();
   }
   return cache;
+}
+
+/** Older saves miss newer fields: fill them with defaults. */
+function normalize(saved: Partial<PosData>): PosData {
+  const base = seedData();
+  return {
+    ...base,
+    ...saved,
+    settings: { ...base.settings, ...saved.settings },
+    receipt: { ...DEFAULT_RECEIPT, ...saved.receipt },
+    stockMoves: saved.stockMoves ?? [],
+    printers: saved.printers ?? [],
+  };
 }
 
 function write(next: PosData) {
@@ -77,6 +91,9 @@ function subscribe(listener: () => void) {
 }
 
 const SERVER: PosData = seedData();
+
+/** Current data outside React (event handlers, async work). */
+export const readPos = () => read();
 
 export function usePos() {
   return useSyncExternalStore(subscribe, read, () => SERVER);
@@ -160,6 +177,7 @@ export function addProduct(orderId: string, p: PosProduct) {
         productId: p.id,
         name: p.name,
         price: p.price,
+        cost: p.cost,
         qty: 1,
         sent: false,
       },
@@ -187,11 +205,116 @@ export function sendToKitchen(orderId: string) {
   mapItems(orderId, (items) => items.map((i) => ({ ...i, sent: true })));
 }
 
+/** Marks the order paid and takes the sold items out of stock. */
 export function payOrder(orderId: string, payment: Omit<Payment, "at">) {
-  updateOrder(orderId, {
-    status: "paid",
-    payment: { ...payment, at: Date.now() },
+  const now = Date.now();
+  update((d) => {
+    const order = d.orders.find((o) => o.id === orderId);
+    if (!order || order.status === "paid") {
+      return d;
+    }
+    const sold = new Map<string, number>();
+    for (const i of order.items) {
+      if (i.productId) {
+        sold.set(i.productId, (sold.get(i.productId) ?? 0) + i.qty);
+      }
+    }
+    const moves: StockMove[] = [];
+    const products = d.products.map((p) => {
+      const qty = sold.get(p.id);
+      if (!(qty && p.trackStock)) {
+        return p;
+      }
+      moves.push({
+        id: uid(),
+        productId: p.id,
+        qty: -qty,
+        kind: "sale",
+        orderId,
+        at: now,
+      });
+      return { ...p, stock: (p.stock ?? 0) - qty };
+    });
+    return {
+      ...d,
+      products,
+      stockMoves: [...moves, ...d.stockMoves].slice(0, 5000),
+      orders: d.orders.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              status: "paid" as const,
+              payment: { ...payment, at: now },
+              updatedAt: now,
+            }
+          : o
+      ),
+    };
   });
+}
+
+/* --------------------------------- stock --------------------------------- */
+
+/**
+ * Stock entry, adjustment or loss. A purchase with a unit cost updates the
+ * product cost by weighted average.
+ */
+export function moveStock(move: Omit<StockMove, "id" | "at">) {
+  update((d) => ({
+    ...d,
+    products: d.products.map((p) => {
+      if (p.id !== move.productId) {
+        return p;
+      }
+      const before = Math.max(0, p.stock ?? 0);
+      const stock = (p.stock ?? 0) + move.qty;
+      let cost = p.cost;
+      if (move.kind === "purchase" && move.unitCost !== undefined) {
+        const total = before + move.qty;
+        cost =
+          total > 0
+            ? (before * (p.cost ?? move.unitCost) + move.qty * move.unitCost) /
+              total
+            : move.unitCost;
+        cost = Math.round(cost * 100) / 100;
+      }
+      return { ...p, stock, cost, trackStock: true };
+    }),
+    stockMoves: [{ ...move, id: uid(), at: Date.now() }, ...d.stockMoves].slice(
+      0,
+      5000
+    ),
+  }));
+}
+
+export const isLowStock = (p: PosProduct) =>
+  Boolean(p.trackStock) && (p.stock ?? 0) <= (p.minStock ?? 0);
+
+/** Margin over the price, in percent (null without a cost). */
+export function marginOf(p: Pick<PosProduct, "price" | "cost">) {
+  if (p.cost === undefined || p.price <= 0) {
+    return null;
+  }
+  return ((p.price - p.cost) / p.price) * 100;
+}
+
+/* ------------------------------ receipt/print ---------------------------- */
+
+export function saveReceipt(patch: Partial<ReceiptSettings>) {
+  update((d) => ({ ...d, receipt: { ...d.receipt, ...patch } }));
+}
+
+export function savePrinter(printer: PrinterConfig) {
+  update((d) => ({
+    ...d,
+    printers: d.printers.some((p) => p.id === printer.id)
+      ? d.printers.map((p) => (p.id === printer.id ? printer : p))
+      : [...d.printers, printer],
+  }));
+}
+
+export function deletePrinter(id: string) {
+  update((d) => ({ ...d, printers: d.printers.filter((p) => p.id !== id) }));
 }
 
 export function deleteOrder(orderId: string) {
@@ -229,6 +352,8 @@ export function saveSettings(patch: Partial<PosSettings>) {
   update((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
 }
 
+/** Back to the sample menu, keeping receipt design and printers. */
 export function resetPos() {
-  write(seedData());
+  const d = read();
+  write({ ...seedData(), receipt: d.receipt, printers: d.printers });
 }

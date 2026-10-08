@@ -12,11 +12,19 @@ import {
 } from "@/components/ui/sheet";
 import { Icon, type IconName } from "@/lib/icons";
 import { paymentLinkUrl, sumupPayUrl } from "@/lib/pos/payments";
-import { money, orderTotals, payOrder, updateOrder } from "@/lib/pos/store";
+import { receiptDoc } from "@/lib/pos/receipt";
+import {
+  money,
+  orderTotals,
+  payOrder,
+  readPos,
+  updateOrder,
+} from "@/lib/pos/store";
 import type { PaymentMethod, PosData, PosOrder } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { orderLabel } from "./pos-cart";
 import { SumupQrStep, useSumupQrAvailable } from "./pos-qr";
+import { autoPrint, PrintButtons, ReceiptPreview } from "./pos-receipt";
 
 const TIPS = [0, 5, 10, 15];
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -112,6 +120,25 @@ function CashStep({
   );
 }
 
+function PaidReceipt({ data, orderId }: { data: PosData; orderId: string }) {
+  const [show, setShow] = useState(false);
+  const paid = data.orders.find((o) => o.id === orderId);
+  if (!paid) {
+    return null;
+  }
+  const doc = receiptDoc(paid, data);
+  return (
+    <div className="flex w-full flex-col gap-2">
+      {show ? <ReceiptPreview doc={doc} settings={data.receipt} /> : null}
+      <Button onClick={() => setShow(!show)} variant="ghost">
+        <Icon className="size-4" name="IconReceiptBill" />
+        {show ? "Esconder recibo" : "Ver recibo"}
+      </Button>
+      <PrintButtons doc={doc} />
+    </div>
+  );
+}
+
 export function CheckoutSheet({
   order,
   data,
@@ -134,6 +161,14 @@ export function CheckoutSheet({
   const due = total + tip;
 
   const qrAvailable = useSumupQrAvailable();
+  // Prints on the automatic printers once the payment is saved
+  const printPaid = useCallback((orderId: string) => {
+    const d = readPos();
+    const paid = d.orders.find((o) => o.id === orderId);
+    if (paid) {
+      autoPrint(receiptDoc(paid, d), d.printers, d.receipt).catch(() => null);
+    }
+  }, []);
   // Stable so the QR step's status polling isn't restarted on every render
   const onQrPaid = useCallback(
     (txCode: string | null) => {
@@ -143,13 +178,15 @@ export function CheckoutSheet({
         tip,
         ref: txCode ?? undefined,
       });
+      printPaid(order.id);
       setStep("done");
     },
-    [order.id, due, tip]
+    [order.id, due, tip, printPaid]
   );
 
   const pay = (method: PaymentMethod, ref?: string) => {
     payOrder(order.id, { method, amount: due, tip, ref });
+    printPaid(order.id);
     setStep("done");
   };
 
@@ -336,6 +373,7 @@ export function CheckoutSheet({
                 <Icon className="size-8" name="IconCheckmark1" />
               </span>
               <p className="font-semibold text-lg">Pagamento registrado</p>
+              <PaidReceipt data={data} orderId={order.id} />
               <Button
                 className="h-12 w-full rounded-full text-base"
                 onClick={close}
