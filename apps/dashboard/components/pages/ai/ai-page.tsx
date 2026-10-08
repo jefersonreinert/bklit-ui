@@ -1061,7 +1061,7 @@ export function AiPage() {
               );
         });
       } else {
-        appendToAssistant(convId, msgId, `\n\n> ${e.text}`);
+        appendToAssistant(convId, msgId, `\n\n> ${e.text}\n\n`);
       }
     },
     [appendToAssistant, updateTools]

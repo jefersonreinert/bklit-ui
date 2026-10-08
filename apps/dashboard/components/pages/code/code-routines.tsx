@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,6 +25,11 @@ import { CodeComposer, type ImagePayload } from "./code-composer";
 export const ROUTINE_PROMPT =
   "Execute a tarefa descrita no bloco routine-fire-payload nos repositórios desta rotina. Trabalhe num branch claude/…, rode os testes, faça commit e push, e abra um pull request quando a tarefa estiver pronta. Responda em português.";
 
+const fireUrl = (id: string) =>
+  `https://api.anthropic.com/v1/claude_code/routines/${id}/fire`;
+
+const TOKEN_ERROR = "Token da rotina";
+
 const FIELD =
   "h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
 
@@ -34,8 +39,10 @@ export function RoutineSheet({
   onClose,
   onAdd,
   onRemove,
+  prefill,
 }: {
   open: boolean;
+  prefill?: RoutineInfo | null;
   routines: RoutineInfo[];
   onClose: () => void;
   onAdd: (name: string, url: string, token: string) => Promise<void>;
@@ -46,6 +53,20 @@ export function RoutineSheet({
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const tokenRef = useRef<HTMLInputElement>(null);
+  const update = (r: RoutineInfo) => {
+    setName(r.name);
+    setUrl(fireUrl(r.id));
+    setToken("");
+    tokenRef.current?.focus();
+  };
+  useEffect(() => {
+    if (open && prefill) {
+      setName(prefill.name);
+      setUrl(fireUrl(prefill.id));
+      setToken("");
+    }
+  }, [open, prefill]);
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -66,9 +87,18 @@ export function RoutineSheet({
         side="bottom"
       >
         <SheetHeader className="border-b p-4">
-          <SheetTitle>Claude Code pela assinatura</SheetTitle>
+          <SheetTitle>
+            {prefill ? "Atualizar token" : "Conectar assinatura"}
+          </SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm">
+          {prefill ? (
+            <p className="rounded-xl bg-muted/60 p-3 text-muted-foreground">
+              Em claude.ai/code/routines, abra “{prefill.name}” → editar → API →{" "}
+              <b className="text-foreground">Regenerate token</b>. Cole o token
+              novo abaixo (a URL já está preenchida).
+            </p>
+          ) : null}
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-muted-foreground">
             <li>
               Abra{" "}
@@ -131,6 +161,7 @@ export function RoutineSheet({
               className={cn(FIELD, "font-mono text-xs")}
               onChange={(e) => setToken(e.target.value)}
               placeholder="sk-ant-oat01-…"
+              ref={tokenRef}
               type="password"
               value={token}
             />
@@ -146,7 +177,7 @@ export function RoutineSheet({
           {routines.length ? (
             <div className="flex flex-col gap-1.5">
               <p className="text-muted-foreground text-xs">
-                Rotinas salvas neste aparelho
+                Rotinas conectadas
               </p>
               {routines.map((r) => (
                 <div
@@ -155,11 +186,16 @@ export function RoutineSheet({
                 >
                   <Icon className="size-4" name="IconCloud" />
                   <span className="flex-1 truncate">{r.name}</span>
-                  {r.server ? (
-                    <span className="text-muted-foreground text-xs">
-                      no servidor
-                    </span>
-                  ) : (
+                  <Button
+                    className="rounded-full"
+                    onClick={() => update(r)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Atualizar token
+                  </Button>
+                  {r.server ? null : (
                     <Button
                       aria-label={`Remover ${r.name}`}
                       onClick={() => onRemove(r.id)}
@@ -274,15 +310,18 @@ export function RoutineSession({
   routine,
   engineBar,
   onBack,
+  onReconnect,
 }: {
   routine: RoutineInfo;
   engineBar: React.ReactNode;
   onBack: () => void;
+  onReconnect: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [fired, setFired] = useState<FiredSession | null>(null);
   const start = async (text: string, images: ImagePayload[]) => {
     setError(null);
+    setFired(null);
     if (!text) {
       setError(
         images.length
@@ -344,7 +383,19 @@ export function RoutineSession({
           </p>
         </div>
         {error ? (
-          <p className="mb-2 px-2 text-destructive text-sm">{error}</p>
+          <div className="mb-2 flex flex-wrap items-center gap-2 px-2">
+            <p className="text-destructive text-sm">{error}</p>
+            {error.startsWith(TOKEN_ERROR) ? (
+              <Button
+                className="rounded-full"
+                onClick={onReconnect}
+                size="sm"
+                type="button"
+              >
+                Atualizar token
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         <CodeComposer
           autoFocus

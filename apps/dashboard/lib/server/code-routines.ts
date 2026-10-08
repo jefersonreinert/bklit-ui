@@ -49,9 +49,14 @@ function serverRoutine(): Routine | null {
   };
 }
 
+/** A routine saved on this device wins over the server one with the same id
+ * (so a regenerated token pasted in the app takes effect right away). */
 export function withShared(own: Routine[]) {
   const shared = serverRoutine();
-  return shared ? [shared, ...own.filter((r) => r.id !== shared.id)] : own;
+  if (!shared || own.some((r) => r.id === shared.id)) {
+    return own;
+  }
+  return [shared, ...own];
 }
 
 export async function readRoutines(request: NextRequest) {

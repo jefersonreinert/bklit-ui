@@ -62,8 +62,8 @@ export function Locked({ onDone }: { onDone: () => void }) {
     <Shell icon="IconShieldCheck" title="Desbloquear o Code">
       <form className="flex flex-col gap-2" onSubmit={submit}>
         <p className="text-muted-foreground text-sm">
-          As sessões usam créditos da API e agem no seu GitHub. Digite o código
-          de acesso do painel (o mesmo do WhatsApp).
+          O Code roda o Claude Code na nuvem pela sua assinatura e age no seu
+          GitHub. Digite o código de acesso do painel (o mesmo do WhatsApp).
         </p>
         <Input
           aria-label="Código de acesso"

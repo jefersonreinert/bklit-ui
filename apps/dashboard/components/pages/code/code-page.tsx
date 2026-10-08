@@ -396,6 +396,7 @@ function Workspace({
   const { routines, add, remove } = useRoutines();
   const fired = useFiredSessions();
   const [connecting, setConnecting] = useState(false);
+  const [prefill, setPrefill] = useState<RoutineInfo | null>(null);
   const [engine, setEngine] = useState<Engine | null>(null);
   const firstRoutine = routines?.[0];
   const current: Engine =
@@ -470,6 +471,10 @@ function Workspace({
             engineBar={engineBar}
             key={routine.id}
             onBack={() => setPane({ kind: "none" })}
+            onReconnect={() => {
+              setPrefill(routine);
+              setConnecting(true);
+            }}
             routine={routine}
           />
         ) : null}
@@ -510,12 +515,16 @@ function Workspace({
           await add(name, url, token);
           setEngine(null);
         }}
-        onClose={() => setConnecting(false)}
+        onClose={() => {
+          setConnecting(false);
+          setPrefill(null);
+        }}
         onRemove={async (id) => {
           await remove(id);
           setEngine(null);
         }}
         open={connecting}
+        prefill={prefill}
         routines={routines ?? []}
       />
       <RepoPicker
