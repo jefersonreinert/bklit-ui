@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Icon, type IconName } from "@/lib/icons";
-import { periodFor, productStats } from "@/lib/pos/analytics";
+import { periodFor, productStats, usePosDaily } from "@/lib/pos/analytics";
 import { TILE_COLORS } from "@/lib/pos/seed";
 import {
   isLowStock,
@@ -166,13 +166,15 @@ export function ProductsView() {
     () => [...new Set(data.products.map((p) => p.category))],
     [data.products]
   );
+  const period = useMemo(() => periodFor("30d"), []);
+  const days = usePosDaily(period);
   const sold = useMemo(() => {
     const map = new Map<string, number>();
-    for (const s of productStats(data, periodFor("30d"))) {
+    for (const s of productStats(days ?? [])) {
       map.set(s.id, s.qty);
     }
     return map;
-  }, [data]);
+  }, [days]);
 
   const kpis = useMemo(() => {
     const tracked = data.products.filter((p) => p.trackStock);

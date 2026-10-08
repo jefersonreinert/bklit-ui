@@ -19,6 +19,7 @@ import {
   orderTotals,
   payOrder,
   updateOrder,
+  useClosedOrders,
   usePos,
 } from "@/lib/pos/store";
 import type {
@@ -268,6 +269,7 @@ export function OrdersView({
   onOpenOrder: (id: string) => void;
 }) {
   const data = usePos();
+  useClosedOrders();
   const [filter, setFilter] = useState<Filter>("open");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);

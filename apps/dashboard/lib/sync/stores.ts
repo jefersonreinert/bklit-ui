@@ -12,7 +12,6 @@ import { api } from "@/convex/_generated/api";
  */
 
 export const SYNCED_KEYS = [
-  "cb:pos:v1",
   "cb:agents:v1",
   "cb:personal-finance:v1",
   "cb:code:repos",

@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/lib/icons";
-import { resetPos, saveSettings } from "@/lib/pos/store";
+import { saveSettings } from "@/lib/pos/store";
 import type { PosSettings } from "@/lib/pos/types";
 
 const CURRENCIES = ["EUR", "BRL", "USD", "GBP"];
 
 export function PosSettingsCard({ settings }: { settings: PosSettings }) {
-  const [confirmReset, setConfirmReset] = useState(false);
   return (
     <div className="flex flex-col gap-4 rounded-3xl border bg-card p-4">
       <p className="flex items-center gap-2 font-semibold">
@@ -77,21 +74,6 @@ export function PosSettingsCard({ settings }: { settings: PosSettings }) {
           vira o valor e {"{ref}"} o número do pedido.
         </span>
       </label>
-      <Button
-        className="self-start"
-        onClick={() => {
-          if (confirmReset) {
-            resetPos();
-          }
-          setConfirmReset(!confirmReset);
-        }}
-        size="sm"
-        variant={confirmReset ? "destructive" : "ghost"}
-      >
-        {confirmReset
-          ? "Toque de novo: apaga pedidos, mesas e produtos"
-          : "Restaurar dados de exemplo"}
-      </Button>
     </div>
   );
 }

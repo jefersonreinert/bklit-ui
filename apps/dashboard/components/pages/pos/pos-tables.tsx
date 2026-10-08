@@ -15,6 +15,7 @@ import {
 } from "@/lib/pos/store";
 import type { FloorArea, PosData, PosTable, TableShape } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
+import { useCan } from "./pos-auth";
 import { TableInspector } from "./pos-table-inspector";
 
 export const FLOOR_W = 1000;
@@ -155,6 +156,7 @@ export function TablesView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const floor = useRef<HTMLDivElement>(null);
   const editing = draft !== null;
+  const can = useCan();
   const areas = draft ?? data.areas;
   const area = areas.find((a) => a.id === areaId) ?? areas[0];
 
@@ -266,7 +268,8 @@ export function TablesView({
               Salvar layout
             </Button>
           </div>
-        ) : (
+        ) : null}
+        {!editing && can("tables") ? (
           <Button
             onClick={() => setDraft(structuredClone(data.areas))}
             variant="outline"
@@ -274,7 +277,7 @@ export function TablesView({
             <Icon className="size-4" name="IconPencil" />
             Editar layout
           </Button>
-        )}
+        ) : null}
       </div>
 
       {editing ? (

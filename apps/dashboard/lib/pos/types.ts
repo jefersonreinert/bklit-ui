@@ -105,6 +105,8 @@ export interface PosSettings {
   sumupAffiliateKey: string;
   /** Payment link with {amount} / {ref} placeholders (Revolut, Stripe, SumUp…). */
   paymentLink: string;
+  /** Lock every device after these idle minutes (0 = never). */
+  autoLockMin?: number;
 }
 
 export type ReceiptTemplate = "modern" | "classic" | "compact";

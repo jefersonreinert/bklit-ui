@@ -17,6 +17,7 @@ import {
 } from "@/lib/pos/store";
 import type { PosData, PosOrder, PosProduct } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
+import { useCan } from "./pos-auth";
 import { CartPanel, orderLabel } from "./pos-cart";
 import { CheckoutSheet } from "./pos-checkout";
 
@@ -236,7 +237,8 @@ export function RegisterView({
 
   const total = order ? orderTotals(order).total : 0;
   const count = order ? itemCount(order) : 0;
-  const canCharge = total > 0 || cents > 0;
+  const can = useCan();
+  const canCharge = can("charge") && (total > 0 || cents > 0);
   const cart = (
     <CartPanel
       data={data}

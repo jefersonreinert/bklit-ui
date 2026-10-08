@@ -10,8 +10,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { api } from "@/convex/_generated/api";
 import { Icon } from "@/lib/icons";
-import { periodFor, productStats } from "@/lib/pos/analytics";
+import { periodFor, productStats, usePosDaily } from "@/lib/pos/analytics";
 import { TILE_COLORS } from "@/lib/pos/seed";
 import {
   deleteProduct,
@@ -20,8 +21,9 @@ import {
   moveStock,
   saveProduct,
   usePos,
+  usePosQuery,
 } from "@/lib/pos/store";
-import type { PosProduct, StockMoveKind } from "@/lib/pos/types";
+import type { PosProduct, StockMove, StockMoveKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 
 const UNITS = ["un", "kg", "g", "L", "ml", "garrafa", "lata", "dose", "porção"];
@@ -90,9 +92,8 @@ function StockPanel({ product }: { product: PosProduct }) {
   const [cost, setCost] = useState(money2(product.cost));
   const [note, setNote] = useState("");
   const live = data.products.find((p) => p.id === product.id) ?? product;
-  const moves = data.stockMoves
-    .filter((m) => m.productId === product.id)
-    .slice(0, 12);
+  const moves = (usePosQuery(api.pos.stockMoves, { productId: product.id }) ??
+    []) as StockMove[];
   const n = num(qty);
   const valid = Number.isFinite(n) && (kind === "adjust" ? n >= 0 : n > 0);
   const apply = () => {
@@ -221,10 +222,11 @@ function SalesPanel({
   product: PosProduct;
   currency: string;
 }) {
-  const data = usePos();
+  const period = useMemo(() => periodFor("30d"), []);
+  const days = usePosDaily(period);
   const stat = useMemo(
-    () => productStats(data, periodFor("30d")).find((s) => s.id === product.id),
-    [data, product.id]
+    () => productStats(days ?? []).find((s) => s.id === product.id),
+    [days, product.id]
   );
   return (
     <Group title="Últimos 30 dias">

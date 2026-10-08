@@ -1,20 +1,24 @@
-import { METHOD_LABEL } from "./receipt";
-import { orderTotals } from "./store";
-import type { PaymentMethod, PosData, PosOrder } from "./types";
+"use client";
 
-/** Sales numbers for reports and product metrics (paid orders only). */
+import { api } from "@/convex/_generated/api";
+import { METHOD_LABEL } from "./receipt";
+import { dayKey, usePosQuery } from "./store";
+import type { PaymentMethod } from "./types";
+
+/**
+ * Reports read the per-day totals the server keeps on every payment (one
+ * small document per day), so they are instant and cheap at any volume.
+ */
+
+export type Daily = NonNullable<typeof api.pos.daily._returnType>[number];
+export type PeriodId = "today" | "7d" | "30d" | "month";
 
 export interface Period {
-  from: number;
-  to: number;
+  from: Date;
+  to: Date;
 }
 
-const DAY = 86_400_000;
-
-export function periodFor(
-  id: "today" | "7d" | "30d" | "month",
-  now = new Date()
-) {
+export function periodFor(id: PeriodId, now = new Date()): Period {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
   if (id === "7d") {
@@ -24,89 +28,68 @@ export function periodFor(
   } else if (id === "month") {
     start.setDate(1);
   }
-  return { from: start.getTime(), to: now.getTime() };
+  return { from: start, to: now };
 }
 
-export const paidIn = (data: PosData, p: Period) =>
-  data.orders.filter(
-    (o) =>
-      o.status === "paid" &&
-      (o.payment?.at ?? o.updatedAt) >= p.from &&
-      (o.payment?.at ?? o.updatedAt) <= p.to
+/** Live day totals for a period (undefined while loading, null: no access). */
+export function usePosDaily(period: Period) {
+  return usePosQuery(api.pos.daily, {
+    from: dayKey(period.from),
+    to: dayKey(period.to),
+  }) as Daily[] | null | undefined;
+}
+
+export function summary(days: Daily[]) {
+  const t = days.reduce(
+    (a, d) => ({
+      orders: a.orders + d.orders,
+      sales: a.sales + d.sales,
+      subtotal: a.subtotal + d.subtotal,
+      tips: a.tips + d.tips,
+      cost: a.cost + d.cost,
+      items: a.items + d.items,
+    }),
+    { orders: 0, sales: 0, subtotal: 0, tips: 0, cost: 0, items: 0 }
   );
-
-function lineCost(data: PosData, productId: string | null, cost?: number) {
-  if (cost !== undefined) {
-    return cost;
-  }
-  return productId
-    ? (data.products.find((p) => p.id === productId)?.cost ?? 0)
-    : 0;
-}
-
-export function orderCost(data: PosData, o: PosOrder) {
-  return o.items.reduce(
-    (a, i) => a + lineCost(data, i.productId, i.cost) * i.qty,
-    0
-  );
-}
-
-export function summary(data: PosData, p: Period) {
-  const orders = paidIn(data, p);
-  let sales = 0;
-  let subtotal = 0;
-  let tips = 0;
-  let cost = 0;
-  let items = 0;
-  for (const o of orders) {
-    const t = orderTotals(o);
-    sales += t.total;
-    subtotal += t.subtotal;
-    tips += o.payment?.tip ?? 0;
-    cost += orderCost(data, o);
-    items += o.items.reduce((a, i) => a + i.qty, 0);
-  }
-  const profit = subtotal - cost;
+  const profit = t.subtotal - t.cost;
   return {
-    orders: orders.length,
-    sales,
-    tips,
-    cost,
+    ...t,
     profit,
-    margin: subtotal > 0 ? (profit / subtotal) * 100 : 0,
-    ticket: orders.length ? sales / orders.length : 0,
-    items,
+    margin: t.subtotal > 0 ? (profit / t.subtotal) * 100 : 0,
+    ticket: t.orders ? t.sales / t.orders : 0,
   };
 }
+
+const dayProfit = (d: Pick<Daily, "subtotal" | "cost">) => d.subtotal - d.cost;
 
 /** Sales and profit per day (or per hour for a single day). */
-export function series(data: PosData, p: Period) {
-  const hourly = p.to - p.from <= DAY;
-  const buckets = new Map<number, { sales: number; profit: number }>();
-  const keyOf = (t: number) => {
-    const d = new Date(t);
-    if (hourly) {
-      d.setMinutes(0, 0, 0);
-    } else {
-      d.setHours(0, 0, 0, 0);
-    }
-    return d.getTime();
-  };
-  const step = hourly ? DAY / 24 : DAY;
-  for (let t = keyOf(p.from); t <= p.to; t += step) {
-    buckets.set(keyOf(t), { sales: 0, profit: 0 });
+export function series(days: Daily[], p: Period) {
+  const single = dayKey(p.from) === dayKey(p.to);
+  if (single) {
+    const d = days[0];
+    const ratio = d && d.sales > 0 ? dayProfit(d) / d.sales : 0;
+    return Array.from({ length: 24 }, (_, h) => {
+      const date = new Date(p.from);
+      date.setHours(h);
+      const sales = d?.hours[String(h).padStart(2, "0")] ?? 0;
+      return { date, sales, profit: sales * ratio };
+    }).filter((x) => x.date <= p.to);
   }
-  for (const o of paidIn(data, p)) {
-    const k = keyOf(o.payment?.at ?? o.updatedAt);
-    const b = buckets.get(k) ?? { sales: 0, profit: 0 };
-    const t = orderTotals(o);
-    b.sales += t.total;
-    b.profit += t.subtotal - orderCost(data, o);
-    buckets.set(k, b);
+  const byDay = new Map(days.map((d) => [d.day, d]));
+  const out: { date: Date; sales: number; profit: number }[] = [];
+  for (
+    const date = new Date(p.from);
+    date <= p.to;
+    date.setDate(date.getDate() + 1)
+  ) {
+    const d = byDay.get(dayKey(date));
+    out.push({
+      date: new Date(date),
+      sales: d?.sales ?? 0,
+      profit: d ? dayProfit(d) : 0,
+    });
   }
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([t, v]) => ({ date: new Date(t), ...v }));
+  return out;
 }
 
 export interface ProductStat {
@@ -119,28 +102,23 @@ export interface ProductStat {
   profit: number;
 }
 
-export function productStats(data: PosData, p: Period) {
+export function productStats(days: Daily[]) {
   const map = new Map<string, ProductStat>();
-  for (const o of paidIn(data, p)) {
-    for (const i of o.items) {
-      const id = i.productId ?? `avulso:${i.name}`;
-      const product = i.productId
-        ? data.products.find((x) => x.id === i.productId)
-        : undefined;
+  for (const d of days) {
+    for (const [id, p] of Object.entries(d.products)) {
       const s = map.get(id) ?? {
         id,
-        name: product?.name ?? i.name,
-        category: product?.category ?? "Avulso",
+        name: p.name,
+        category: p.category,
         qty: 0,
         revenue: 0,
         cost: 0,
         profit: 0,
       };
-      const c = lineCost(data, i.productId, i.cost) * i.qty;
-      s.qty += i.qty;
-      s.revenue += i.price * i.qty;
-      s.cost += c;
-      s.profit += i.price * i.qty - c;
+      s.qty += p.qty;
+      s.revenue += p.revenue;
+      s.cost += p.cost;
+      s.profit += p.revenue - p.cost;
       map.set(id, s);
     }
   }
@@ -157,38 +135,42 @@ export function byCategory(stats: ProductStat[]) {
     .sort((a, b) => b.value - a.value);
 }
 
-export function byMethod(data: PosData, p: Period) {
-  const map = new Map<PaymentMethod, number>();
-  for (const o of paidIn(data, p)) {
-    if (o.payment) {
-      map.set(
-        o.payment.method,
-        (map.get(o.payment.method) ?? 0) + o.payment.amount
-      );
+export function byMethod(days: Daily[]) {
+  const map = new Map<string, number>();
+  for (const d of days) {
+    for (const [m, v] of Object.entries(d.methods)) {
+      map.set(m, (map.get(m) ?? 0) + v);
     }
   }
   return [...map.entries()]
-    .map(([m, value]) => ({ label: METHOD_LABEL[m], value }))
+    .map(([m, value]) => ({
+      label: METHOD_LABEL[m as PaymentMethod] ?? m,
+      value,
+    }))
     .sort((a, b) => b.value - a.value);
 }
 
 /** Sales per hour of the day (when the bar is busiest). */
-export function byHour(data: PosData, p: Period) {
+export function byHour(days: Daily[]) {
   const hours = Array.from({ length: 24 }, (_, h) => ({
     hour: `${String(h).padStart(2, "0")}h`,
     sales: 0,
   }));
-  for (const o of paidIn(data, p)) {
-    const h = new Date(o.payment?.at ?? o.updatedAt).getHours();
-    const slot = hours[h];
-    if (slot) {
-      slot.sales += orderTotals(o).total;
+  for (const d of days) {
+    for (const [h, v] of Object.entries(d.hours)) {
+      const slot = hours[Number(h)];
+      if (slot) {
+        slot.sales += v;
+      }
     }
   }
   const first = hours.findIndex((h) => h.sales > 0);
+  if (first < 0) {
+    return [];
+  }
   let last = hours.length - 1;
-  while (last > 0 && !hours[last]?.sales) {
+  while (last > first && !hours[last]?.sales) {
     last--;
   }
-  return first < 0 ? [] : hours.slice(first, last + 1);
+  return hours.slice(first, last + 1);
 }

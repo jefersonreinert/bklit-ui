@@ -32,6 +32,7 @@ import {
   productStats,
   series,
   summary,
+  usePosDaily,
 } from "@/lib/pos/analytics";
 import { isLowStock, money, usePos } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
@@ -156,18 +157,21 @@ export function ReportsView() {
   const data = usePos();
   const [periodId, setPeriodId] = useState<PeriodId>("7d");
   const cur = data.settings.currency;
+  const period = useMemo(() => periodFor(periodId), [periodId]);
+  const days = usePosDaily(period);
   const r = useMemo(() => {
-    const p = periodFor(periodId);
-    const stats = productStats(data, p);
+    const p = period;
+    const list = days ?? [];
+    const stats = productStats(list);
     return {
-      sum: summary(data, p),
-      series: series(data, p),
+      sum: summary(list),
+      series: series(list, p),
       stats,
       categories: byCategory(stats),
-      methods: byMethod(data, p),
-      hours: byHour(data, p),
+      methods: byMethod(list),
+      hours: byHour(list),
     };
-  }, [data, periodId]);
+  }, [days, period]);
   const low = data.products.filter(isLowStock);
   const hourly = periodId === "today";
 

@@ -8,8 +8,11 @@
  * @module
  */
 
+import type * as access from "../access.js";
 import type * as lib from "../lib.js";
 import type * as notes from "../notes.js";
+import type * as pos from "../pos.js";
+import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
 
 import type {
@@ -19,8 +22,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  access: typeof access;
   lib: typeof lib;
   notes: typeof notes;
+  pos: typeof pos;
+  staff: typeof staff;
   stores: typeof stores;
 }>;
 

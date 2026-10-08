@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/lib/icons";
 import { readSumupResult } from "@/lib/pos/payments";
 import {
+  clearPosError,
   money,
   orderTotals,
   payOrder,
   updateOrder,
   usePos,
+  usePosError,
 } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
+import { PosGate, type PosPerm, UserChip, useCan } from "./pos-auth";
 import { OrdersView } from "./pos-orders";
 import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
@@ -26,14 +29,57 @@ export type PosTab =
   | "reports"
   | "settings";
 
-const TABS: { id: PosTab; label: string; icon: IconName }[] = [
-  { id: "register", label: "Caixa", icon: "IconCalculator" },
-  { id: "tables", label: "Mesas", icon: "IconTable" },
-  { id: "orders", label: "Pedidos", icon: "IconReceiptBill" },
-  { id: "products", label: "Produtos", icon: "IconTag" },
-  { id: "reports", label: "Relatórios", icon: "IconChart1" },
-  { id: "settings", label: "Ajustes", icon: "IconSettingsGear1" },
+const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
+  { id: "register", label: "Caixa", icon: "IconCalculator", perm: ["orders"] },
+  {
+    id: "tables",
+    label: "Mesas",
+    icon: "IconTable",
+    perm: ["orders", "tables"],
+  },
+  {
+    id: "orders",
+    label: "Pedidos",
+    icon: "IconReceiptBill",
+    perm: ["orders", "history"],
+  },
+  {
+    id: "products",
+    label: "Produtos",
+    icon: "IconTag",
+    perm: ["products", "stock"],
+  },
+  { id: "reports", label: "Relatórios", icon: "IconChart1", perm: ["reports"] },
+  {
+    id: "settings",
+    label: "Ajustes",
+    icon: "IconSettingsGear1",
+    perm: ["settings", "users"],
+  },
 ];
+
+function ErrorBanner() {
+  const error = usePosError();
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    const t = setTimeout(clearPosError, 6000);
+    return () => clearTimeout(t);
+  }, [error]);
+  if (!error) {
+    return null;
+  }
+  return (
+    <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive text-sm">
+      <Icon className="mt-0.5 size-4 shrink-0" name="IconExclamationTriangle" />
+      <p className="flex-1">{error}</p>
+      <button aria-label="Fechar" onClick={clearPosError} type="button">
+        <Icon className="size-4" name="IconCrossSmall" />
+      </button>
+    </div>
+  );
+}
 
 /** Result of a SumUp tap-to-pay coming back through the callback URL. */
 function useSumupReturn() {
@@ -75,7 +121,20 @@ function useSumupReturn() {
 }
 
 export function PosPage() {
-  const [tab, setTab] = useState<PosTab>("register");
+  return (
+    <PosGate>
+      <PosApp />
+    </PosGate>
+  );
+}
+
+function PosApp() {
+  const can = useCan();
+  const tabs = TABS.filter((t) => can(t.perm));
+  const [picked, setTab] = useState<PosTab>("register");
+  const tab = tabs.some((t) => t.id === picked)
+    ? picked
+    : (tabs[0]?.id ?? "register");
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const sumup = useSumupReturn();
 
@@ -87,7 +146,7 @@ export function PosPage() {
   return (
     <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] flex-col md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
       <nav className="hidden shrink-0 items-center justify-center gap-1 border-b px-4 py-2 md:flex">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             className={cn(
               "flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors",
@@ -103,7 +162,14 @@ export function PosPage() {
             {t.label}
           </button>
         ))}
+        <span className="ml-3 border-l pl-3">
+          <UserChip />
+        </span>
       </nav>
+      <div className="flex shrink-0 justify-end border-b px-3 py-1.5 md:hidden">
+        <UserChip />
+      </div>
+      <ErrorBanner />
       {sumup.notice ? (
         <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border bg-card px-3 py-2 text-sm">
           <Icon className="mt-0.5 size-4 shrink-0" name="IconCreditCard1" />
@@ -131,8 +197,13 @@ export function PosPage() {
         {tab === "reports" ? <ReportsView /> : null}
         {tab === "settings" ? <SettingsView /> : null}
       </div>
-      <nav className="grid shrink-0 grid-cols-6 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden">
-        {TABS.map((t) => (
+      <nav
+        className="grid shrink-0 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden"
+        style={{
+          gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+        }}
+      >
+        {tabs.map((t) => (
           <button
             className={cn(
               "flex flex-col items-center gap-1 py-2 text-[10px] transition-colors",

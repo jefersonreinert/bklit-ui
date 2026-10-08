@@ -6,6 +6,24 @@ import { v } from "convex/values";
  * searchable by the AI); every other module (POS, agents, personal
  * finances, preferences) syncs its local store as one JSON document.
  */
+const posItem = v.object({
+  id: v.string(),
+  productId: v.union(v.string(), v.null()),
+  name: v.string(),
+  price: v.number(),
+  cost: v.optional(v.number()),
+  qty: v.number(),
+  sent: v.boolean(),
+});
+
+const posPayment = v.object({
+  method: v.string(),
+  amount: v.number(),
+  tip: v.number(),
+  ref: v.optional(v.string()),
+  at: v.number(),
+});
+
 export default defineSchema({
   notes: defineTable({
     clientId: v.string(),
@@ -25,6 +43,136 @@ export default defineSchema({
       searchField: "content",
       filterFields: ["deleted"],
     }),
+
+  /* ---------------------------------- POS --------------------------------- */
+  // One document per product/order so several iPads and phones can sell at
+  // the same time without overwriting each other (each change is a
+  // transaction on the server).
+
+  posProducts: defineTable({
+    cid: v.string(),
+    name: v.string(),
+    category: v.string(),
+    price: v.number(),
+    color: v.string(),
+    available: v.boolean(),
+    cost: v.optional(v.number()),
+    sku: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    unit: v.optional(v.string()),
+    trackStock: v.optional(v.boolean()),
+    stock: v.optional(v.number()),
+    minStock: v.optional(v.number()),
+    description: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_cid", ["cid"]),
+
+  posOrders: defineTable({
+    cid: v.string(),
+    number: v.number(),
+    tableId: v.union(v.string(), v.null()),
+    name: v.string(),
+    items: v.array(posItem),
+    taxRate: v.number(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("paying"),
+      v.literal("paid"),
+      v.literal("void")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    /** When it was paid or voided (0 while open). */
+    closedAt: v.number(),
+    payment: v.optional(posPayment),
+    openedBy: v.optional(v.string()),
+    closedBy: v.optional(v.string()),
+  })
+    .index("by_cid", ["cid"])
+    .index("by_status_closed", ["status", "closedAt"]),
+
+  /** Settings, floor plan and receipt design (one document, key "main"). */
+  posMeta: defineTable({
+    key: v.string(),
+    areas: v.any(),
+    settings: v.any(),
+    receipt: v.any(),
+    nextOrderNumber: v.number(),
+    failedLogins: v.optional(v.number()),
+    lockedUntil: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
+  posStock: defineTable({
+    productCid: v.string(),
+    qty: v.number(),
+    kind: v.union(
+      v.literal("sale"),
+      v.literal("purchase"),
+      v.literal("adjust"),
+      v.literal("waste")
+    ),
+    unitCost: v.optional(v.number()),
+    note: v.optional(v.string()),
+    orderCid: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    at: v.number(),
+  })
+    .index("by_product", ["productCid", "at"])
+    .index("by_at", ["at"]),
+
+  /** Totals per local day, updated on each payment (fast, cheap reports). */
+  posDaily: defineTable({
+    day: v.string(),
+    orders: v.number(),
+    sales: v.number(),
+    subtotal: v.number(),
+    tax: v.number(),
+    tips: v.number(),
+    cost: v.number(),
+    items: v.number(),
+    /** method → amount */
+    methods: v.record(v.string(), v.number()),
+    /** "00".."23" → sales */
+    hours: v.record(v.string(), v.number()),
+    /** product cid (or "avulso:name") → totals */
+    products: v.record(
+      v.string(),
+      v.object({
+        name: v.string(),
+        category: v.string(),
+        qty: v.number(),
+        revenue: v.number(),
+        cost: v.number(),
+      })
+    ),
+  }).index("by_day", ["day"]),
+
+  posUsers: defineTable({
+    name: v.string(),
+    role: v.string(),
+    perms: v.array(v.string()),
+    color: v.string(),
+    /** SHA-256 of the PIN with a server secret; the PIN is never stored. */
+    pinKey: v.string(),
+    active: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_pinKey", ["pinKey"]),
+
+  posSessions: defineTable({
+    userId: v.id("posUsers"),
+    token: v.string(),
+    device: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"]),
+
+  posAudit: defineTable({
+    userName: v.string(),
+    action: v.string(),
+    detail: v.string(),
+    at: v.number(),
+  }).index("by_at", ["at"]),
 
   stores: defineTable({
     key: v.string(),
