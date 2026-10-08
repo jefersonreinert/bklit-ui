@@ -155,15 +155,21 @@ export function RoutineSheet({
                 >
                   <Icon className="size-4" name="IconCloud" />
                   <span className="flex-1 truncate">{r.name}</span>
-                  <Button
-                    aria-label={`Remover ${r.name}`}
-                    onClick={() => onRemove(r.id)}
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Icon className="size-4" name="IconTrashCan" />
-                  </Button>
+                  {r.server ? (
+                    <span className="text-muted-foreground text-xs">
+                      no servidor
+                    </span>
+                  ) : (
+                    <Button
+                      aria-label={`Remover ${r.name}`}
+                      onClick={() => onRemove(r.id)}
+                      size="icon-sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Icon className="size-4" name="IconTrashCan" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

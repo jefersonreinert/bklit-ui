@@ -3,9 +3,12 @@ import {
   fireRoutine,
   isRoutineToken,
   ROUTINES_COOKIE,
+  type Routine,
+  readOwnRoutines,
   readRoutines,
   routineIdFromUrl,
   sealRoutines,
+  withShared,
 } from "@/lib/server/code-routines";
 import { cookieOptions } from "@/lib/server/notion-connector";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
@@ -18,13 +21,21 @@ const json = (data: unknown, status = 200) =>
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
+const toPublic = (list: Routine[]) =>
+  list.map(({ id, name, addedAt, server }) => ({
+    id,
+    name,
+    addedAt,
+    server: Boolean(server),
+  }));
+
 /** Routines saved on this browser (tokens never leave the server). */
 export async function GET(request: NextRequest) {
   if (!(await hasAccess(request))) {
     return json({ error: "locked" }, 401);
   }
   const list = await readRoutines(request);
-  return json(list.map(({ id, name, addedAt }) => ({ id, name, addedAt })));
+  return json(toPublic(list));
 }
 
 /** add | remove | fire */
@@ -58,7 +69,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let next = list;
+  const own = await readOwnRoutines(request);
+  let next = own;
   if (action === "add") {
     const id = routineIdFromUrl(str(body.url));
     const token = str(body.token);
@@ -78,18 +90,16 @@ export async function POST(request: NextRequest) {
       );
     }
     next = [
-      ...list.filter((r) => r.id !== id),
+      ...own.filter((r) => r.id !== id),
       { id, token, name: str(body.name) || "Claude Code", addedAt: Date.now() },
     ];
   } else if (action === "remove") {
-    next = list.filter((r) => r.id !== str(body.id));
+    next = own.filter((r) => r.id !== str(body.id));
   } else {
     return json({ error: "Ação inválida." }, 400);
   }
   const sealed = await sealRoutines(next);
-  const res = json(
-    next.map(({ id, name, addedAt }) => ({ id, name, addedAt }))
-  );
+  const res = json(toPublic(withShared(next)));
   res.cookies.set(
     ROUTINES_COOKIE,
     sealed.value,

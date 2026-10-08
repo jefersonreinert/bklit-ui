@@ -15,6 +15,8 @@ export interface RoutineInfo {
   id: string;
   name: string;
   addedAt: number;
+  /** Configured on the server for every device; can't be removed here. */
+  server?: boolean;
 }
 
 export interface FiredSession {

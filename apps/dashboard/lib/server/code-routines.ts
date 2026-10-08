@@ -19,15 +19,43 @@ export interface Routine {
   name: string;
   token: string;
   addedAt: number;
+  /** Configured on the server (CODE_ROUTINE_*), shared by every device. */
+  server?: boolean;
 }
 
 const apiBase = () =>
   process.env.ROUTINES_API_BASE ?? "https://api.anthropic.com";
 
-export async function readRoutines(request: NextRequest) {
+/** Routines saved only on this browser. */
+export async function readOwnRoutines(request: NextRequest) {
   return (
     (await unseal<Routine[]>(request.cookies.get(ROUTINES_COOKIE)?.value)) ?? []
   );
+}
+
+/** The routine set on the server (CODE_ROUTINE_*), on every unlocked device. */
+function serverRoutine(): Routine | null {
+  const id = routineIdFromUrl(process.env.CODE_ROUTINE_URL ?? "");
+  const token = process.env.CODE_ROUTINE_TOKEN?.trim() ?? "";
+  if (!(id && isRoutineToken(token))) {
+    return null;
+  }
+  return {
+    id,
+    token,
+    name: process.env.CODE_ROUTINE_NAME?.trim() || "Claude Code",
+    addedAt: 0,
+    server: true,
+  };
+}
+
+export function withShared(own: Routine[]) {
+  const shared = serverRoutine();
+  return shared ? [shared, ...own.filter((r) => r.id !== shared.id)] : own;
+}
+
+export async function readRoutines(request: NextRequest) {
+  return withShared(await readOwnRoutines(request));
 }
 
 export async function sealRoutines(list: Routine[]) {
