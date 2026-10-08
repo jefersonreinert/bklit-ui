@@ -16,6 +16,7 @@ export const SYNCED_KEYS = [
   "cb:agents:v1",
   "cb:personal-finance:v1",
   "cb:code:repos",
+  "cb:code:fired",
   "cb:notes:logo-favorites",
   "casa-brasa-ai-conversations",
   "casa-brasa-ai-connectors",

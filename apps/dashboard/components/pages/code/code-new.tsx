@@ -63,7 +63,9 @@ export function NewSession({
   onPickRepos,
   onCreated,
   onBack,
+  engineBar,
 }: {
+  engineBar?: React.ReactNode;
   repos: string[];
   github: string | null;
   onPickRepos: () => void;
@@ -134,6 +136,7 @@ export function NewSession({
       </div>
       <div className="mx-auto w-full max-w-3xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mb-2 flex flex-col gap-2">
+          {engineBar}
           {repos.map((r) => (
             <div
               className={cn(

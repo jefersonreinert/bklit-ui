@@ -176,6 +176,7 @@ export function CodeComposer({
   onSend,
   onStop,
   autoFocus,
+  hideMode,
   children,
 }: {
   placeholder: string;
@@ -186,6 +187,8 @@ export function CodeComposer({
   onSend: (text: string, images: ImagePayload[]) => Promise<boolean>;
   onStop?: () => void;
   autoFocus?: boolean;
+  /** Routine sessions pick their mode on claude.ai. */
+  hideMode?: boolean;
   children?: React.ReactNode;
 }) {
   const [text, setText] = useState("");
@@ -292,7 +295,9 @@ export function CodeComposer({
           >
             <Icon className="size-5" name="IconCamera1" />
           </button>
-          <ModeMenu disabled={modeLocked} mode={mode} onMode={onMode} />
+          {hideMode ? null : (
+            <ModeMenu disabled={modeLocked} mode={mode} onMode={onMode} />
+          )}
           <div className="ml-auto flex items-center gap-1.5">
             <button
               aria-label={

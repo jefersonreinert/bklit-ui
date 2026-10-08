@@ -27,7 +27,11 @@ export async function codeFetch<T>(path: string, init?: RequestInit) {
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) {
-    throw new CodeApiError(data.error ?? `Erro ${res.status}`, res.status);
+    const message =
+      data.error === "not_configured"
+        ? "O modo API precisa de ANTHROPIC_API_KEY com créditos. Use uma rotina da sua assinatura."
+        : (data.error ?? `Erro ${res.status}`);
+    throw new CodeApiError(message, res.status);
   }
   return data as T;
 }

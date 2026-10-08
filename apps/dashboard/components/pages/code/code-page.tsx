@@ -16,13 +16,26 @@ import {
   useCodeStatus,
   useSessions,
 } from "@/lib/code/client";
+import {
+  type FiredSession,
+  type RoutineInfo,
+  useFiredSessions,
+  useRoutines,
+} from "@/lib/code/routines";
 import type { CodePhase, CodeSessionSummary } from "@/lib/code/types";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { NewSession } from "./code-new";
 import { RepoPicker } from "./code-pickers";
+import {
+  type Engine,
+  EngineBar,
+  FiredRow,
+  RoutineSession,
+  RoutineSheet,
+} from "./code-routines";
 import { SessionView } from "./code-session";
-import { ConnectGithub, Locked, NotConfigured } from "./code-setup";
+import { ConnectGithub, Locked } from "./code-setup";
 
 type Filter = "all" | CodePhase;
 
@@ -165,6 +178,41 @@ function FilterMenu({
   );
 }
 
+function SubscriptionChips({
+  routines,
+  onConnect,
+}: {
+  routines: RoutineInfo[];
+  onConnect: () => void;
+}) {
+  return (
+    <>
+      <p className="px-3 pt-7 pb-3 text-muted-foreground">
+        Claude Code (assinatura)
+      </p>
+      <div className="flex flex-wrap gap-2 px-3">
+        {routines.map((r) => (
+          <span
+            className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm"
+            key={r.id}
+          >
+            <Icon className="size-4 text-[#d97757]" name="IconCloud" />
+            {r.name}
+          </span>
+        ))}
+        <button
+          className="flex items-center gap-2 rounded-full border bg-card px-5 py-2.5 text-[15px] shadow-xs hover:bg-muted"
+          onClick={onConnect}
+          type="button"
+        >
+          <Icon className="size-5" name="IconPlusSmall" />
+          {routines.length ? "Gerenciar rotinas" : "Conectar assinatura"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function SessionList({
   sessions,
   error,
@@ -175,7 +223,11 @@ function SessionList({
   onNew,
   onPickRepos,
   onRemoveRepo,
+  fired,
+  subscription,
 }: {
+  fired: FiredSession[];
+  subscription: React.ReactNode;
   sessions: CodeSessionSummary[] | null;
   error: string | null;
   repos: string[];
@@ -191,6 +243,11 @@ function SessionList({
   const [searching, setSearching] = useState(false);
   const [notify, setNotify] = useState(false);
   useNotify(sessions, notify);
+
+  const shownFired = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return fired.filter((f) => !q || f.title.toLowerCase().includes(q));
+  }, [fired, query]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -255,6 +312,7 @@ function SessionList({
             <ConnectGithub />
           )}
         </div>
+        {subscription}
         <p className="px-3 pt-7 pb-2 text-muted-foreground">
           Sessões
           {filter === "all" ? "" : ` · ${PHASES[filter].label}`}
@@ -269,13 +327,20 @@ function SessionList({
             value={query}
           />
         ) : null}
+        {filter === "all"
+          ? shownFired.map((f) => <FiredRow key={f.sessionId} s={f} />)
+          : null}
         {error ? (
-          <p className="px-3 text-destructive text-sm">{error}</p>
+          <p className="px-3 pt-2 text-muted-foreground text-xs">
+            Modo API: {error}
+          </p>
         ) : null}
-        {sessions ? null : (
+        {sessions || error ? null : (
           <p className="px-3 text-muted-foreground text-sm">Carregando…</p>
         )}
-        {sessions && visible.length === 0 ? (
+        {visible.length === 0 &&
+        shownFired.length === 0 &&
+        (sessions || error) ? (
           <p className="px-3 text-muted-foreground text-sm">
             Nenhuma sessão aqui ainda.
           </p>
@@ -320,8 +385,34 @@ type Pane =
   | { kind: "new" }
   | { kind: "session"; id: string };
 
-function Workspace({ github }: { github: string | null }) {
-  const sessions = useSessions(true);
+function Workspace({
+  github,
+  apiReady,
+}: {
+  github: string | null;
+  apiReady: boolean;
+}) {
+  const sessions = useSessions(apiReady);
+  const { routines, add, remove } = useRoutines();
+  const fired = useFiredSessions();
+  const [connecting, setConnecting] = useState(false);
+  const [engine, setEngine] = useState<Engine | null>(null);
+  const firstRoutine = routines?.[0];
+  const current: Engine =
+    engine ??
+    (firstRoutine ? { kind: "routine", id: firstRoutine.id } : { kind: "api" });
+  const routine =
+    current.kind === "routine"
+      ? routines?.find((r) => r.id === current.id)
+      : undefined;
+  const engineBar = (
+    <EngineBar
+      onChange={setEngine}
+      onConnect={() => setConnecting(true)}
+      routines={routines ?? []}
+      value={current}
+    />
+  );
   const [pane, setPane] = useState<Pane>({ kind: "none" });
   const [repos, setRepos] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
@@ -347,7 +438,12 @@ function Workspace({ github }: { github: string | null }) {
       >
         <SessionList
           activeId={pane.kind === "session" ? pane.id : null}
-          error={sessions.error?.message ?? null}
+          error={
+            apiReady
+              ? (sessions.error?.message ?? null)
+              : "desligado (sem ANTHROPIC_API_KEY)."
+          }
+          fired={fired}
           github={github}
           onNew={() => setPane({ kind: "new" })}
           onOpen={(s) => setPane({ kind: "session", id: s.id })}
@@ -355,6 +451,12 @@ function Workspace({ github }: { github: string | null }) {
           onRemoveRepo={(r) => updateRepos(repos.filter((x) => x !== r))}
           repos={repos}
           sessions={list}
+          subscription={
+            <SubscriptionChips
+              onConnect={() => setConnecting(true)}
+              routines={routines ?? []}
+            />
+          }
         />
       </aside>
       <main
@@ -363,8 +465,17 @@ function Workspace({ github }: { github: string | null }) {
           showDetail ? "block" : "hidden md:block"
         )}
       >
-        {pane.kind === "new" ? (
+        {pane.kind === "new" && routine ? (
+          <RoutineSession
+            engineBar={engineBar}
+            key={routine.id}
+            onBack={() => setPane({ kind: "none" })}
+            routine={routine}
+          />
+        ) : null}
+        {pane.kind === "new" && !routine ? (
           <NewSession
+            engineBar={engineBar}
             github={github}
             onBack={() => setPane({ kind: "none" })}
             onCreated={(s) => {
@@ -394,6 +505,19 @@ function Workspace({ github }: { github: string | null }) {
           </div>
         ) : null}
       </main>
+      <RoutineSheet
+        onAdd={async (name, url, token) => {
+          await add(name, url, token);
+          setEngine(null);
+        }}
+        onClose={() => setConnecting(false)}
+        onRemove={async (id) => {
+          await remove(id);
+          setEngine(null);
+        }}
+        open={connecting}
+        routines={routines ?? []}
+      />
       <RepoPicker
         onChange={updateRepos}
         onClose={() => setPicking(false)}
@@ -413,11 +537,10 @@ export function CodePage() {
       </p>
     );
   }
-  if (!status.data.configured) {
-    return <NotConfigured />;
-  }
   if (!status.data.unlocked) {
     return <Locked onDone={status.reload} />;
   }
-  return <Workspace github={status.data.github} />;
+  return (
+    <Workspace apiReady={status.data.configured} github={status.data.github} />
+  );
 }
