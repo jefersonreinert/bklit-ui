@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { AI_MODELS } from "@/lib/ai-models";
+import { CHAT_MODELS } from "@/lib/ai-models";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Markdown } from "../ai/markdown";
@@ -289,7 +289,7 @@ function SettingsPanel({
       <div className="flex flex-col gap-1.5">
         <span className="text-muted-foreground text-xs">Modelo</span>
         <Select
-          items={AI_MODELS.map((m) => ({ value: m.id, label: m.name }))}
+          items={CHAT_MODELS.map((m) => ({ value: m.id, label: m.name }))}
           onValueChange={(model) => change({ model: model as string })}
           value={settings.model}
         >
@@ -297,7 +297,7 @@ function SettingsPanel({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {AI_MODELS.map((m) => (
+            {CHAT_MODELS.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name}
               </SelectItem>

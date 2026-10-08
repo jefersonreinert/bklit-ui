@@ -37,7 +37,8 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { demoAnswer } from "@/lib/ai-demo";
 import type { ChatStreamEvent } from "@/lib/ai-events";
-import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
+import { setPreferredModel, usePreferredModel } from "@/lib/ai-model-pref";
+import { CHAT_MODELS, type ChatModelId } from "@/lib/ai-models";
 import { Icon, type IconName } from "@/lib/icons";
 import { firstName, usePreferences } from "@/lib/preferences";
 import {
@@ -82,7 +83,7 @@ interface ChatMessage {
 interface Conversation {
   id: string;
   title: string;
-  model: AiModelId;
+  model: ChatModelId;
   updatedAt: number;
   messages: ChatMessage[];
 }
@@ -305,18 +306,18 @@ function ModelSelect({
   value,
   onChange,
 }: {
-  value: AiModelId;
-  onChange: (m: AiModelId) => void;
+  value: ChatModelId;
+  onChange: (m: ChatModelId) => void;
 }) {
   // Short names in the pill ("Opus 5.5"), like Claude's app
-  const items = AI_MODELS.map((m) => ({
+  const items = CHAT_MODELS.map((m) => ({
     value: m.id,
     label: m.name.replace(CLAUDE_PREFIX, ""),
   }));
   return (
     <Select
       items={items}
-      onValueChange={(v) => onChange(v as AiModelId)}
+      onValueChange={(v) => onChange(v as ChatModelId)}
       value={value}
     >
       <SelectTrigger
@@ -325,12 +326,12 @@ function ModelSelect({
         size="sm"
       >
         <SelectValue />
-        {value === "claude-haiku-4-5" ? null : (
+        {value.startsWith("claude-") && value !== "claude-haiku-4-5" ? (
           <span className="text-muted-foreground">Médio</span>
-        )}
+        ) : null}
       </SelectTrigger>
       <SelectContent>
-        {AI_MODELS.map((m) => (
+        {CHAT_MODELS.map((m) => (
           <SelectItem key={m.id} value={m.id}>
             <span className="flex flex-col">
               <span>{m.name}</span>
@@ -373,8 +374,8 @@ function Composer({
   onSubmit: () => void;
   onStop: () => void;
   streaming: boolean;
-  model: AiModelId;
-  onModelChange: (m: AiModelId) => void;
+  model: ChatModelId;
+  onModelChange: (m: ChatModelId) => void;
   autoFocus?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -927,7 +928,8 @@ export function AiPage() {
   const dictation = useDictation((text) =>
     setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
   );
-  const [model, setModel] = useState<AiModelId>(DEFAULT_MODEL);
+  const model = usePreferredModel();
+  const setModel = setPreferredModel;
   const [streaming, setStreaming] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1086,7 +1088,11 @@ export function AiPage() {
   );
 
   const run = useCallback(
-    async (convId: string, history: ChatMessage[], chosenModel: AiModelId) => {
+    async (
+      convId: string,
+      history: ChatMessage[],
+      chosenModel: ChatModelId
+    ) => {
       const assistantId = uid();
       updateConversation(convId, (c) => ({
         ...c,

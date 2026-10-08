@@ -19,3 +19,44 @@ export const AI_MODELS = [
 export type AiModelId = (typeof AI_MODELS)[number]["id"];
 
 export const DEFAULT_MODEL: AiModelId = "claude-opus-5-5";
+
+/** Free models on Groq (OpenAI-compatible API), handy for testing. */
+export const GROQ_MODELS = [
+  {
+    id: "openai/gpt-oss-120b",
+    name: "GPT-OSS 120B (Groq)",
+    description: "Grátis para teste · o melhor do Groq, usa ferramentas",
+  },
+  {
+    id: "openai/gpt-oss-20b",
+    name: "GPT-OSS 20B (Groq)",
+    description: "Grátis para teste · muito rápido",
+  },
+  {
+    id: "qwen/qwen3.8-27b",
+    name: "Qwen 3.8 27B (Groq)",
+    description: "Grátis para teste · alternativa ao GPT-OSS",
+  },
+] as const;
+
+export type GroqModelId = (typeof GROQ_MODELS)[number]["id"];
+export type ChatModelId = AiModelId | GroqModelId;
+
+export const DEFAULT_GROQ_MODEL: GroqModelId = "openai/gpt-oss-120b";
+
+/** Every model the assistant, notes and voice can run on. */
+export const CHAT_MODELS: {
+  id: ChatModelId;
+  name: string;
+  description: string;
+  provider: "anthropic" | "groq";
+}[] = [
+  ...AI_MODELS.map((m) => ({ ...m, provider: "anthropic" as const })),
+  ...GROQ_MODELS.map((m) => ({ ...m, provider: "groq" as const })),
+];
+
+export const isGroqModel = (id: unknown): id is GroqModelId =>
+  GROQ_MODELS.some((m) => m.id === id);
+
+export const isChatModel = (id: unknown): id is ChatModelId =>
+  CHAT_MODELS.some((m) => m.id === id);

@@ -2,7 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { NextRequest } from "next/server";
 import { SYSTEM_PROMPT } from "@/lib/ai-context";
 import type { ChatStreamEvent } from "@/lib/ai-events";
-import { AI_MODELS, type AiModelId, DEFAULT_MODEL } from "@/lib/ai-models";
+import {
+  AI_MODELS,
+  type AiModelId,
+  DEFAULT_GROQ_MODEL,
+  DEFAULT_MODEL,
+  isGroqModel,
+} from "@/lib/ai-models";
 import {
   GITHUB_MCP_URL,
   readGithubConnection,
@@ -19,6 +25,7 @@ import {
   runGoogleTool,
   toolServer,
 } from "@/lib/server/google-tools";
+import { groqKey, runGroqConversation } from "@/lib/server/groq-chat";
 import {
   CONNECTION_COOKIE,
   cookieOptions,
@@ -149,7 +156,10 @@ function errorMessage(error: unknown) {
   if (error instanceof Anthropic.APIError) {
     return `Erro da API (${error.status}): ${error.message}`;
   }
-  return "Erro ao falar com o Claude.";
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "Erro ao falar com a IA.";
 }
 
 function connectorProblem(name: string, status: string) {
@@ -559,8 +569,25 @@ async function runConversation(
   });
 }
 
+/** Plain system text and the panel's own tools, for the Groq path. */
+function groqInputs(params: BetaParams) {
+  const system = (Array.isArray(params.system) ? params.system : [])
+    .map((b) => b.text)
+    .join("\n\n");
+  const tools = (params.tools ?? []).filter(
+    (t): t is Anthropic.Beta.BetaTool => "input_schema" in t
+  );
+  return { system, tools };
+}
+
+const GROQ_FALLBACK_NOTICE =
+  "Sem créditos na Anthropic: respondendo com GPT-OSS 120B (Groq, grátis).";
+const GROQ_MCP_NOTICE =
+  "Notion e GitHub só funcionam com os modelos Claude; neste modelo eles ficam de fora.";
+
 export async function POST(request: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const anthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
+  if (!(anthropicKey || groqKey())) {
     return Response.json({ error: "missing_api_key" }, { status: 503 });
   }
 
@@ -572,6 +599,8 @@ export async function POST(request: NextRequest) {
   }
 
   const model: AiModelId = isModel(body.model) ? body.model : DEFAULT_MODEL;
+  const useGroq = isGroqModel(body.model) || !anthropicKey;
+  const groqModel = isGroqModel(body.model) ? body.model : DEFAULT_GROQ_MODEL;
   const history = sanitizeHistory(body.messages);
   if (history.length === 0 || history[0]?.role !== "user") {
     return Response.json({ error: "invalid_messages" }, { status: 400 });
@@ -583,20 +612,51 @@ export async function POST(request: NextRequest) {
     body.style ? STYLE_INSTRUCTIONS[body.style] : null,
   ].filter((t): t is string => Boolean(t));
   const params = buildParams(model, history, connectors, extras);
-  const client = new Anthropic();
   const abort = new AbortController();
 
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
       const emit = (e: ChatStreamEvent) =>
         controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`));
+      const viaGroq = () => {
+        if (connectors.notion || connectors.github) {
+          emit({ type: "notice", text: GROQ_MCP_NOTICE });
+        }
+        return runGroqConversation({
+          model: groqModel,
+          ...groqInputs(params),
+          history,
+          runTool: (name, input) => runClientTool(connectors, name, input),
+          toolServer,
+          emit,
+          signal: abort.signal,
+        });
+      };
       for (const text of connectors.notices) {
         emit({ type: "notice", text });
       }
       try {
-        await runConversation(client, params, connectors, emit, abort.signal);
+        if (useGroq) {
+          await viaGroq();
+        } else {
+          await runConversation(
+            new Anthropic(),
+            params,
+            connectors,
+            emit,
+            abort.signal
+          );
+        }
       } catch (error) {
-        if (!abort.signal.aborted) {
+        if (abort.signal.aborted) {
+          return;
+        }
+        if (!useGroq && isOutOfCredits(error) && groqKey()) {
+          emit({ type: "notice", text: GROQ_FALLBACK_NOTICE });
+          await viaGroq().catch((e: unknown) =>
+            emit({ type: "notice", text: `⚠️ ${errorMessage(e)}` })
+          );
+        } else {
           emit(
             isOutOfCredits(error)
               ? { type: "fallback", text: NO_CREDITS_TEXT }
@@ -624,7 +684,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-store",
-      "X-Model": model,
+      "X-Model": useGroq ? groqModel : model,
       "X-Connectors": active.join(","),
     },
   });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatStreamEvent } from "@/lib/ai-events";
-import { DEFAULT_MODEL } from "@/lib/ai-models";
+import { preferredModel } from "@/lib/ai-model-pref";
 import { panelSnapshot } from "./panel-context";
 
 /**
@@ -158,7 +158,7 @@ export function useLiveWriter(onSave: (content: string) => void) {
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            model: input.model ?? DEFAULT_MODEL,
+            model: input.model ?? preferredModel(),
             style: "write",
             connectors: input.connectors,
             messages: [{ role: "user", content: buildPrompt(input) }],

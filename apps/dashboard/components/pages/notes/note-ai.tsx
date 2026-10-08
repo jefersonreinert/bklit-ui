@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { type FormEvent, useEffect, useState } from "react";
 import { AiMascot } from "@/components/dashboard/ai-mascot";
 import type { WriteMode, WriterState } from "@/lib/ai/live-writer";
+import { setPreferredModel, usePreferredModel } from "@/lib/ai-model-pref";
+import { CHAT_MODELS, type ChatModelId } from "@/lib/ai-models";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +73,7 @@ export function NoteAiBar({
   const [text, setText] = useState("");
   const [mode, setMode] = useState<WriteMode>("append");
   const busy = state.status === "thinking" || state.status === "writing";
+  const model = usePreferredModel();
   // Errors reopen the box so the message is visible
   useEffect(() => {
     if (state.status === "error") {
@@ -194,6 +197,20 @@ export function NoteAiBar({
                   </button>
                 ))}
               </div>
+              <select
+                aria-label="Modelo da IA"
+                className="h-9 min-w-0 max-w-36 truncate rounded-full bg-muted/70 px-3 text-xs outline-none"
+                onChange={(e) =>
+                  setPreferredModel(e.target.value as ChatModelId)
+                }
+                value={model}
+              >
+                {CHAT_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name.replace("Claude ", "")}
+                  </option>
+                ))}
+              </select>
               <button
                 aria-label="Escrever"
                 className="ml-auto flex size-10 items-center justify-center rounded-full text-white disabled:opacity-40"
