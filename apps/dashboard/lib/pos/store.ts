@@ -19,6 +19,15 @@ import type {
 
 const KEY = "cb:pos:v1";
 let cache: PosData | null = null;
+
+// Another tab or the Convex sync rewrote the store: drop the cached copy
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === KEY) {
+      cache = null;
+    }
+  });
+}
 const listeners = new Set<() => void>();
 
 function read(): PosData {

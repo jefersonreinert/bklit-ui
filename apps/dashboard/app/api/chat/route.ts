@@ -26,6 +26,13 @@ import {
   NOTION_MCP_URL,
   sealConnection,
 } from "@/lib/server/notion-connector";
+import {
+  isPanelTool,
+  PANEL_INSTRUCTIONS,
+  PANEL_TOOLS,
+  panelToolsAvailable,
+  runPanelTool,
+} from "@/lib/server/panel-tools";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
 import { hasAccess, whatsappConfig } from "@/lib/server/whatsapp";
 import {
@@ -110,6 +117,8 @@ interface Connectors {
   drive: boolean;
   /** Public YouTube data; needs only the server's API key. */
   youtube: boolean;
+  /** Central database (Convex) tools; needs the access code. */
+  panel: boolean;
   /** WhatsApp bridge, only for a browser that entered the access code. */
   whatsapp: boolean;
   notices: string[];
@@ -298,6 +307,7 @@ async function resolveConnectors(
     gmail: false,
     drive: false,
     youtube: Boolean(requested?.includes("youtube") && youtubeAvailable()),
+    panel: panelToolsAvailable() && (await hasAccess(request)),
     whatsapp: Boolean(
       requested?.includes("whatsapp") &&
         whatsappConfig() &&
@@ -357,6 +367,7 @@ function buildParams(
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
     ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
     ...(c.whatsapp ? WHATSAPP_TOOLS : []),
+    ...(c.panel ? PANEL_TOOLS : []),
   ];
   return {
     model,
@@ -382,6 +393,7 @@ function buildParams(
       ...(c.whatsapp
         ? [{ type: "text" as const, text: WHATSAPP_INSTRUCTIONS }]
         : []),
+      ...(c.panel ? [{ type: "text" as const, text: PANEL_INSTRUCTIONS }] : []),
     ],
     messages,
     ...(betas.length > 0 ? { betas } : {}),
@@ -458,6 +470,9 @@ async function streamOnce(
 }
 
 function runClientTool(c: Connectors, name: string, input: unknown) {
+  if (c.panel && isPanelTool(name)) {
+    return runPanelTool(name, input);
+  }
   if (c.whatsapp && isWhatsappTool(name)) {
     return runWhatsappTool(name, input);
   }

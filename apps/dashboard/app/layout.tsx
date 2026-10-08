@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { AppHeader } from "@/components/dashboard/app-header";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ClientOnly } from "@/components/dashboard/client-only";
+import { ConvexSync } from "@/components/dashboard/convex-sync";
 import { InstallHint } from "@/components/dashboard/install-hint";
 import { UpdateChecker } from "@/components/dashboard/update-checker";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           <PreferencesBoot />
           <UpdateChecker />
+          <ConvexSync />
           <div
             aria-hidden="true"
             className="ambient-glow pointer-events-none fixed inset-0 -z-10"

@@ -150,6 +150,9 @@ export const isGoogleTool = (name: string) =>
   (DRIVE_TOOL_NAMES as readonly string[]).includes(name);
 
 export function toolServer(name: string) {
+  if (name.startsWith("painel_")) {
+    return "painel";
+  }
   if (name.startsWith("youtube_")) {
     return "youtube";
   }

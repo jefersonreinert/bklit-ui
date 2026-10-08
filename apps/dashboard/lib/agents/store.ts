@@ -12,6 +12,15 @@ import type { Agent, AgentMcpServer, AgentSubagent } from "./types";
 const KEY = "cb:agents:v1";
 const EMPTY: Agent[] = [];
 let cache: Agent[] | null = null;
+
+// Another tab or the Convex sync rewrote the store: drop the cached copy
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === KEY) {
+      cache = null;
+    }
+  });
+}
 const listeners = new Set<() => void>();
 
 function read(): Agent[] {

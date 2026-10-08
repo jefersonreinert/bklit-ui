@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { documentStats, RESTAURANT_NAME } from "@/lib/data";
 import { Icon } from "@/lib/icons";
 import { navItems, normalizePath } from "@/lib/nav";
+import { useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
 
@@ -61,6 +62,29 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+const SYNC_LABEL = {
+  synced: "Sincronizado (Convex)",
+  connecting: "Conectando ao Convex…",
+  locked: "Sincronização bloqueada: digite o código de acesso",
+} as const;
+
+/** Whether this device is syncing with the central database. */
+function SyncBadge() {
+  const status = useSyncStatus();
+  if (status === "off") {
+    return null;
+  }
+  return (
+    <p className="mt-2 flex items-center gap-1.5 border-t pt-2 text-muted-foreground">
+      <Icon
+        className={cn("size-3.5", status === "synced" && "text-success")}
+        name={status === "synced" ? "IconCloudCheck" : "IconCloud"}
+      />
+      {SYNC_LABEL[status]}
+    </p>
+  );
+}
+
 export function SidebarFooterCard() {
   return (
     <div className="rounded-xl border bg-card p-3 text-xs">
@@ -72,6 +96,7 @@ export function SidebarFooterCard() {
         Aberto agora
       </div>
       <p className="text-muted-foreground">Serviço do jantar · 18h – 23h30</p>
+      <SyncBadge />
     </div>
   );
 }

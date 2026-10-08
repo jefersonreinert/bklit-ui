@@ -21,6 +21,15 @@ export interface FinanceData {
 
 const EMPTY: FinanceData = { txns: [], files: [] };
 let cache: FinanceData | null = null;
+
+// Another tab or the Convex sync rewrote the store: drop the cached copy
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === KEY) {
+      cache = null;
+    }
+  });
+}
 const listeners = new Set<() => void>();
 
 function read(): FinanceData {

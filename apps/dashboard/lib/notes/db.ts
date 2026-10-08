@@ -136,6 +136,102 @@ export function useNotes() {
   );
 }
 
+/* ------------------------------ sync hooks ------------------------------- */
+
+export type LocalChange =
+  | { kind: "save"; note: Note }
+  | { kind: "delete"; id: string; at: number };
+
+const changeListeners = new Set<(c: LocalChange) => void>();
+
+/** Edits made on this device (the Convex sync uploads them). */
+export function onLocalChange(listener: (c: LocalChange) => void) {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
+function notifyChange(change: LocalChange) {
+  for (const l of changeListeners) {
+    l(change);
+  }
+}
+
+const TOMBSTONES_KEY = "cb:notes:tombstones";
+
+/** Notes deleted here, so an older server copy can't bring them back. */
+function tombstones(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(TOMBSTONES_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setTombstone(id: string, at: number | null) {
+  const all = tombstones();
+  if (at === null) {
+    delete all[id];
+  } else {
+    all[id] = at;
+  }
+  try {
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(all));
+  } catch {
+    // Storage full: the server tombstone still protects other devices
+  }
+}
+
+/** Deletions made here, for the sync to replay after being offline. */
+export const localTombstones = () => tombstones();
+
+/** Current notes once IndexedDB has loaded. */
+export async function loadedNotes() {
+  await load();
+  return state.notes;
+}
+
+/**
+ * Applies notes from the server: newer versions replace local ones and
+ * tombstones delete them. Never echoes back as a local change.
+ */
+export function applyRemote(remote: (Note & { deleted: boolean })[]) {
+  const byId = new Map(state.notes.map((n) => [n.id, n]));
+  const dead = tombstones();
+  let changed = false;
+  for (const r of remote) {
+    const local = byId.get(r.id);
+    const deletedAt = dead[r.id];
+    if (deletedAt !== undefined) {
+      if (r.deleted) {
+        setTombstone(r.id, null);
+      }
+      if (deletedAt >= r.updatedAt) {
+        continue;
+      }
+    }
+    if (local && local.updatedAt >= r.updatedAt) {
+      continue;
+    }
+    const { deleted, ...note } = r;
+    if (deleted) {
+      if (local) {
+        byId.delete(r.id);
+        changed = true;
+        run("notes", "readwrite", (s) => s.delete(r.id)).catch(() => null);
+      }
+      continue;
+    }
+    byId.set(r.id, note);
+    changed = true;
+    run("notes", "readwrite", (s) => s.put(note)).catch(() => null);
+  }
+  if (changed) {
+    emit({ ...state, notes: [...byId.values()] });
+  }
+}
+
 export const newId = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
@@ -149,6 +245,7 @@ export function saveNote(note: Note) {
       : [...state.notes, next],
   });
   run("notes", "readwrite", (s) => s.put(next)).catch(() => null);
+  notifyChange({ kind: "save", note: next });
   return next;
 }
 
@@ -176,6 +273,9 @@ export function deleteNote(id: string) {
   }
   emit({ ...state, notes: state.notes.filter((n) => n.id !== id) });
   run("notes", "readwrite", (s) => s.delete(id)).catch(() => null);
+  const at = Date.now();
+  setTombstone(id, at);
+  notifyChange({ kind: "delete", id, at });
 }
 
 /** Parent chain from the root down to (not including) the note. */
