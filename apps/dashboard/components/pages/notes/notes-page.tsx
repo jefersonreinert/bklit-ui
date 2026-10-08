@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { useLiveWriter } from "@/lib/ai/live-writer";
 import { Icon } from "@/lib/icons";
 import { createNote, deleteNote, saveNote, useNotes } from "@/lib/notes/db";
 import {
@@ -20,7 +21,9 @@ import {
   neighbors,
 } from "@/lib/notes/links";
 import type { Note } from "@/lib/notes/types";
+import { connectedKeys, useConnectors } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
+import { NoteAiBar } from "./note-ai";
 import { NoteEditor } from "./note-editor";
 import { NoteHero, NoteIcon } from "./note-hero";
 import { type MarkdownActions, NoteMarkdown } from "./note-markdown";
@@ -354,8 +357,21 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
     onToggleTask: (line) =>
       saveNote({ ...note, content: toggleTask(note.content, line) }),
   };
-  const showEditor = s.mode === "edit" || s.mode === "split";
-  const showReader = s.mode === "read" || s.mode === "split";
+  const latest = useRef(note);
+  latest.current = note;
+  const { status } = useConnectors();
+  const writer = useLiveWriter((content) =>
+    saveNote({ ...latest.current, content })
+  );
+  const liveRef = useRef<HTMLDivElement>(null);
+  const writing = writer.live !== null;
+  useEffect(() => {
+    if (writing) {
+      liveRef.current?.scrollIntoView({ block: "end" });
+    }
+  });
+  const showEditor = !writing && (s.mode === "edit" || s.mode === "split");
+  const showReader = writing || s.mode === "read" || s.mode === "split";
   const hero = (
     <NoteHero
       note={note}
@@ -366,7 +382,7 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
   );
   return (
     <>
-      <div className="flex min-h-0 min-w-0 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-col">
         <NoteHeader
           mode={s.mode}
           note={note}
@@ -394,13 +410,17 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
             <div
               className={cn(
                 "min-h-0 overflow-y-auto",
-                s.mode === "split" && "hidden border-l lg:block"
+                !writing && s.mode === "split" && "hidden border-l lg:block"
               )}
             >
               {hero}
-              <article className="mx-auto max-w-3xl px-5 pb-24 md:px-10">
-                <NoteMarkdown actions={actions} text={note.content} />
-                {note.content.trim() === "" ? (
+              <article className="mx-auto max-w-3xl px-5 pb-32 md:px-10">
+                <NoteMarkdown
+                  actions={actions}
+                  text={writing ? `${writer.live}▍` : note.content}
+                />
+                <div ref={liveRef} />
+                {!writing && note.content.trim() === "" ? (
                   <button
                     className="text-muted-foreground text-sm"
                     onClick={() => s.changeMode("edit")}
@@ -413,6 +433,20 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
             </div>
           ) : null}
         </div>
+        <NoteAiBar
+          onStart={(instruction, mode) =>
+            writer.start({
+              title: note.title,
+              content: note.content,
+              instruction,
+              mode,
+              titles: s.notes.map((n) => n.title),
+              connectors: connectedKeys(status),
+            })
+          }
+          onStop={writer.stop}
+          state={writer.state}
+        />
       </div>
       <SidePanel note={note} notes={s.notes} onOpen={(n) => s.open(n.id)} />
     </>

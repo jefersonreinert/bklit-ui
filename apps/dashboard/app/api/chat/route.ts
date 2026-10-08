@@ -68,14 +68,18 @@ interface ChatRequest {
   connectors?: string[];
   user?: { name?: string; role?: string };
   /** "voice" = the reply will be spoken aloud (Voz page). */
-  style?: "voice" | "notes";
+  style?: ChatStyle;
 }
 
-const STYLE_INSTRUCTIONS: Record<"voice" | "notes", string> = {
+type ChatStyle = "voice" | "notes" | "write";
+
+const STYLE_INSTRUCTIONS: Record<ChatStyle, string> = {
   voice:
     "Você está em uma conversa por voz: a resposta será lida em voz alta no fone. Responda em português falado e natural, em no máximo 3 a 4 frases curtas, sem markdown, sem tabelas, sem listas com símbolos e sem emojis. Diga números de forma falada (ex.: 'cerca de vinte e sete por cento'). Se a pessoa pedir detalhes, ofereça continuar.",
   notes:
     "Você está recebendo a transcrição automática de um microfone (pode ter erros de reconhecimento e frases cortadas). Corrija mentalmente os erros óbvios e responda exatamente o que for pedido.",
+  write:
+    "Você está escrevendo AO VIVO dentro de uma nota do editor de notas (Markdown, estilo Notion); a pessoa vê cada letra aparecendo. Responda SOMENTE com o texto que entra na nota: sem saudação, sem preâmbulo, sem comentar o que vai fazer e sem cercar tudo em bloco de código. Use títulos (##), listas, tabelas, citações e **negrito** quando ajudarem. Pode usar [[Título]] para ligar outras notas existentes e blocos ```chart (no formato descrito nas instruções de gráficos) quando um gráfico ajudar. Quando precisar de dados (e-mails, agenda, finanças, notas, GitHub, Notion), consulte as ferramentas e os dados do painel antes de escrever e use números reais. Se pedirem para continuar, continue de onde o texto parou, sem repetir.",
 };
 
 // Names and roles: letters, digits, spaces and light punctuation only

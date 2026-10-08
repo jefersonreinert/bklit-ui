@@ -138,3 +138,27 @@ export function useConnectors() {
     disconnectGithub,
   };
 }
+
+/** Every connector this browser can use right now, as chat route keys. */
+export function connectedKeys(status: ConnectorsStatus | null) {
+  if (!status) {
+    return [];
+  }
+  const keys: string[] = [];
+  if (status.notion.connected) {
+    keys.push("notion");
+  }
+  if (status.github.connected) {
+    keys.push("github");
+  }
+  if (status.google.connected) {
+    keys.push("gmail", "drive");
+  }
+  if (status.youtube.available) {
+    keys.push("youtube");
+  }
+  if (status.whatsapp.available && status.whatsapp.unlocked) {
+    keys.push("whatsapp");
+  }
+  return keys;
+}
