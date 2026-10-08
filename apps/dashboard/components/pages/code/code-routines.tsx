@@ -22,6 +22,28 @@ import { CodeComposer, type ImagePayload } from "./code-composer";
 
 /** Subscription mode: real Claude Code cloud sessions fired from routines. */
 
+/** The always-on server (Contabo VPS) running `claude remote-control`. */
+export const SERVER_URL =
+  "https://claude.ai/code?environment=env_017rXksLQvPR7jWgm2grYiNx";
+
+export function ServerButton({ compact = false }: { compact?: boolean }) {
+  return (
+    <a
+      className={cn(
+        "flex shrink-0 items-center gap-2 rounded-full bg-[#d97757] text-white shadow-xs transition-opacity hover:opacity-90",
+        compact ? "h-9 px-3.5 text-sm" : "px-5 py-2.5 text-[15px]"
+      )}
+      href={SERVER_URL}
+      rel="noopener"
+      target="_blank"
+    >
+      <Icon className={compact ? "size-4" : "size-5"} name="IconServer" />
+      Abrir servidor
+      <Icon className="size-4" name="IconArrowUpRight" />
+    </a>
+  );
+}
+
 export const ROUTINE_PROMPT =
   "Execute a tarefa descrita no bloco routine-fire-payload nos repositórios desta rotina. Trabalhe num branch claude/…, rode os testes, faça commit e push, e abra um pull request quando a tarefa estiver pronta. Responda em português.";
 
@@ -278,6 +300,7 @@ export function EngineBar({
     );
   return (
     <div className="flex gap-2 overflow-x-auto pb-0.5">
+      <ServerButton compact />
       {routines.map((r) => (
         <button
           className={chip(value.kind === "routine" && value.id === r.id)}

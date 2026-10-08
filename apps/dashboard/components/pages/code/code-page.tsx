@@ -33,6 +33,7 @@ import {
   FiredRow,
   RoutineSession,
   RoutineSheet,
+  ServerButton,
 } from "./code-routines";
 import { SessionView } from "./code-session";
 import { ConnectGithub, Locked } from "./code-setup";
@@ -191,6 +192,7 @@ function SubscriptionChips({
         Claude Code (assinatura)
       </p>
       <div className="flex flex-wrap gap-2 px-3">
+        <ServerButton />
         {routines.map((r) => (
           <span
             className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm"
