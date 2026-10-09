@@ -94,9 +94,24 @@ const feed = (
 
 // Financial news: exactly the sources of the MarketNewsAPI project
 const DEFAULT_FEEDS: NewsFeed[] = [
-  feed("marketwatch", "MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories", true),
-  feed("bloomberg", "Bloomberg", "https://feeds.bloomberg.com/markets/news.rss", true),
-  feed("investing", "Investing.com", "https://www.investing.com/rss/news.rss", true),
+  feed(
+    "marketwatch",
+    "MarketWatch",
+    "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    true
+  ),
+  feed(
+    "bloomberg",
+    "Bloomberg",
+    "https://feeds.bloomberg.com/markets/news.rss",
+    true
+  ),
+  feed(
+    "investing",
+    "Investing.com",
+    "https://www.investing.com/rss/news.rss",
+    true
+  ),
 ];
 
 function localStore<T>(key: string, fallback: T) {
