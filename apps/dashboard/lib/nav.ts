@@ -82,6 +82,13 @@ export const navItems: NavItem[] = [
     icon: "IconNewspaper",
   },
   {
+    href: "/graficos",
+    label: "Gráficos",
+    description:
+      "Forex, ouro, índices, ações e cripto em tempo real, com desenhos e replay",
+    icon: "IconTradingViewCandles",
+  },
+  {
     href: "/calendario",
     label: "Calendário econômico",
     description:

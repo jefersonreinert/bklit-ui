@@ -26,6 +26,13 @@
       "assist": { "enabled": false }
     },
     {
+      // Vendored from jefersonreinert/mt5-chart-platform (kept close to upstream)
+      "includes": ["apps/dashboard/components/pages/trading/mt5/**"],
+      "formatter": { "enabled": false },
+      "linter": { "enabled": false },
+      "assist": { "enabled": false }
+    },
+    {
       // Generated shadcn registry sources (registry:build); not hand-edited
       "includes": ["packages/ui/registry/**"],
       "formatter": { "enabled": false },

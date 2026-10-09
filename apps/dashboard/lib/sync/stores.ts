@@ -15,6 +15,7 @@ export const SYNCED_KEYS = [
   "cb:agents:v1",
   "cb:browser:v1",
   "cb:news:v3",
+  "cb:trading:v1",
   "cb:personal-finance:v1",
   "cb:code:repos",
   "cb:code:fired",

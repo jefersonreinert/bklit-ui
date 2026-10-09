@@ -57,6 +57,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-brand: var(--brand);
+  --color-up: var(--up);
+  --color-down: var(--down);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --radius-sm: calc(var(--radius) - 4px);
@@ -456,4 +458,15 @@
   50% {
     transform: rotate(2deg);
   }
+}
+
+/* Charting platform (vendored mt5-chart-platform) — scoped tokens */
+.mt5 {
+  --up: #26a69a;
+  --down: #ef5350;
+  --accent: #2962ff;
+  --fg-muted: var(--muted-foreground);
+  --chart-grid: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --chart-crosshair: var(--muted-foreground);
+  --chart-label: var(--muted-foreground);
 }
