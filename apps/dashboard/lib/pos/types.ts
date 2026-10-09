@@ -20,6 +20,33 @@ export interface PosProduct {
   /** Alert when stock falls to this level. */
   minStock?: number;
   description?: string;
+  /** Option groups ("steps"): ice, lemon, doneness… */
+  modifiers?: ModifierGroup[];
+}
+
+export interface ModifierOption {
+  id: string;
+  name: string;
+  /** Added to the unit price (0 = free). */
+  price: number;
+  active: boolean;
+}
+
+export interface ModifierGroup {
+  id: string;
+  name: string;
+  /** Must pick one before adding. */
+  required: boolean;
+  /** Several options can be picked. */
+  multiple: boolean;
+  active: boolean;
+  options: ModifierOption[];
+}
+
+export interface ItemMod {
+  group: string;
+  name: string;
+  price: number;
 }
 
 export type StockMoveKind = "sale" | "purchase" | "adjust" | "waste";
@@ -66,6 +93,10 @@ export interface OrderItem {
   qty: number;
   /** Unit cost when added, for profit reports. */
   cost?: number;
+  /** Chosen options (already included in price). */
+  mods?: ItemMod[];
+  /** Free text for the kitchen ("sem tomate"). */
+  note?: string;
   /** Already sent to the kitchen. */
   sent: boolean;
 }
@@ -157,6 +188,12 @@ export interface PrinterConfig {
   copies: number;
   /** Open the cash drawer after printing a cash payment. */
   drawer: boolean;
+  /** Prints customer receipts/invoices (default true). */
+  receipts?: boolean;
+  /** Prints kitchen/bar tickets when items are sent. */
+  kitchen?: boolean;
+  /** Only these product categories go to this printer's tickets (empty = all). */
+  categories?: string[];
 }
 
 export interface PosData {

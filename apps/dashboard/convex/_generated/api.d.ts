@@ -14,6 +14,7 @@ import type * as notes from "../notes.js";
 import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
+import type * as vouchers from "../vouchers.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   pos: typeof pos;
   staff: typeof staff;
   stores: typeof stores;
+  vouchers: typeof vouchers;
 }>;
 
 /**

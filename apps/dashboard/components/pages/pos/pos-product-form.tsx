@@ -25,6 +25,7 @@ import {
 } from "@/lib/pos/store";
 import type { PosProduct, StockMove, StockMoveKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
+import { cleanModifiers, ModifiersEditor } from "./pos-modifiers";
 
 const UNITS = ["un", "kg", "g", "L", "ml", "garrafa", "lata", "dose", "porção"];
 
@@ -355,6 +356,7 @@ export function ProductForm({
       // Stock is edited here only for new products; later through movements
       stock: isNew ? num(stock) || 0 : (live?.stock ?? p.stock),
       minStock: num(minStock) || 0,
+      modifiers: cleanModifiers(p.modifiers ?? []),
     });
     onClose();
   };
@@ -480,6 +482,13 @@ export function ProductForm({
               </label>
             </div>
             <PriceStats cost={costValue} currency={cur} price={value} />
+          </Group>
+
+          <Group title="Opções (steps)">
+            <ModifiersEditor
+              onChange={(modifiers) => setP({ ...p, modifiers })}
+              value={p.modifiers ?? []}
+            />
           </Group>
 
           <Group title="Estoque">

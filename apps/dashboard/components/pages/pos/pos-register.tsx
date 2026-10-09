@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useCan } from "./pos-auth";
 import { CartPanel, orderLabel } from "./pos-cart";
 import { CheckoutSheet } from "./pos-checkout";
+import { activeGroups, ModifierSheet } from "./pos-modifiers";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "0", "back"];
 const MAX_CENTS = 9_999_999;
@@ -199,6 +200,7 @@ export function RegisterView({
   const [cents, setCents] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState<PosProduct | null>(null);
   const currency = data.settings.currency;
 
   const addTyped = () => {
@@ -243,6 +245,7 @@ export function RegisterView({
     <CartPanel
       data={data}
       onCheckout={startCheckout}
+      onMoved={(id) => onActiveOrder(id)}
       onNew={() => {
         onActiveOrder(null);
         setCartOpen(false);
@@ -302,7 +305,11 @@ export function RegisterView({
         ) : (
           <ProductGrid
             currency={currency}
-            onPick={(p) => addProduct(ensureOrder(), p)}
+            onPick={(p) =>
+              activeGroups(p).length
+                ? setChoosing(p)
+                : addProduct(ensureOrder(), p)
+            }
             products={data.products}
           />
         )}
@@ -350,6 +357,16 @@ export function RegisterView({
           {cart}
         </SheetContent>
       </Sheet>
+      <ModifierSheet
+        currency={currency}
+        onAdd={(extra) => {
+          if (choosing) {
+            addProduct(ensureOrder(), choosing, extra);
+          }
+        }}
+        onClose={() => setChoosing(null)}
+        product={choosing}
+      />
       {checkoutOrder ? (
         <CheckoutSheet
           data={data}

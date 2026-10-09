@@ -3,6 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { audit, meta, requireStaff } from "./access";
 import { isPanel, requirePanel } from "./lib";
+import { modifierGroup, posItem } from "./schema";
 
 /**
  * POS data shared by every device. Each action is a small transaction on
@@ -10,15 +11,7 @@ import { isPanel, requirePanel } from "./lib";
  * order numbers come from one counter.
  */
 
-const item = v.object({
-  id: v.string(),
-  productId: v.union(v.string(), v.null()),
-  name: v.string(),
-  price: v.number(),
-  cost: v.optional(v.number()),
-  qty: v.number(),
-  sent: v.boolean(),
-});
+const item = posItem;
 
 const productFields = {
   name: v.string(),
@@ -34,6 +27,7 @@ const productFields = {
   stock: v.optional(v.number()),
   minStock: v.optional(v.number()),
   description: v.optional(v.string()),
+  modifiers: v.optional(v.array(modifierGroup)),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
@@ -65,7 +59,12 @@ export const catalog = query({
     return {
       products: products.map(toProduct),
       meta: m
-        ? { areas: m.areas, settings: m.settings, receipt: m.receipt }
+        ? {
+            areas: m.areas,
+            settings: m.settings,
+            receipt: m.receipt,
+            printers: m.printers,
+          }
         : null,
     };
   },
@@ -216,9 +215,13 @@ export const addItem = mutation({
     await requireStaff(ctx, session, "orders");
     const order = await findOrder(ctx, orderId);
     editable(order);
-    const same = line.productId
-      ? order.items.find((i) => i.productId === line.productId && !i.sent)
-      : undefined;
+    const plain = (i: typeof line) => !(i.mods?.length || i.note);
+    const same =
+      line.productId && plain(line)
+        ? order.items.find(
+            (i) => i.productId === line.productId && !i.sent && plain(i)
+          )
+        : undefined;
     const items = same
       ? order.items.map((i) =>
           i === same ? { ...i, qty: i.qty + line.qty } : i
@@ -263,6 +266,29 @@ export const changeQty = mutation({
   },
 });
 
+/** Note for the kitchen on a line not sent yet. */
+export const setItemNote = mutation({
+  args: {
+    session: v.string(),
+    orderId: v.string(),
+    itemId: v.string(),
+    note: v.string(),
+  },
+  handler: async (ctx, { session, orderId, itemId, note }) => {
+    await requireStaff(ctx, session, "orders");
+    const order = await findOrder(ctx, orderId);
+    editable(order);
+    await ctx.db.patch(order._id, {
+      items: order.items.map((i) =>
+        i.id === itemId
+          ? { ...i, note: note.trim().slice(0, 200) || undefined }
+          : i
+      ),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const sendToKitchen = mutation({
   args: { session: v.string(), orderId: v.string() },
   handler: async (ctx, { session, orderId }) => {
@@ -289,6 +315,86 @@ export const patchOrder = mutation({
     const order = await findOrder(ctx, orderId);
     editable(order);
     await ctx.db.patch(order._id, { ...patch, updatedAt: Date.now() });
+  },
+});
+
+/**
+ * Moves items (all when itemIds is empty) to another table. Joins the
+ * table's open order or opens one; the source closes when emptied.
+ */
+export const transferItems = mutation({
+  args: {
+    session: v.string(),
+    fromId: v.string(),
+    toTableId: v.string(),
+    itemIds: v.array(v.string()),
+    newCid: v.string(),
+  },
+  handler: async (ctx, { session, fromId, toTableId, itemIds, newCid }) => {
+    const user = await requireStaff(ctx, session, "orders");
+    const from = await findOrder(ctx, fromId);
+    editable(from);
+    const moving = itemIds.length
+      ? from.items.filter((i) => itemIds.includes(i.id))
+      : from.items;
+    const staying = from.items.filter((i) => !moving.includes(i));
+    const now = Date.now();
+    const [open, paying] = await Promise.all(
+      (["open", "paying"] as const).map((status) =>
+        ctx.db
+          .query("posOrders")
+          .withIndex("by_status_closed", (q) => q.eq("status", status))
+          .take(500)
+      )
+    );
+    const target = [...(open ?? []), ...(paying ?? [])].find(
+      (o) => o.tableId === toTableId && o._id !== from._id
+    );
+    let targetCid: string;
+    if (target) {
+      await ctx.db.patch(target._id, {
+        items: [...target.items, ...moving],
+        updatedAt: now,
+      });
+      targetCid = target.cid;
+    } else if (staying.length === 0) {
+      // Whole order to a free table: just move it
+      await ctx.db.patch(from._id, { tableId: toTableId, updatedAt: now });
+      await audit(ctx, user, "Mudou de mesa", `pedido ${from.number}`);
+      return from.cid;
+    } else {
+      const m = await meta(ctx);
+      if (!m) {
+        throw new ConvexError("POS sem configuração.");
+      }
+      await ctx.db.patch(m._id, { nextOrderNumber: m.nextOrderNumber + 1 });
+      await ctx.db.insert("posOrders", {
+        cid: newCid,
+        number: m.nextOrderNumber,
+        tableId: toTableId,
+        name: "",
+        items: moving,
+        taxRate: from.taxRate,
+        status: "open",
+        createdAt: now,
+        updatedAt: now,
+        closedAt: 0,
+        openedBy: user.name,
+      });
+      targetCid = newCid;
+    }
+    if (staying.length === 0) {
+      await ctx.db.delete(from._id);
+    } else {
+      await ctx.db.patch(from._id, { items: staying, updatedAt: now });
+    }
+    await audit(
+      ctx,
+      user,
+      "Transferiu itens",
+      `pedido ${from.number}: ${moving.length} itens`
+    );
+    return targetCid;
   },
 });
 
@@ -593,6 +699,7 @@ export const saveMeta = mutation({
     areas: v.optional(v.any()),
     settings: v.optional(v.any()),
     receipt: v.optional(v.any()),
+    printers: v.optional(v.any()),
   },
   handler: async (ctx, { session, ...patch }) => {
     const need = patch.areas === undefined ? "settings" : "tables";

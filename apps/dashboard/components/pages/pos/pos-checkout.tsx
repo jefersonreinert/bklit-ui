@@ -25,11 +25,12 @@ import { cn } from "@/lib/utils";
 import { orderLabel } from "./pos-cart";
 import { SumupQrStep, useSumupQrAvailable } from "./pos-qr";
 import { autoPrint, PrintButtons, ReceiptPreview } from "./pos-receipt";
+import { RedeemVoucher } from "./pos-vouchers";
 
 const TIPS = [0, 5, 10, 15];
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-type Step = "choose" | "qr" | "cash" | "link" | "other" | "done";
+type Step = "choose" | "qr" | "cash" | "link" | "other" | "voucher" | "done";
 
 function MethodButton({
   icon,
@@ -305,6 +306,12 @@ export function CheckoutSheet({
                 title="Link de pagamento"
               />
               <MethodButton
+                hint="Escaneie o QR ou digite o código: o desconto entra no pedido"
+                icon="IconGiftcard"
+                onClick={() => setStep("voucher")}
+                title="Usar voucher"
+              />
+              <MethodButton
                 hint="Maquininha, transferência, voucher…"
                 icon="IconCreditCard1"
                 onClick={() => setStep("other")}
@@ -341,6 +348,13 @@ export function CheckoutSheet({
                 Cliente pagou
               </Button>
             </div>
+          ) : null}
+
+          {step === "voucher" ? (
+            <RedeemVoucher
+              onDone={() => setStep("choose")}
+              orderId={order.id}
+            />
           ) : null}
 
           {step === "qr" ? (

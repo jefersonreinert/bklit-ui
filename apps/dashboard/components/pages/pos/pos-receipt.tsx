@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Icon } from "@/lib/icons";
 import { pdfName, printReceipt, receiptPdf, sharePdf } from "@/lib/pos/print";
 import { type ReceiptDoc, receiptDoc, renderReceipt } from "@/lib/pos/receipt";
-import { usePos } from "@/lib/pos/store";
+import { getDevicePrefs, usePos } from "@/lib/pos/store";
 import type { PosOrder, PrinterConfig, ReceiptSettings } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 
@@ -118,14 +118,15 @@ export function usePrintActions(doc: ReceiptDoc | null) {
   };
 }
 
-/** Prints automatically on the printers marked "imprimir ao pagar". */
+/** Prints on this device's automatic receipt printer, if one is chosen. */
 export function autoPrint(
   doc: ReceiptDoc,
   printers: PrinterConfig[],
   receipt: ReceiptSettings
 ) {
-  const auto = printers.filter((p) => p.autoPrint && p.kind === "epos");
-  return Promise.allSettled(auto.map((p) => printReceipt(p, doc, receipt)));
+  const id = getDevicePrefs().autoReceipt;
+  const printer = printers.find((p) => p.id === id && p.kind === "epos");
+  return printer ? printReceipt(printer, doc, receipt) : Promise.resolve(null);
 }
 
 export function PrintButtons({
@@ -135,7 +136,7 @@ export function PrintButtons({
   doc: ReceiptDoc;
   onSettings?: () => void;
 }) {
-  const { printers } = usePos();
+  const printers = usePos().printers.filter((p) => p.receipts !== false);
   const { busy, message, print, pdf } = usePrintActions(doc);
   return (
     <div className="flex flex-col gap-2">

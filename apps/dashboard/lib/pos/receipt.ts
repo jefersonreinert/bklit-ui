@@ -3,6 +3,7 @@
 import { encode } from "uqr";
 import { money, orderTotals } from "./store";
 import type {
+  OrderItem,
   PaperSize,
   PaymentMethod,
   PosData,
@@ -23,12 +24,29 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   other: "Outro",
 };
 
+/** "Com gelo, Limão · “sem tomate”" under a cart, receipt or ticket line. */
+export function itemDetail(i: Pick<OrderItem, "mods" | "note">) {
+  return [
+    (i.mods ?? []).map((m) => m.name).join(", "),
+    i.note ? `“${i.note}”` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export interface ReceiptDoc {
   number: number;
   date: Date;
   table: string;
   customer: string;
-  lines: { name: string; qty: number; price: number; total: number }[];
+  lines: {
+    name: string;
+    qty: number;
+    price: number;
+    total: number;
+    /** Options and kitchen note. */
+    detail?: string;
+  }[];
   subtotal: number;
   taxRate: number;
   tax: number;
@@ -57,6 +75,7 @@ export function receiptDoc(order: PosOrder, data: PosData): ReceiptDoc {
       qty: i.qty,
       price: i.price,
       total: i.price * i.qty,
+      detail: itemDetail(i) || undefined,
     })),
     subtotal: t.subtotal,
     taxRate: order.taxRate,
@@ -340,9 +359,15 @@ function items(x: Ctx, doc: ReceiptDoc) {
   for (const l of doc.lines) {
     if (x.s.template === "compact") {
       row(x, `${l.qty}× ${l.name}`, m(l.total), { size: 10.5 });
+      if (l.detail) {
+        text(x, l.detail, { size: 9, color: MUTED });
+      }
       continue;
     }
     row(x, l.name, m(l.total), { size: 11.5, weight: 600 });
+    if (l.detail) {
+      text(x, l.detail, { size: 9.5, color: MUTED });
+    }
     text(x, `${l.qty} × ${m(l.price)}`, { size: 9.5, color: MUTED, gap: 4 });
   }
   rule(x, x.s.template === "classic" ? "dotted" : "dashed");
@@ -466,5 +491,79 @@ export async function renderReceipt(
   c.fillRect(0, 0, w, canvas.height);
   x.draw = true;
   layout(x, doc, img);
+  return canvas;
+}
+
+/* ------------------------------ kitchen ticket --------------------------- */
+
+export interface TicketDoc {
+  station: string;
+  number: number;
+  table: string;
+  customer: string;
+  user: string;
+  date: Date;
+  lines: { qty: number; name: string; detail: string }[];
+}
+
+function ticketLayout(x: Ctx, t: TicketDoc) {
+  x.y = 10 * x.u;
+  text(x, t.station.toUpperCase(), { size: 13, weight: 800, align: "center" });
+  text(x, t.table || `Pedido #${t.number}`, {
+    size: 22,
+    weight: 800,
+    align: "center",
+  });
+  text(
+    x,
+    [
+      t.table ? `Pedido #${t.number}` : "",
+      t.customer,
+      t.date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      t.user,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    { size: 11, align: "center", weight: 600 }
+  );
+  rule(x, "solid");
+  for (const l of t.lines) {
+    text(x, `${l.qty}×  ${l.name}`, { size: 17, weight: 800 });
+    if (l.detail) {
+      text(x, l.detail, { size: 13, weight: 600 });
+    }
+    x.y += 6 * x.u;
+  }
+  rule(x, "solid");
+  x.y += 14 * x.u;
+  return Math.ceil(x.y);
+}
+
+/** Kitchen/bar ticket: big text, no prices, black on white. */
+export function renderTicket(t: TicketDoc, s: ReceiptSettings, width: number) {
+  const canvas = document.createElement("canvas");
+  const c = canvas.getContext("2d");
+  if (!c) {
+    throw new Error("Canvas indisponível");
+  }
+  const x: Ctx = {
+    c,
+    s: { ...s, template: "modern" },
+    w: width,
+    pad: width * 0.04,
+    u: width / 300,
+    y: 0,
+    draw: false,
+    thermal: true,
+  };
+  canvas.width = width;
+  canvas.height = ticketLayout(x, t);
+  c.fillStyle = "#ffffff";
+  c.fillRect(0, 0, width, canvas.height);
+  x.draw = true;
+  ticketLayout(x, t);
   return canvas;
 }

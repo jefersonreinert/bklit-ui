@@ -11,6 +11,7 @@ import {
   bootstrapPos,
   errorText,
   getSession,
+  setPosUserName,
   setSession,
   usePos,
   usePosQuery,
@@ -401,6 +402,10 @@ export function PosGate({ children }: { children: ReactNode }) {
   const data = usePos();
   const autoLock = data.settings.autoLockMin ?? 0;
   useAutoLock(user ? autoLock : 0);
+
+  useEffect(() => {
+    setPosUserName(user?.name ?? "");
+  }, [user]);
 
   // An administrator whose POS was never imported (first run interrupted)
   useEffect(() => {

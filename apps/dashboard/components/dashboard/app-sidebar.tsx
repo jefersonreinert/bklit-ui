@@ -28,7 +28,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = normalizePath(usePathname());
 
   return (
-    <nav aria-label="Navegação principal" className="flex flex-col gap-1">
+    <nav
+      aria-label="Navegação principal"
+      className="-mx-2 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2"
+    >
       <span className="px-3 pb-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
         Menu
       </span>
@@ -106,7 +109,7 @@ export function AppSidebar() {
     <aside className="acrylic sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r bg-sidebar p-4 lg:flex print:hidden">
       <SidebarBrand />
       <SidebarNav />
-      <div className="mt-auto">
+      <div className="shrink-0">
         <SidebarFooterCard />
       </div>
     </aside>

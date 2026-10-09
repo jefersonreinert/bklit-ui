@@ -6,7 +6,7 @@ import { v } from "convex/values";
  * searchable by the AI); every other module (POS, agents, personal
  * finances, preferences) syncs its local store as one JSON document.
  */
-const posItem = v.object({
+export const posItem = v.object({
   id: v.string(),
   productId: v.union(v.string(), v.null()),
   name: v.string(),
@@ -14,6 +14,28 @@ const posItem = v.object({
   cost: v.optional(v.number()),
   qty: v.number(),
   sent: v.boolean(),
+  mods: v.optional(
+    v.array(
+      v.object({ group: v.string(), name: v.string(), price: v.number() })
+    )
+  ),
+  note: v.optional(v.string()),
+});
+
+export const modifierGroup = v.object({
+  id: v.string(),
+  name: v.string(),
+  required: v.boolean(),
+  multiple: v.boolean(),
+  active: v.boolean(),
+  options: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      price: v.number(),
+      active: v.boolean(),
+    })
+  ),
 });
 
 const posPayment = v.object({
@@ -64,6 +86,7 @@ export default defineSchema({
     stock: v.optional(v.number()),
     minStock: v.optional(v.number()),
     description: v.optional(v.string()),
+    modifiers: v.optional(v.array(modifierGroup)),
     updatedAt: v.number(),
   }).index("by_cid", ["cid"]),
 
@@ -97,6 +120,8 @@ export default defineSchema({
     areas: v.any(),
     settings: v.any(),
     receipt: v.any(),
+    /** Printers and their routing, shared by every device. */
+    printers: v.optional(v.any()),
     nextOrderNumber: v.number(),
     failedLogins: v.optional(v.number()),
     lockedUntil: v.optional(v.number()),
@@ -166,6 +191,31 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_user", ["userId"]),
+
+  posVouchers: defineTable({
+    code: v.string(),
+    kind: v.union(v.literal("amount"), v.literal("percent")),
+    value: v.number(),
+    label: v.string(),
+    maxUses: v.number(),
+    uses: v.number(),
+    /** 0 = never expires. */
+    expiresAt: v.number(),
+    active: v.boolean(),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    redemptions: v.array(
+      v.object({
+        orderCid: v.string(),
+        orderNumber: v.number(),
+        amount: v.number(),
+        userName: v.string(),
+        at: v.number(),
+      })
+    ),
+  })
+    .index("by_code", ["code"])
+    .index("by_created", ["createdAt"]),
 
   posAudit: defineTable({
     userName: v.string(),

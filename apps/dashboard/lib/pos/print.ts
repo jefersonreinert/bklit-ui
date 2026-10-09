@@ -5,6 +5,8 @@ import {
   PAPER_MM,
   type ReceiptDoc,
   renderReceipt,
+  renderTicket,
+  type TicketDoc,
 } from "./receipt";
 import type { PrinterConfig, ReceiptSettings } from "./types";
 
@@ -177,17 +179,17 @@ const STATUS_HINTS: Record<string, string> = {
   EPTR_AUTOMATICAL: "Erro recuperável da impressora; tente de novo.",
 };
 
-export async function eposPrint(
+/** Sends a rendered canvas to an Epson printer (raster, then cut). */
+async function eposSend(
   printer: PrinterConfig,
-  doc: ReceiptDoc,
-  s: ReceiptSettings
+  canvas: HTMLCanvasElement,
+  opts: { drawer: boolean; copies: number }
 ) {
-  const canvas = await renderReceipt(
-    doc,
-    { ...s, paper: printer.paper },
-    { width: PAPER_DOTS[printer.paper], thermal: true }
-  );
-  const xml = eposXml(toRaster(canvas), canvas.width, canvas.height, printer);
+  const xml = eposXml(toRaster(canvas), canvas.width, canvas.height, {
+    ...printer,
+    drawer: opts.drawer,
+    copies: opts.copies,
+  });
   let res: Response;
   try {
     res = await fetch(eposUrl(printer), {
@@ -201,18 +203,45 @@ export async function eposPrint(
     });
   } catch {
     throw new Error(
-      `Não consegui falar com a impressora em ${printer.host}. Confira se o celular está no mesmo Wi-Fi e toque em “Autorizar conexão” nas impressoras.`
+      `Não consegui falar com a impressora “${printer.name}” (${printer.host}). Confira se este aparelho está no mesmo Wi-Fi e toque em “Autorizar conexão” nas impressoras.`
     );
   }
   const body = await res.text();
-  const success = SUCCESS.test(body);
-  if (!success) {
+  if (!SUCCESS.test(body)) {
     const code = CODE.exec(body)?.[1] ?? "";
     throw new Error(
-      STATUS_HINTS[code] ??
-        `A impressora recusou a impressão${code ? ` (${code})` : ` (HTTP ${res.status})`}.`
+      `${printer.name}: ${
+        STATUS_HINTS[code] ??
+        `recusou a impressão${code ? ` (${code})` : ` (HTTP ${res.status})`}`
+      }`
     );
   }
+}
+
+export async function eposPrint(
+  printer: PrinterConfig,
+  doc: ReceiptDoc,
+  s: ReceiptSettings
+) {
+  const canvas = await renderReceipt(
+    doc,
+    { ...s, paper: printer.paper },
+    { width: PAPER_DOTS[printer.paper], thermal: true }
+  );
+  await eposSend(printer, canvas, {
+    drawer: printer.drawer,
+    copies: printer.copies,
+  });
+}
+
+/** Kitchen/bar ticket on one printer (Epson network printers only). */
+export async function printTicket(
+  printer: PrinterConfig,
+  ticket: TicketDoc,
+  s: ReceiptSettings
+) {
+  const canvas = renderTicket(ticket, s, PAPER_DOTS[printer.paper]);
+  await eposSend(printer, canvas, { drawer: false, copies: 1 });
 }
 
 /** Prints on one printer, whatever its kind. */
@@ -227,4 +256,44 @@ export async function printReceipt(
   }
   const blob = await receiptPdf(doc, { ...s, paper: printer.paper });
   return sharePdf(blob, pdfName(doc));
+}
+
+/** Any rendered image (voucher, label) as a PDF the width of the paper. */
+export async function imagePdf(
+  canvas: HTMLCanvasElement,
+  paperMm: number,
+  title: string
+) {
+  const { jsPDF } = await import("jspdf");
+  const h = (canvas.height / canvas.width) * paperMm;
+  const pdf = new jsPDF({
+    unit: "mm",
+    format: [paperMm, h],
+    orientation: h >= paperMm ? "portrait" : "landscape",
+    compress: true,
+  });
+  pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, paperMm, h);
+  pdf.setProperties({ title });
+  return pdf.output("blob");
+}
+
+/** Prints an image on a printer: Epson directly, others through the PDF. */
+export async function printImage(
+  printer: PrinterConfig,
+  render: (width: number) => HTMLCanvasElement,
+  title: string
+) {
+  if (printer.kind === "epos") {
+    await eposSend(printer, render(PAPER_DOTS[printer.paper]), {
+      drawer: false,
+      copies: 1,
+    });
+    return "printed";
+  }
+  const blob = await imagePdf(
+    render(PAPER_DOTS[printer.paper] * 2),
+    PAPER_MM[printer.paper],
+    title
+  );
+  return sharePdf(blob, `${title}.pdf`);
 }

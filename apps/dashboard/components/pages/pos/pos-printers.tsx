@@ -14,7 +14,14 @@ import { Switch } from "@/components/ui/switch";
 import { Icon, type IconName } from "@/lib/icons";
 import { printReceipt } from "@/lib/pos/print";
 import { sampleDoc } from "@/lib/pos/receipt";
-import { deletePrinter, savePrinter, uid, usePos } from "@/lib/pos/store";
+import {
+  deletePrinter,
+  savePrinter,
+  setDevicePrefs,
+  uid,
+  useDevicePrefs,
+  usePos,
+} from "@/lib/pos/store";
 import type { PrinterConfig, PrinterKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +50,10 @@ const blank = (): PrinterConfig => ({
   host: "",
   deviceId: "local_printer",
   paper: "80",
-  autoPrint: true,
+  autoPrint: false,
+  receipts: true,
+  kitchen: false,
+  categories: [],
   copies: 1,
   drawer: false,
 });
@@ -273,14 +283,7 @@ function EposFields({
           value={p.deviceId}
         />
       </label>
-      <span className="flex items-center justify-between text-sm">
-        Imprimir sozinho ao receber
-        <Switch
-          aria-label="Imprimir ao receber"
-          checked={p.autoPrint}
-          onCheckedChange={(autoPrint) => setP({ ...p, autoPrint })}
-        />
-      </span>
+      <RoutingFields p={p} setP={setP} />
       <span className="flex items-center justify-between text-sm">
         Abrir gaveta de dinheiro
         <Switch
@@ -341,6 +344,102 @@ function BluetoothHelp() {
   );
 }
 
+const roles = (p: PrinterConfig) =>
+  [
+    p.receipts === false ? "" : "recibos",
+    p.kitchen
+      ? `tíquetes${p.categories?.length ? ` (${p.categories.join(", ")})` : ""}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" · ") || "sem função";
+
+/** What this printer prints: receipts and/or tickets for some categories. */
+function RoutingFields({
+  p,
+  setP,
+}: {
+  p: PrinterConfig;
+  setP: (p: PrinterConfig) => void;
+}) {
+  const { products } = usePos();
+  const prefs = useDevicePrefs();
+  const categories = [...new Set(products.map((x) => x.category))];
+  const chosen = p.categories ?? [];
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border p-3">
+      <p className="font-medium text-sm">O que esta impressora imprime</p>
+      <span className="flex items-center justify-between text-sm">
+        Recibos e faturas do cliente
+        <Switch
+          aria-label="Recibos"
+          checked={p.receipts !== false}
+          onCheckedChange={(receipts) => setP({ ...p, receipts })}
+        />
+      </span>
+      <span className="flex items-center justify-between text-sm">
+        Tíquetes de produção (cozinha, bar)
+        <Switch
+          aria-label="Tíquetes"
+          checked={Boolean(p.kitchen)}
+          onCheckedChange={(kitchen) => setP({ ...p, kitchen })}
+        />
+      </span>
+      {p.kitchen ? (
+        <div className="flex flex-col gap-1.5 text-sm">
+          <span className="text-muted-foreground text-xs">
+            Categorias que saem aqui (nenhuma marcada = todas). Ex.: Cozinha →
+            Entradas, Principais; Bar → Bebidas, Coquetéis, Vinhos, Cafés.
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map((c) => {
+              const on = chosen.includes(c);
+              return (
+                <button
+                  aria-pressed={on}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs",
+                    on ? "bg-foreground text-background" : "bg-muted"
+                  )}
+                  key={c}
+                  onClick={() =>
+                    setP({
+                      ...p,
+                      categories: on
+                        ? chosen.filter((x) => x !== c)
+                        : [...chosen, c],
+                    })
+                  }
+                  type="button"
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+      {p.receipts === false ? null : (
+        <span className="flex items-center justify-between border-t pt-3 text-sm">
+          <span>
+            Neste aparelho: imprimir recibo sozinho ao receber
+            <span className="block text-muted-foreground text-xs">
+              Cada iPad/celular escolhe a sua impressora de recibo.
+            </span>
+          </span>
+          <Switch
+            aria-label="Recibo automático neste aparelho"
+            checked={prefs.autoReceipt === p.id}
+            onCheckedChange={(on) =>
+              setDevicePrefs({ autoReceipt: on ? p.id : "" })
+            }
+          />
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function PrintersCard() {
   const { printers } = usePos();
   const [editing, setEditing] = useState<PrinterConfig | null>(null);
@@ -378,7 +477,7 @@ export function PrintersCard() {
                   <span className="block truncate text-sm">{p.name}</span>
                   <span className="block truncate text-muted-foreground text-xs">
                     {p.kind === "epos" ? p.host : "PDF → app Epson / AirPrint"}{" "}
-                    · {p.paper} mm{p.autoPrint ? " · automática" : ""}
+                    · {p.paper} mm · {roles(p)}
                   </span>
                 </span>
                 <Icon

@@ -85,6 +85,10 @@ function insertBlock(e: Edit, block: string): Edit {
   return { value, start: caret, end: caret };
 }
 
+/** Round, icon-only buttons in one scrollable pill (like Notion's bar). */
+const TOOL =
+  "flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95";
+
 const TOOLS: {
   icon: IconName | null;
   label: string;
@@ -99,26 +103,22 @@ const TOOLS: {
     run: (e) => prefixLines(e, "## "),
   },
   {
-    icon: null,
-    text: "B",
+    icon: "IconBold",
     label: "Negrito",
     run: (e) => wrap(e, "**", "**", "negrito"),
   },
   {
-    icon: null,
-    text: "I",
+    icon: "IconItalic",
     label: "Itálico",
     run: (e) => wrap(e, "*", "*", "itálico"),
   },
   {
-    icon: null,
-    text: "S",
+    icon: "IconStrikeThrough",
     label: "Riscado",
     run: (e) => wrap(e, "~~", "~~", "riscado"),
   },
   {
-    icon: null,
-    text: "≡",
+    icon: "IconBrush",
     label: "Destaque",
     run: (e) => wrap(e, "==", "==", "destaque"),
   },
@@ -128,16 +128,18 @@ const TOOLS: {
     label: "Tarefa",
     run: (e) => prefixLines(e, "- [ ] "),
   },
-  { icon: null, text: "❝", label: "Citação", run: (e) => prefixLines(e, "> ") },
   {
-    icon: null,
-    text: "</>",
+    icon: "IconOpenQuote1",
+    label: "Citação",
+    run: (e) => prefixLines(e, "> "),
+  },
+  {
+    icon: "IconCode",
     label: "Código",
     run: (e) => wrap(e, "```\n", "\n```", "código"),
   },
   {
-    icon: null,
-    text: "[[ ]]",
+    icon: "IconChainLink1",
     label: "Link para nota",
     run: (e) => wrap(e, "[[", "]]", "Nome da nota"),
   },
@@ -148,8 +150,7 @@ const TOOLS: {
       insertBlock(e, "| Coluna | Coluna |\n|---|---|\n| valor | valor |"),
   },
   {
-    icon: null,
-    text: "—",
+    icon: "IconDivider",
     label: "Divisória",
     run: (e) => insertBlock(e, "---"),
   },
@@ -167,13 +168,13 @@ function ChartMenu({ onPick }: { onPick: (block: string) => void }) {
         render={
           <button
             aria-label="Inserir gráfico"
-            className="flex h-8 items-center gap-1 rounded-lg px-2 text-sm hover:bg-muted"
+            className={TOOL}
             title="Inserir gráfico animado"
             type="button"
           />
         }
       >
-        <Icon className="size-4" name="IconChart3" />
+        <Icon className="size-[18px]" name="IconChart3" />
       </PopoverTrigger>
       <PopoverContent
         align="start"
@@ -230,13 +231,13 @@ function LinkMenu({ onInsert }: { onInsert: (block: string) => void }) {
         render={
           <button
             aria-label="Inserir link ou vídeo do YouTube"
-            className="flex h-8 items-center rounded-lg px-2 hover:bg-muted"
+            className={TOOL}
             title="Link ou vídeo do YouTube"
             type="button"
           />
         }
       >
-        <Icon className="size-4" name="IconYoutube" />
+        <Icon className="size-[18px]" name="IconYoutube" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 p-3">
         <form className="flex flex-col gap-2" onSubmit={submit}>
@@ -352,23 +353,27 @@ export function NoteEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
+      <div className="no-scrollbar mx-2 mt-2 mb-1 flex shrink-0 items-center gap-0.5 overflow-x-auto rounded-full border bg-card/80 px-1.5 py-1 shadow-sm backdrop-blur-xl">
         {TOOLS.map((t) => (
           <button
             aria-label={t.label}
-            className="flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 font-medium text-sm hover:bg-muted"
+            className={TOOL}
             key={t.label}
             onClick={() => apply(t.run(current()))}
             title={t.label}
             type="button"
           >
-            {t.icon ? <Icon className="size-4" name={t.icon} /> : t.text}
+            {t.icon ? (
+              <Icon className="size-[18px]" name={t.icon} />
+            ) : (
+              <span className="font-semibold text-[13px]">{t.text}</span>
+            )}
           </button>
         ))}
-        <span className="mx-1 h-5 w-px bg-border" />
+        <span className="mx-1 h-5 w-px shrink-0 bg-border" />
         <button
           aria-label="Anexar imagem, vídeo, PDF ou arquivo"
-          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm hover:bg-muted"
+          className={TOOL}
           onClick={() => fileInput.current?.click()}
           title="Imagem, vídeo, PDF ou arquivo"
           type="button"
@@ -376,9 +381,8 @@ export function NoteEditor({
           {uploading > 0 ? (
             <Spinner className="size-4" />
           ) : (
-            <Icon className="size-4" name="IconPaperclip1" />
+            <Icon className="size-[18px]" name="IconPaperclip1" />
           )}
-          Anexar
         </button>
         <LinkMenu onInsert={(b) => apply(insertBlock(current(), b))} />
         <ChartMenu onPick={(b) => apply(insertBlock(current(), b))} />

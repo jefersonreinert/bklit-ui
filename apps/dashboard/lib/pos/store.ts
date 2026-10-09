@@ -9,6 +9,7 @@ import { convexClient } from "@/lib/sync/convex-client";
 import { DEFAULT_RECEIPT, seedData } from "./seed";
 import type {
   FloorArea,
+  ItemMod,
   OrderItem,
   Payment,
   PosData,
@@ -103,7 +104,7 @@ function build(): PosData {
     orders,
     nextOrderNumber: 0,
     stockMoves: [] as StockMove[],
-    printers: state.printers,
+    printers: (m?.printers as PrinterConfig[] | undefined) ?? state.printers,
   };
 }
 
@@ -494,9 +495,13 @@ export function updateOrder(id: string, patch: Partial<PosOrder>) {
 function addLine(orderId: string, line: OrderItem) {
   send(api.pos.addItem, { orderId, item: line }, (store) =>
     editOrder(store, orderId, (o) => {
-      const same = line.productId
-        ? o.items.find((i) => i.productId === line.productId && !i.sent)
-        : undefined;
+      const plain = (i: OrderItem) => !(i.mods?.length || i.note);
+      const same =
+        line.productId && plain(line)
+          ? o.items.find(
+              (i) => i.productId === line.productId && !i.sent && plain(i)
+            )
+          : undefined;
       return {
         ...o,
         items: same
@@ -509,17 +514,39 @@ function addLine(orderId: string, line: OrderItem) {
   );
 }
 
-/** Adds a product (merging with an unsent line of the same product). */
-export function addProduct(orderId: string, p: PosProduct) {
+/**
+ * Adds a product (merging with an unsent plain line of the same product).
+ * Options add their price to the unit price.
+ */
+export function addProduct(
+  orderId: string,
+  p: PosProduct,
+  extra: { mods?: ItemMod[]; note?: string; qty?: number } = {}
+) {
+  const mods = extra.mods?.length ? extra.mods : undefined;
+  const note = extra.note?.trim() || undefined;
   addLine(orderId, {
     id: uid(),
     productId: p.id,
     name: p.name,
-    price: p.price,
+    price: p.price + (mods ?? []).reduce((a, m) => a + m.price, 0),
     cost: p.cost,
-    qty: 1,
+    qty: extra.qty ?? 1,
     sent: false,
+    mods,
+    note,
   });
+}
+
+export function setItemNote(orderId: string, itemId: string, note: string) {
+  send(api.pos.setItemNote, { orderId, itemId, note }, (store) =>
+    editOrder(store, orderId, (o) => ({
+      ...o,
+      items: o.items.map((i) =>
+        i.id === itemId ? { ...i, note: note.trim() || undefined } : i
+      ),
+    }))
+  );
 }
 
 /** A typed amount from the keypad ("Valor avulso"). */
@@ -546,6 +573,17 @@ export function changeQty(orderId: string, itemId: string, delta: number) {
 }
 
 export function sendToKitchen(orderId: string) {
+  const order = read().orders.find((o) => o.id === orderId);
+  if (order && getDevicePrefs().tickets) {
+    const pending = order.items.filter((i) => !i.sent);
+    import("./kitchen")
+      .then(({ printKitchen }) => printKitchen(read(), order, pending))
+      .catch((err: unknown) => {
+        state.error =
+          err instanceof Error ? err.message : "Falha ao imprimir na cozinha.";
+        emit();
+      });
+  }
   send(api.pos.sendToKitchen, { orderId }, (store) =>
     editOrder(store, orderId, (o) => ({
       ...o,
@@ -586,6 +624,50 @@ export function payOrder(orderId: string, payment: Omit<Payment, "at">) {
     (store) =>
       editOpen(store, (orders) => orders.filter((o) => o.id !== orderId))
   );
+}
+
+/**
+ * Moves items (all when itemIds is empty) to another table; resolves with
+ * the id of the order that now holds them.
+ */
+export async function transferItems(
+  fromId: string,
+  toTableId: string,
+  itemIds: string[]
+) {
+  const newCid = uid();
+  const result = await send(
+    api.pos.transferItems,
+    { fromId, toTableId, itemIds, newCid },
+    (store) =>
+      editOpen(store, (orders) => {
+        const from = orders.find((o) => o.id === fromId);
+        if (!from) {
+          return orders;
+        }
+        const moving = itemIds.length
+          ? from.items.filter((i) => itemIds.includes(i.id))
+          : from.items;
+        const staying = from.items.filter((i) => !moving.includes(i));
+        const target = orders.find(
+          (o) => o.tableId === toTableId && o.id !== fromId
+        );
+        return orders
+          .map((o) => {
+            if (o.id === fromId) {
+              return staying.length || target
+                ? { ...o, items: staying }
+                : { ...o, tableId: toTableId };
+            }
+            if (target && o.id === target.id) {
+              return { ...o, items: [...o.items, ...moving] };
+            }
+            return o;
+          })
+          .filter((o) => o.id !== fromId || o.items.length > 0 || !target);
+      })
+  );
+  return (result as string | undefined) ?? null;
 }
 
 export function deleteOrder(orderId: string) {
@@ -652,7 +734,7 @@ export function moveStock(move: Omit<StockMove, "id" | "at">) {
 }
 
 function saveMetaField(
-  field: "areas" | "settings" | "receipt",
+  field: "areas" | "settings" | "receipt" | "printers",
   value: unknown
 ) {
   return send(api.pos.saveMeta, { [field]: value }, (store) =>
@@ -690,21 +772,14 @@ export function saveReceipt(patch: Partial<ReceiptSettings>) {
   }, 700);
 }
 
-/* ------------------------- printers (this device) ------------------------ */
-
-function writePrinters(printers: PrinterConfig[]) {
-  state.printers = printers;
-  try {
-    localStorage.setItem(PRINTERS_KEY, JSON.stringify(printers));
-  } catch {
-    // private mode
-  }
-  emit();
-}
+/* -------------------------------- printers ------------------------------- */
+// Printers and routing are shared (every device knows the kitchen and bar
+// printers); which printer prints this device's receipts is per device.
 
 export function savePrinter(printer: PrinterConfig) {
-  const list = state.printers;
-  writePrinters(
+  const list = read().printers;
+  saveMetaField(
+    "printers",
     list.some((p) => p.id === printer.id)
       ? list.map((p) => (p.id === printer.id ? printer : p))
       : [...list, printer]
@@ -712,8 +787,69 @@ export function savePrinter(printer: PrinterConfig) {
 }
 
 export function deletePrinter(id: string) {
-  writePrinters(state.printers.filter((p) => p.id !== id));
+  saveMetaField(
+    "printers",
+    read().printers.filter((p) => p.id !== id)
+  );
 }
+
+export interface DevicePrefs {
+  /** Printer that prints this device's receipts on payment ("" = none). */
+  autoReceipt: string;
+  /** Print kitchen/bar tickets from this device when sending. */
+  tickets: boolean;
+}
+
+const DEVICE_KEY = "cb:pos:device";
+const deviceListeners = new Set<() => void>();
+let devicePrefs: DevicePrefs | null = null;
+
+export function getDevicePrefs(): DevicePrefs {
+  if (!devicePrefs) {
+    try {
+      devicePrefs = {
+        autoReceipt: "",
+        tickets: true,
+        ...JSON.parse(localStorage.getItem(DEVICE_KEY) ?? "{}"),
+      };
+    } catch {
+      devicePrefs = { autoReceipt: "", tickets: true };
+    }
+  }
+  return devicePrefs as DevicePrefs;
+}
+
+export function setDevicePrefs(patch: Partial<DevicePrefs>) {
+  devicePrefs = { ...getDevicePrefs(), ...patch };
+  try {
+    localStorage.setItem(DEVICE_KEY, JSON.stringify(devicePrefs));
+  } catch {
+    // private mode
+  }
+  for (const l of deviceListeners) {
+    l();
+  }
+}
+
+export function useDevicePrefs() {
+  return useSyncExternalStore(
+    (l) => {
+      deviceListeners.add(l);
+      return () => {
+        deviceListeners.delete(l);
+      };
+    },
+    getDevicePrefs,
+    () => ({ autoReceipt: "", tickets: true })
+  );
+}
+
+/** Name on kitchen tickets (set by the signed-in screen). */
+let userName = "";
+export function setPosUserName(name: string) {
+  userName = name;
+}
+export const posUserName = () => userName;
 
 /* --------------------------------- setup --------------------------------- */
 

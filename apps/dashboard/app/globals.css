@@ -438,3 +438,22 @@
     backdrop-filter: none;
   }
 }
+
+/* Horizontal toolbars that scroll without a visible bar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Home screen icons while editing (like iOS) */
+@keyframes jiggle {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}

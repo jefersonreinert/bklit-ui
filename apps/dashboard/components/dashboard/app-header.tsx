@@ -49,7 +49,7 @@ export function AppHeader() {
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <SidebarBrand />
           <SidebarNav onNavigate={() => setOpen(false)} />
-          <div className="mt-auto">
+          <div className="shrink-0">
             <SidebarFooterCard />
           </div>
         </SheetContent>

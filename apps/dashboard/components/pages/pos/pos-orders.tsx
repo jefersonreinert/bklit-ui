@@ -235,6 +235,21 @@ function OrderDetail({
             </Button>
           ) : null}
           {order.status === "paid" ? <ReceiptButton order={order} /> : null}
+          {active && data.printers.some((p) => p.kitchen) ? (
+            <Button
+              onClick={() => {
+                import("@/lib/pos/kitchen")
+                  .then(({ printKitchen }) =>
+                    printKitchen(data, order, order.items)
+                  )
+                  .catch(() => null);
+              }}
+              variant="outline"
+            >
+              <Icon className="size-4" name="IconPrinter" />
+              Reimprimir tíquetes da cozinha/bar
+            </Button>
+          ) : null}
           {active ? (
             <Button
               onClick={() => {
