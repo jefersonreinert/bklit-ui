@@ -121,7 +121,9 @@ function NoteHeader({
   onBack,
   onDeleted,
   onOpenNote,
+  onTransfer,
 }: {
+  onTransfer: () => void;
   note: Note;
   notes: Note[];
   mode: Mode;
@@ -176,6 +178,9 @@ function NoteHeader({
             }
           >
             Nova subpágina
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onTransfer}>
+            Importar do Notion…
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => download(note)}>
             Exportar .md
@@ -311,7 +316,7 @@ function useNotesState() {
   const [mode, setMode] = useState<Mode>("read");
   const [view, setView] = useState<"note" | "graph">("note");
   const [tag, setTag] = useState<string | null>(null);
-
+  const [transfer, setTransfer] = useState(false);
   useEffect(() => {
     setActiveId(readPref(ACTIVE_KEY));
     const m = readPref(MODE_KEY);
@@ -345,6 +350,8 @@ function useNotesState() {
     setView,
     tag,
     setTag,
+    transfer,
+    setTransfer,
   };
 }
 
@@ -406,6 +413,7 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
           onDeleted={() => s.open(null)}
           onMode={s.changeMode}
           onOpenNote={(n) => s.open(n.id)}
+          onTransfer={() => s.setTransfer(true)}
         />
         <div
           className={cn(
@@ -468,14 +476,26 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
   );
 }
 
-function EmptyNote({ onGraph }: { onGraph: () => void }) {
+function EmptyNote({
+  onGraph,
+  onImport,
+}: {
+  onGraph: () => void;
+  onImport: () => void;
+}) {
   return (
     <div className="hidden min-h-0 flex-col items-center justify-center gap-3 text-center text-muted-foreground lg:flex xl:col-span-2">
       <Icon className="size-10" name="IconFileText" />
       <p className="text-sm">Escolha uma nota ou crie uma nova.</p>
-      <Button onClick={onGraph} variant="outline">
-        Ver o grafo das notas
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={onGraph} variant="outline">
+          Ver o grafo das notas
+        </Button>
+        <Button onClick={onImport}>
+          <Icon className="size-4" name="IconImport" />
+          Importar do Notion
+        </Button>
+      </div>
     </div>
   );
 }
@@ -483,8 +503,6 @@ function EmptyNote({ onGraph }: { onGraph: () => void }) {
 export function NotesPage() {
   const s = useNotesState();
   const note = s.notes.find((n) => n.id === s.activeId) ?? null;
-
-  const [transfer, setTransfer] = useState(false);
 
   const onNode = (n: GraphNode) => {
     if (n.kind === "note") {
@@ -518,7 +536,7 @@ export function NotesPage() {
           activeId={s.activeId}
           notes={s.notes}
           onGraph={() => s.setView("graph")}
-          onImport={() => setTransfer(true)}
+          onImport={() => s.setTransfer(true)}
           onNew={() => {
             s.open(createNote({ content: "" }).id);
             s.changeMode("edit");
@@ -539,13 +557,18 @@ export function NotesPage() {
         </div>
       ) : null}
       {!graph && note ? <NoteArea note={note} s={s} /> : null}
-      {graph || note ? null : <EmptyNote onGraph={() => s.setView("graph")} />}
+      {graph || note ? null : (
+        <EmptyNote
+          onGraph={() => s.setView("graph")}
+          onImport={() => s.setTransfer(true)}
+        />
+      )}
       <TransferSheet
         current={note}
         notes={s.notes}
-        onClose={() => setTransfer(false)}
+        onClose={() => s.setTransfer(false)}
         onOpen={s.open}
-        open={transfer}
+        open={s.transfer}
       />
     </div>
   );

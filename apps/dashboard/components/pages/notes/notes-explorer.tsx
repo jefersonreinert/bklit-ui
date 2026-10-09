@@ -351,6 +351,24 @@ export function NotesExplorer({
       <div className="flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-1">
           <TopBar onGraph={onGraph} onImport={onImport} />
+          <button
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-dashed px-4 py-3 text-left transition-colors hover:bg-muted"
+            onClick={onImport}
+            type="button"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-foreground font-bold font-serif text-background text-lg">
+              N
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium text-sm">
+                Importar do Notion
+              </span>
+              <span className="block truncate text-muted-foreground text-xs">
+                Envie o .zip exportado · também exporta
+              </span>
+            </span>
+            <Icon className="size-4 text-muted-foreground" name="IconImport" />
+          </button>
           {searching || q ? (
             <div className="mt-3 flex items-center gap-2 rounded-full border bg-card px-4">
               <Icon
