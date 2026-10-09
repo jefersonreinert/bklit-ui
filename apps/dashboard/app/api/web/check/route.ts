@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       {
         url: final.toString(),
         title,
-        embeddable: embeddable(res.headers, final),
+        embeddable: embeddable(res.headers, final, url),
       },
       { headers: { "Cache-Control": "private, max-age=300" } }
     );

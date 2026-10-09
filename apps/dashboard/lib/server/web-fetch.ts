@@ -1,3 +1,5 @@
+import { NEVER_EMBED } from "@/lib/browser/embed";
+
 /**
  * Fetching public web pages for the in-app browser and news (only after the
  * panel's access code, never private network addresses).
@@ -42,8 +44,14 @@ const WS = /\s+/;
 const FRAME_ANCESTORS = /frame-ancestors\s+([^;]+)/i;
 
 /** Whether the site lets other pages show it inside a frame. */
-export function embeddable(headers: Headers, finalUrl: URL) {
+export function embeddable(headers: Headers, finalUrl: URL, asked?: URL) {
   if (finalUrl.protocol !== "https:") {
+    return false;
+  }
+  if (
+    NEVER_EMBED.test(finalUrl.hostname) ||
+    (asked && NEVER_EMBED.test(asked.hostname))
+  ) {
     return false;
   }
   const xfo = headers.get("x-frame-options")?.toLowerCase() ?? "";

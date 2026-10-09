@@ -80,44 +80,38 @@ const DEFAULT_BROWSER: BrowserData = {
   history: [],
 };
 
+const feed = (
+  fid: string,
+  name: string,
+  url: string,
+  on: boolean
+): NewsFeed => ({
+  id: fid,
+  name,
+  url,
+  on,
+});
+
+// Google News blocks requests from servers, so it's off by default
 const DEFAULT_FEEDS: NewsFeed[] = [
-  {
-    id: "gn-pt",
-    name: "Google Notícias Portugal",
-    url: "https://news.google.com/rss?hl=pt-PT&gl=PT&ceid=PT:pt-150",
-    on: true,
-  },
-  {
-    id: "gn-br",
-    name: "Google Notícias Brasil",
-    url: "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419",
-    on: true,
-  },
-  { id: "g1", name: "g1", url: "https://g1.globo.com/rss/g1/", on: true },
-  {
-    id: "publico",
-    name: "Público",
-    url: "https://feeds.feedburner.com/PublicoRSS",
-    on: true,
-  },
-  {
-    id: "observador",
-    name: "Observador",
-    url: "https://observador.pt/feed/",
-    on: false,
-  },
-  {
-    id: "bbc",
-    name: "BBC News Brasil",
-    url: "https://feeds.bbci.co.uk/portuguese/rss.xml",
-    on: true,
-  },
-  {
-    id: "gn-food",
-    name: "Gastronomia (Google)",
-    url: "https://news.google.com/rss/search?q=restaurantes+gastronomia&hl=pt-PT&gl=PT&ceid=PT:pt-150",
-    on: false,
-  },
+  feed("rtp", "RTP Notícias", "https://www.rtp.pt/noticias/rss", true),
+  feed("observador", "Observador", "https://observador.pt/feed/", true),
+  feed("publico", "Público", "https://feeds.feedburner.com/PublicoRSS", true),
+  feed("g1", "g1", "https://g1.globo.com/rss/g1/", true),
+  feed(
+    "bbc",
+    "BBC News Brasil",
+    "https://feeds.bbci.co.uk/portuguese/rss.xml",
+    true
+  ),
+  feed("cnn", "CNN Brasil", "https://www.cnnbrasil.com.br/feed/", false),
+  feed(
+    "uol",
+    "UOL Notícias",
+    "https://rss.uol.com.br/feed/noticias.xml",
+    false
+  ),
+  feed("eco", "ECO (economia)", "https://eco.sapo.pt/feed/", false),
 ];
 
 function localStore<T>(key: string, fallback: T) {

@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import { NEVER_EMBED } from "@/lib/browser/embed";
 import {
   APP_COLORS,
   addApp,
@@ -431,6 +432,16 @@ export function BrowserPage() {
   const open = async (raw: string) => {
     const url = toUrl(raw);
     if (!url) {
+      return;
+    }
+    // Sites that never open inside apps go straight to Safari (same tap)
+    if (
+      NEVER_EMBED.test(hostOf(url)) ||
+      NEVER_EMBED.test(new URL(url).hostname)
+    ) {
+      window.open(url, "_blank", "noopener");
+      addHistory(url, hostOf(url));
+      setAddress("");
       return;
     }
     setPage({ url, title: "", embeddable: null });
