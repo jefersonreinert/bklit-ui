@@ -20,6 +20,7 @@ import {
   type GraphNode,
   neighbors,
 } from "@/lib/notes/links";
+import { downloadBlob, exportNotion } from "@/lib/notes/notion/export";
 import type { Note } from "@/lib/notes/types";
 import { connectedKeys, useConnectors } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
@@ -30,12 +31,12 @@ import { type MarkdownActions, NoteMarkdown } from "./note-markdown";
 import { NoteRadial } from "./note-radial";
 import { NotesExplorer } from "./notes-explorer";
 import { NotesGraph } from "./notes-graph";
+import { TransferSheet } from "./notes-transfer";
 
 type Mode = "read" | "edit" | "split";
 const MODE_KEY = "cb:notes:mode";
 const ACTIVE_KEY = "cb:notes:active";
 const TASK_MARK = /\[( |x|X)\]/;
-const MD_EXT = /\.(md|markdown|txt)$/i;
 
 function readPref(key: string) {
   try {
@@ -178,6 +179,14 @@ function NoteHeader({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => download(note)}>
             Exportar .md
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={async () => {
+              const { blob } = await exportNotion(notes, [note.id]);
+              downloadBlob(blob, `${note.title || "pagina"}.zip`);
+            }}
+          >
+            Exportar para o Notion (.zip)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -353,6 +362,12 @@ function NoteArea({ note, s }: { note: Note; s: NotesState }) {
   const actions: MarkdownActions = {
     exists: (t) => Boolean(findByTitle(s.notes, t)),
     onLink: s.openTitle,
+    hasId: (id) => s.notes.some((n) => n.id === id),
+    onOpenId: (id) => {
+      if (s.notes.some((n) => n.id === id)) {
+        s.open(id);
+      }
+    },
     onTag: (t) => s.setTag(t),
     onToggleTask: (line) =>
       saveNote({ ...note, content: toggleTask(note.content, line) }),
@@ -469,18 +484,7 @@ export function NotesPage() {
   const s = useNotesState();
   const note = s.notes.find((n) => n.id === s.activeId) ?? null;
 
-  const importFiles = async (files: FileList | null) => {
-    let last: Note | null = null;
-    for (const f of [...(files ?? [])]) {
-      last = createNote({
-        title: f.name.replace(MD_EXT, ""),
-        content: await f.text(),
-      });
-    }
-    if (last) {
-      s.open(last.id);
-    }
-  };
+  const [transfer, setTransfer] = useState(false);
 
   const onNode = (n: GraphNode) => {
     if (n.kind === "note") {
@@ -514,7 +518,7 @@ export function NotesPage() {
           activeId={s.activeId}
           notes={s.notes}
           onGraph={() => s.setView("graph")}
-          onImport={importFiles}
+          onImport={() => setTransfer(true)}
           onNew={() => {
             s.open(createNote({ content: "" }).id);
             s.changeMode("edit");
@@ -536,6 +540,13 @@ export function NotesPage() {
       ) : null}
       {!graph && note ? <NoteArea note={note} s={s} /> : null}
       {graph || note ? null : <EmptyNote onGraph={() => s.setView("graph")} />}
+      <TransferSheet
+        current={note}
+        notes={s.notes}
+        onClose={() => setTransfer(false)}
+        onOpen={s.open}
+        open={transfer}
+      />
     </div>
   );
 }

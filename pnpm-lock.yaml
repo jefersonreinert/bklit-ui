@@ -77,6 +77,9 @@ importers:
       d3-array:
         specifier: 3.2.4
         version: 3.2.4
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       geist:
         specifier: ^1.7.2
         version: 1.7.2(next@16.2.9(@babel/core@7.29.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))

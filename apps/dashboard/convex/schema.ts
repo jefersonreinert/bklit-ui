@@ -56,11 +56,16 @@ export default defineSchema({
     icon: v.optional(v.string()),
     cover: v.optional(v.string()),
     parentId: v.optional(v.union(v.string(), v.null())),
+    /** Where an imported page came from ("notion:<id>"), for re-imports. */
+    origin: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     deleted: v.boolean(),
+    /** Server write order: devices download only what changed after it. */
+    syncedAt: v.optional(v.number()),
   })
     .index("by_clientId", ["clientId"])
+    .index("by_synced", ["syncedAt"])
     .searchIndex("search_content", {
       searchField: "content",
       filterFields: ["deleted"],

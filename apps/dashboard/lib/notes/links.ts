@@ -7,6 +7,7 @@ const TAG = /(?:^|[\s(])#([\p{L}\d][\p{L}\d_/-]*)/gu;
 const FENCED = /```[\s\S]*?```/g;
 const INLINE_CODE = /`[^`]*`/g;
 const HEADING_LINE = /^#{1,6}\s/gm;
+const ID_LINK = /\]\(note:([^)\s]+)\)/g;
 
 const key = (title: string) => title.trim().toLowerCase();
 
@@ -16,6 +17,11 @@ function prose(content: string) {
 
 export function linksOf(content: string) {
   return [...prose(content).matchAll(WIKILINK)].map((m) => (m[1] ?? "").trim());
+}
+
+/** Ids of pages linked as [label](note:<id>) (imported pages). */
+export function idLinksOf(content: string) {
+  return [...prose(content).matchAll(ID_LINK)].map((m) => m[1] ?? "");
 }
 
 export function tagsOf(content: string) {
@@ -33,7 +39,10 @@ export function findByTitle(notes: Note[], title: string) {
 export function backlinks(notes: Note[], note: Note) {
   const k = key(note.title);
   return notes.filter(
-    (n) => n.id !== note.id && linksOf(n.content).some((l) => key(l) === k)
+    (n) =>
+      n.id !== note.id &&
+      (linksOf(n.content).some((l) => key(l) === k) ||
+        idLinksOf(n.content).includes(note.id))
   );
 }
 
@@ -70,27 +79,24 @@ export function buildGraph(notes: Note[], opts: { tags: boolean }) {
       }
     }
   };
+  /** Ghost (unresolved link) and tag nodes, created on first use. */
+  const extra = (id: string, label: string, kind: GraphNodeKind) => {
+    if (!nodes.has(id)) {
+      nodes.set(id, { id, label, kind, degree: 0 });
+    }
+    return id;
+  };
   for (const n of notes) {
     for (const l of new Set(linksOf(n.content).map(key))) {
-      const target = byTitle.get(l);
-      if (target) {
-        link(n.id, target.id);
-      } else {
-        const id = `ghost:${l}`;
-        if (!nodes.has(id)) {
-          nodes.set(id, { id, label: l, kind: "ghost", degree: 0 });
-        }
+      link(n.id, byTitle.get(l)?.id ?? extra(`ghost:${l}`, l, "ghost"));
+    }
+    for (const id of new Set(idLinksOf(n.content))) {
+      if (nodes.has(id)) {
         link(n.id, id);
       }
     }
-    if (opts.tags) {
-      for (const t of tagsOf(n.content)) {
-        const id = `tag:${t}`;
-        if (!nodes.has(id)) {
-          nodes.set(id, { id, label: `#${t}`, kind: "tag", degree: 0 });
-        }
-        link(n.id, id);
-      }
+    for (const t of opts.tags ? tagsOf(n.content) : []) {
+      link(n.id, extra(`tag:${t}`, `#${t}`, "tag"));
     }
   }
   return { nodes: [...nodes.values()], edges };
@@ -98,9 +104,11 @@ export function buildGraph(notes: Note[], opts: { tags: boolean }) {
 
 /** Notes linked to or from a note (for the connectivity ring). */
 export function neighbors(notes: Note[], note: Note) {
-  const outgoing = linksOf(note.content)
-    .map((l) => findByTitle(notes, l))
-    .filter((n): n is Note => Boolean(n));
+  const byId = new Map(notes.map((n) => [n.id, n]));
+  const outgoing = [
+    ...linksOf(note.content).map((l) => findByTitle(notes, l)),
+    ...idLinksOf(note.content).map((id) => byId.get(id)),
+  ].filter((n): n is Note => Boolean(n));
   const all = [...outgoing, ...backlinks(notes, note)];
   return [...new Map(all.map((n) => [n.id, n])).values()];
 }

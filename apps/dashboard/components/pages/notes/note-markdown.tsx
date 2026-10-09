@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 import { ChartEmbed, MediaEmbed } from "./note-embeds";
 
 /**
- * Markdown for notes (no innerHTML): headings, paragraphs, lists, tasks,
- * quotes, code, tables, rules, [[links]], #tags, links, media embeds
- * (images, video, YouTube, audio, PDFs, files) and ```chart blocks.
+ * Markdown for notes (no innerHTML): headings, paragraphs, nested lists,
+ * tasks, quotes, callouts (a quote starting with an emoji), toggles
+ * (<details>), code, $$ equations, tables, rules, [[links]], page links
+ * (note:<id>), #tags, links, media embeds (images, video, YouTube, audio,
+ * PDFs, files) and ```chart blocks.
  */
 
 export interface MarkdownActions {
@@ -17,6 +19,9 @@ export interface MarkdownActions {
   onTag: (tag: string) => void;
   /** Toggles the task on that source line. */
   onToggleTask: (line: number) => void;
+  /** Page links by id ([label](note:<id>), from imports). */
+  hasId?: (id: string) => boolean;
+  onOpenId?: (id: string) => void;
 }
 
 const INLINE =
@@ -36,6 +41,14 @@ const EMBED_LINE = /^!\[[^\]]*\]\([^)\s]+\)$/;
 const FENCE = "```";
 const CRLF = /\r\n/g;
 const SAFE_URL = /^(https?:|mailto:|tel:|att:|\/|#)/i;
+const NOTE_LINK = /^note:/;
+const LEADING = /^\s*/;
+const EMOJI_START =
+  /^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*/u;
+const DETAILS_OPEN = /^<details(\s[^>]*)?>$/i;
+const DETAILS_CLOSE = /^<\/details>$/i;
+const SUMMARY = /^<summary>(.*?)<\/summary>$/i;
+const MATH = "$$";
 
 function Inline({ text, actions }: { text: string; actions: MarkdownActions }) {
   const parts = text.split(INLINE).filter(Boolean);
@@ -49,6 +62,31 @@ function Inline({ text, actions }: { text: string; actions: MarkdownActions }) {
         />
       ))}
     </>
+  );
+}
+
+/** [label](note:<id>): a link to a page by id (imported pages). */
+function PageLink({
+  id,
+  label,
+  actions,
+}: {
+  id: string;
+  label: string;
+  actions: MarkdownActions;
+}) {
+  const resolved = actions.hasId?.(id) ?? false;
+  return (
+    <button
+      className={cn(
+        "cursor-pointer font-medium underline-offset-4 hover:underline",
+        resolved ? "text-[#d97757]" : "text-[#d97757]/55 italic"
+      )}
+      onClick={() => actions.onOpenId?.(id)}
+      type="button"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -82,6 +120,15 @@ function InlinePart({
     );
   }
   const link = LINK.exec(part);
+  if (link && NOTE_LINK.test(link[2] ?? "")) {
+    return (
+      <PageLink
+        actions={actions}
+        id={(link[2] ?? "").slice(5)}
+        label={link[1] ?? ""}
+      />
+    );
+  }
   if (link) {
     const href = link[2] ?? "";
     return (
@@ -150,6 +197,8 @@ interface Block {
 interface Ctx {
   lines: string[];
   actions: MarkdownActions;
+  /** Line of lines[0] in the whole note (toggles render a slice). */
+  offset: number;
 }
 type Parser = (ctx: Ctx, i: number) => Block | null;
 
@@ -236,6 +285,25 @@ const parseQuote: Parser = (ctx, i) => {
     body.push(trimmed(ctx, j).replace(QUOTE, ""));
     j++;
   }
+  const emoji = EMOJI_START.exec(body[0] ?? "");
+  if (emoji) {
+    body[0] = (body[0] ?? "").slice(emoji[0].length);
+    return {
+      node: (
+        <div className="my-4 flex gap-3 rounded-2xl bg-muted/60 px-4 py-3">
+          <span className="text-lg leading-relaxed">{emoji[1]}</span>
+          <div className="min-w-0 flex-1 leading-relaxed">
+            {body.map((b, k) => (
+              <p className="min-h-[0.5em]" key={`${k}-${b.slice(0, 6)}`}>
+                <Inline actions={ctx.actions} text={b} />
+              </p>
+            ))}
+          </div>
+        </div>
+      ),
+      next: j,
+    };
+  }
   return {
     node: (
       <blockquote className="my-4 border-[#d97757]/60 border-l-2 pl-4 text-muted-foreground italic">
@@ -304,18 +372,25 @@ const parseTable: Parser = (ctx, i) => {
   };
 };
 
+const indentOf = (raw: string) =>
+  Math.min((LEADING.exec(raw)?.[0] ?? "").replace("\t", "    ").length, 24);
+
 function ListItem({ ctx, index }: { ctx: Ctx; index: number }) {
   const raw = line(ctx, index);
   const task = TASK.exec(raw);
+  const indent = indentOf(raw) * 0.375;
   if (task) {
     const done = task[1] !== " ";
     return (
-      <li className="flex items-start gap-2">
+      <li
+        className="flex items-start gap-2"
+        style={{ marginLeft: `${indent}rem` }}
+      >
         <input
           aria-label={done ? "Marcar como pendente" : "Marcar como feito"}
           checked={done}
           className="mt-1.5 size-4 shrink-0 accent-[#d97757]"
-          onChange={() => ctx.actions.onToggleTask(index)}
+          onChange={() => ctx.actions.onToggleTask(index + ctx.offset)}
           type="checkbox"
         />
         <span className={cn(done && "text-muted-foreground line-through")}>
@@ -325,7 +400,7 @@ function ListItem({ ctx, index }: { ctx: Ctx; index: number }) {
     );
   }
   return (
-    <li>
+    <li style={indent ? { marginLeft: `${indent}rem` } : undefined}>
       <Inline
         actions={ctx.actions}
         text={raw.replace(ORDERED, "").replace(BULLET, "")}
@@ -350,6 +425,7 @@ const parseList: Parser = (ctx, i) => {
   }
   const tasks = items.every((k) => TASK.test(line(ctx, k)));
   const List = ordered ? "ol" : "ul";
+  const start = ordered ? Number.parseInt(trimmed(ctx, i), 10) : 1;
   return {
     node: (
       <List
@@ -358,6 +434,7 @@ const parseList: Parser = (ctx, i) => {
           ordered ? "list-decimal" : "list-disc",
           tasks && "list-none pl-1"
         )}
+        start={start > 1 ? start : undefined}
       >
         {items.map((k) => (
           <ListItem ctx={ctx} index={k} key={k} />
@@ -368,8 +445,82 @@ const parseList: Parser = (ctx, i) => {
   };
 };
 
+/** <details><summary>Title</summary> … </details> (Notion toggles). */
+const parseDetails: Parser = (ctx, i) => {
+  if (!DETAILS_OPEN.test(trimmed(ctx, i))) {
+    return null;
+  }
+  let j = i + 1;
+  const summary = SUMMARY.exec(trimmed(ctx, j));
+  if (summary) {
+    j++;
+  }
+  const start = j;
+  let depth = 1;
+  for (; j < ctx.lines.length; j++) {
+    const t = trimmed(ctx, j);
+    if (DETAILS_OPEN.test(t)) {
+      depth++;
+    } else if (DETAILS_CLOSE.test(t)) {
+      depth--;
+      if (depth === 0) {
+        break;
+      }
+    }
+  }
+  return {
+    node: (
+      <details className="group my-2">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 font-medium [&::-webkit-details-marker]:hidden">
+          <span className="text-muted-foreground text-xs transition-transform group-open:rotate-90">
+            ▶
+          </span>
+          <Inline actions={ctx.actions} text={summary?.[1] ?? "Detalhes"} />
+        </summary>
+        <div className="border-border border-l pl-5">
+          <Blocks
+            actions={ctx.actions}
+            lines={ctx.lines.slice(start, j)}
+            offset={ctx.offset + start}
+          />
+        </div>
+      </details>
+    ),
+    next: j + 1,
+  };
+};
+
+/** $$ … $$ blocks (shown as the TeX source). */
+const parseMath: Parser = (ctx, i) => {
+  const first = trimmed(ctx, i);
+  if (!first.startsWith(MATH)) {
+    return null;
+  }
+  if (first.length > 4 && first.endsWith(MATH)) {
+    return { node: <MathBlock tex={first.slice(2, -2)} />, next: i + 1 };
+  }
+  const body: string[] = [first.slice(2)];
+  let j = i + 1;
+  while (j < ctx.lines.length && !trimmed(ctx, j).endsWith(MATH)) {
+    body.push(line(ctx, j));
+    j++;
+  }
+  body.push(trimmed(ctx, j).slice(0, -2));
+  return { node: <MathBlock tex={body.join("\n").trim()} />, next: j + 1 };
+};
+
+function MathBlock({ tex }: { tex: string }) {
+  return (
+    <div className="my-4 overflow-x-auto rounded-xl bg-muted/40 px-4 py-3 text-center font-serif text-[15px] italic">
+      {tex}
+    </div>
+  );
+}
+
 const STARTS: Parser[] = [
   parseFence,
+  parseDetails,
+  parseMath,
   parseHeading,
   parseRule,
   parseEmbed,
@@ -384,6 +535,8 @@ function isStart(ctx: Ctx, i: number) {
   return (
     t === "" ||
     t.startsWith(FENCE) ||
+    t.startsWith(MATH) ||
+    DETAILS_OPEN.test(t) ||
     HEADING.test(t) ||
     RULE.test(t) ||
     EMBED_LINE.test(t) ||
@@ -411,9 +564,13 @@ const parseParagraph: Parser = (ctx, i) => {
     body.push(trimmed(ctx, j));
     j++;
   }
+  const indent = indentOf(line(ctx, i)) * 0.375;
   return {
     node: (
-      <p className="my-3 leading-relaxed">
+      <p
+        className="my-3 leading-relaxed"
+        style={indent ? { marginLeft: `${indent}rem` } : undefined}
+      >
         {body.map((b, k) => (
           <Fragment key={`${k}-${b.slice(0, 6)}`}>
             {k > 0 ? <br /> : null}
@@ -426,14 +583,16 @@ const parseParagraph: Parser = (ctx, i) => {
   };
 };
 
-export function NoteMarkdown({
-  text,
+function Blocks({
+  lines,
   actions,
+  offset,
 }: {
-  text: string;
+  lines: string[];
   actions: MarkdownActions;
+  offset: number;
 }) {
-  const ctx: Ctx = { lines: text.replace(CRLF, "\n").split("\n"), actions };
+  const ctx: Ctx = { lines, actions, offset };
   const blocks: ReactNode[] = [];
   let i = 0;
   while (i < ctx.lines.length) {
@@ -448,5 +607,23 @@ export function NoteMarkdown({
     blocks.push(<Fragment key={i}>{block.node}</Fragment>);
     i = block.next;
   }
-  return <div className="note-prose text-[15px]">{blocks}</div>;
+  return <>{blocks}</>;
+}
+
+export function NoteMarkdown({
+  text,
+  actions,
+}: {
+  text: string;
+  actions: MarkdownActions;
+}) {
+  return (
+    <div className="note-prose text-[15px]">
+      <Blocks
+        actions={actions}
+        lines={text.replace(CRLF, "\n").split("\n")}
+        offset={0}
+      />
+    </div>
+  );
 }

@@ -14,6 +14,8 @@ export interface Note {
   cover?: string;
   /** Page this one lives inside (sub-page), like Notion. */
   parentId?: string | null;
+  /** Where an imported page came from ("notion:<id>"), for re-imports. */
+  origin?: string;
   createdAt: number;
   updatedAt: number;
 }

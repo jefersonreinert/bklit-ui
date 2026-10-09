@@ -212,7 +212,7 @@ function TopBar({
   onImport,
 }: {
   onGraph: () => void;
-  onImport: (files: FileList | null) => void;
+  onImport: () => void;
 }) {
   return (
     <div className="flex items-center gap-2">
@@ -228,23 +228,15 @@ function TopBar({
       >
         <Icon className="size-5" name="IconShapesPlusXSquareCircle" />
       </button>
-      <label
-        className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-muted"
-        title="Importar .md"
+      <button
+        aria-label="Importar e exportar (Notion, Markdown)"
+        className="flex size-11 items-center justify-center rounded-full bg-muted"
+        onClick={onImport}
+        title="Importar e exportar"
+        type="button"
       >
-        <span className="sr-only">Importar arquivos Markdown</span>
-        <input
-          accept=".md,.markdown,.txt,text/markdown,text/plain"
-          className="sr-only"
-          multiple
-          onChange={(e) => {
-            onImport(e.target.files);
-            e.target.value = "";
-          }}
-          type="file"
-        />
         <Icon className="size-5" name="IconImport" />
-      </label>
+      </button>
     </div>
   );
 }
@@ -338,7 +330,7 @@ export function NotesExplorer({
   onOpen: (id: string) => void;
   onNew: () => void;
   onGraph: () => void;
-  onImport: (files: FileList | null) => void;
+  onImport: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);

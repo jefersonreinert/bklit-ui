@@ -352,3 +352,15 @@ export async function removeFromLibrary(id: string) {
     files: state.files.map((f) => (f.id === id ? { ...f, library: false } : f)),
   });
 }
+
+/** Notes and file list as they are now (for import/export). */
+export const currentNotes = () => state.notes;
+export const currentFiles = () => state.files;
+
+/** The stored file itself (for export). */
+export async function fileBlob(id: string) {
+  const record = await run<NoteFile | undefined>("files", "readonly", (s) =>
+    s.get(id)
+  );
+  return record?.blob ?? null;
+}

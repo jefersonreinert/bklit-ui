@@ -1,7 +1,7 @@
 "use client";
 
 import { ConvexProvider, useMutation, useQuery } from "convex/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import {
@@ -33,6 +33,7 @@ function toNote(d: Doc<"notes">): Note & { deleted: boolean } {
     icon: d.icon,
     cover: d.cover,
     parentId: d.parentId ?? null,
+    ...(d.origin ? { origin: d.origin } : {}),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
     deleted: d.deleted,
@@ -49,6 +50,7 @@ function toArgs(n: Note) {
     ...(n.icon ? { icon: n.icon } : {}),
     ...(n.cover ? { cover: n.cover } : {}),
     parentId: n.parentId ?? null,
+    ...(n.origin ? { origin: n.origin } : {}),
     createdAt: n.createdAt,
     updatedAt: n.updatedAt,
   };
@@ -57,14 +59,18 @@ function toArgs(n: Note) {
 type Upsert = ReturnType<typeof useMutation<typeof api.notes.upsert>>;
 type Remove = ReturnType<typeof useMutation<typeof api.notes.remove>>;
 
+interface ServerMeta {
+  updatedAt: number;
+  deleted: boolean;
+}
+
 /** First contact: send what the server lacks or has older, replay deletes. */
 function uploadMissing(
   local: Note[],
-  remote: Doc<"notes">[],
+  server: Map<string, ServerMeta>,
   upsert: Upsert,
   remove: Remove
 ) {
-  const server = new Map(remote.map((r) => [r.clientId, r]));
   for (const n of local) {
     const r = server.get(n.id);
     if (!r || r.updatedAt < n.updatedAt) {
@@ -78,18 +84,75 @@ function uploadMissing(
   }
 }
 
+const CURSOR_KEY = "cb:notes:synced";
+
+/** Applies a page of server changes; returns the new cursor. */
+function applyPage(
+  docs: Doc<"notes">[],
+  server: Map<string, ServerMeta>,
+  cursor: number
+) {
+  applyRemote(docs.map(toNote));
+  for (const d of docs) {
+    server.set(d.clientId, { updatedAt: d.updatedAt, deleted: d.deleted });
+  }
+  const last = docs.at(-1)?.syncedAt ?? cursor;
+  try {
+    localStorage.setItem(CURSOR_KEY, String(last));
+  } catch {
+    // storage full: next visit downloads again
+  }
+  return last;
+}
+
+/**
+ * What the server has: the changes downloaded now, plus notes this device
+ * already had at its saved cursor (unless they changed here since).
+ */
+function knownOnServer(
+  local: Note[],
+  server: Map<string, ServerMeta>,
+  cursor: number
+) {
+  const known = new Map(server);
+  if (cursor > 0) {
+    for (const n of local) {
+      if (!known.has(n.id) && n.updatedAt <= cursor) {
+        known.set(n.id, { updatedAt: n.updatedAt, deleted: false });
+      }
+    }
+  }
+  return known;
+}
+
+/** Server stamp this device has caught up to (notes live in IndexedDB). */
+function savedCursor() {
+  try {
+    return Number(localStorage.getItem(CURSOR_KEY) ?? "-1") || -1;
+  } catch {
+    return -1;
+  }
+}
+
+/**
+ * Downloads only notes changed since the last stamp this device saw, then
+ * stays subscribed for new changes (one note per save, not every note).
+ */
 function NotesSync() {
-  const remote = useQuery(api.notes.list);
+  const [cursor, setCursor] = useState(savedCursor);
+  const page = useQuery(api.notes.since, { after: cursor });
   const upsert = useMutation(api.notes.upsert);
   const remove = useMutation(api.notes.remove);
+  const server = useRef(new Map<string, ServerMeta>());
   const merged = useRef(false);
-  const online = Array.isArray(remote);
-  const onlineRef = useRef(online);
-  onlineRef.current = online;
+  // undefined while the next page loads: keep the last known state
+  const onlineRef = useRef(false);
+  if (page !== undefined) {
+    onlineRef.current = page !== null;
+  }
 
   useEffect(() => {
-    if (!remote) {
-      merged.current = false;
+    if (!page) {
       return;
     }
     let cancelled = false;
@@ -98,17 +161,24 @@ function NotesSync() {
       if (cancelled) {
         return;
       }
-      applyRemote(remote.map(toNote));
-      if (merged.current) {
+      if (page.docs.length > 0) {
+        setCursor(applyPage(page.docs, server.current, cursor));
+      }
+      if (page.more || merged.current) {
         return;
       }
       merged.current = true;
-      uploadMissing(local, remote, upsert, remove);
+      uploadMissing(
+        local,
+        knownOnServer(local, server.current, cursor),
+        upsert,
+        remove
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [remote, upsert, remove]);
+  }, [page, cursor, upsert, remove]);
 
   useEffect(() => {
     const pending = new Map<string, LocalChange>();
