@@ -76,9 +76,17 @@ export const navItems: NavItem[] = [
   },
   {
     href: "/noticias",
-    label: "Notícias",
-    description: "Manchetes do dia das suas fontes",
+    label: "Notícias financeiras",
+    description:
+      "Mercados, economia e empresas: MarketWatch, Bloomberg, Investing.com…",
     icon: "IconNewspaper",
+  },
+  {
+    href: "/calendario",
+    label: "Calendário econômico",
+    description:
+      "Indicadores e eventos que movem o mercado, com impacto e resultados",
+    icon: "IconCalendarClock",
   },
   {
     href: "/notas",

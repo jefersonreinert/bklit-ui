@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +25,7 @@ import {
   useNewsFeeds,
 } from "@/lib/browser/store";
 import { Icon } from "@/lib/icons";
+import { dayKey, flag, useCalendar } from "@/lib/markets/calendar";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "./unlock-card";
 
@@ -189,6 +190,51 @@ function FeedsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
+/** Today's high-impact releases, linking to the calendar. */
+function TodayEvents() {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const { events } = useCalendar(today, today);
+  const list = (events ?? [])
+    .filter(
+      (e) => e.impact === "high" && dayKey(new Date(e.time)) === dayKey(today)
+    )
+    .slice(0, 8);
+  if (!list.length) {
+    return null;
+  }
+  return (
+    <Link
+      className="no-scrollbar flex gap-2 overflow-x-auto rounded-2xl border bg-card p-2"
+      href="/calendario/"
+    >
+      <span className="flex shrink-0 items-center gap-1.5 px-2 font-semibold text-[#d03b2f] text-xs uppercase">
+        <Icon className="size-4" name="IconCalendarClock" />
+        Hoje
+      </span>
+      {list.map((e) => (
+        <span
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-muted/60 px-2.5 py-1.5 text-xs"
+          key={e.id}
+        >
+          <span>{flag(e.currency)}</span>
+          <span className="tabular-nums">
+            {new Date(e.time).toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <span className="max-w-48 truncate font-medium">{e.title}</span>
+          {e.actual ? <span className="tabular-nums">· {e.actual}</span> : null}
+        </span>
+      ))}
+    </Link>
+  );
+}
+
 export function NewsPage() {
   const feeds = useNewsFeeds();
   const { items, error, loading, reload } = useNews(feeds);
@@ -204,6 +250,7 @@ export function NewsPage() {
   const others = withImage ? list.filter((i) => i !== withImage) : rest;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 pb-8">
+      <TodayEvents />
       <div className="flex items-center gap-2">
         <div className="no-scrollbar flex flex-1 gap-1.5 overflow-x-auto">
           <button

@@ -9,6 +9,7 @@ export interface NewsItem {
   summary: string;
   image: string;
   source: string;
+  feed?: string;
   date: number;
 }
 
@@ -41,14 +42,31 @@ export function useNews(feeds: NewsFeed[]) {
         return;
       }
       const data = (await res.json()) as { items: NewsItem[] };
-      setItems(data.items);
+      // Show the source name as configured (feeds call themselves "All News"…)
+      const norm = (u: string) => {
+        try {
+          return new URL(u).toString();
+        } catch {
+          return u;
+        }
+      };
+      const names = new Map(feeds.map((f) => [norm(f.url), f.name]));
+      setItems(
+        data.items.map((i) => {
+          const name = i.feed ? names.get(i.feed) : undefined;
+          // Aggregators (Google News) keep each article's own source
+          return name && !i.feed?.includes("news.google.")
+            ? { ...i, source: name }
+            : i;
+        })
+      );
       setError(null);
     } catch {
       setError("Sem conexão.");
     } finally {
       setLoading(false);
     }
-  }, [urls]);
+  }, [urls, feeds]);
   useEffect(() => {
     load();
     const t = setInterval(load, 600_000);

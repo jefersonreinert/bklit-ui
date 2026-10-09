@@ -53,6 +53,7 @@ interface NewsItem {
   summary: string;
   image: string;
   source: string;
+  feed: string;
   date: number;
 }
 
@@ -80,6 +81,7 @@ function parse(xml: string, feedUrl: string): NewsItem[] {
         IMG.exec(descHtml.replace(ENTITY, (x) => ENTITIES[x] ?? x))?.[1] ??
         "",
       source: clean(tag(it, "source")) || source,
+      feed: feedUrl,
       date: Number.isFinite(date) ? date : 0,
     });
     if (items.length >= 40) {

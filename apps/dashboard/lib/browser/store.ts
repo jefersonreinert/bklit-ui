@@ -38,7 +38,7 @@ export interface NewsFeed {
 }
 
 export const BROWSER_KEY = "cb:browser:v1";
-export const NEWS_KEY = "cb:news:v1";
+export const NEWS_KEY = "cb:news:v3";
 
 const COLORS = [
   "#c96442",
@@ -92,26 +92,11 @@ const feed = (
   on,
 });
 
-// Google News blocks requests from servers, so it's off by default
+// Financial news: exactly the sources of the MarketNewsAPI project
 const DEFAULT_FEEDS: NewsFeed[] = [
-  feed("rtp", "RTP Notícias", "https://www.rtp.pt/noticias/rss", true),
-  feed("observador", "Observador", "https://observador.pt/feed/", true),
-  feed("publico", "Público", "https://feeds.feedburner.com/PublicoRSS", true),
-  feed("g1", "g1", "https://g1.globo.com/rss/g1/", true),
-  feed(
-    "bbc",
-    "BBC News Brasil",
-    "https://feeds.bbci.co.uk/portuguese/rss.xml",
-    true
-  ),
-  feed("cnn", "CNN Brasil", "https://www.cnnbrasil.com.br/feed/", false),
-  feed(
-    "uol",
-    "UOL Notícias",
-    "https://rss.uol.com.br/feed/noticias.xml",
-    false
-  ),
-  feed("eco", "ECO (economia)", "https://eco.sapo.pt/feed/", false),
+  feed("marketwatch", "MarketWatch", "https://feeds.content.dowjones.io/public/rss/mw_topstories", true),
+  feed("bloomberg", "Bloomberg", "https://feeds.bloomberg.com/markets/news.rss", true),
+  feed("investing", "Investing.com", "https://www.investing.com/rss/news.rss", true),
 ];
 
 function localStore<T>(key: string, fallback: T) {

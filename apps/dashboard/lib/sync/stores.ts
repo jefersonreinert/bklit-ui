@@ -14,7 +14,7 @@ import { api } from "@/convex/_generated/api";
 export const SYNCED_KEYS = [
   "cb:agents:v1",
   "cb:browser:v1",
-  "cb:news:v1",
+  "cb:news:v3",
   "cb:personal-finance:v1",
   "cb:code:repos",
   "cb:code:fired",
