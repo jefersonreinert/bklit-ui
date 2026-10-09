@@ -34,7 +34,21 @@ export interface ImportResult {
   rootId: string | null;
 }
 
-type Kind = "md" | "html" | "csv";
+type Kind = "md" | "html" | "csv" | "media";
+
+/** Choices on the import screen. */
+export interface ImportOptions {
+  /** Icon/cover for the pages created (att:, grad:, logo or emoji). */
+  icon?: string;
+  cover?: string;
+  /** Different icon/cover for database rows (fall back to the above). */
+  rowIcon?: string;
+  rowCover?: string;
+  /** Replace the icons/covers that came from Notion too. */
+  override?: boolean;
+  /** Page the import goes inside (null: top level). */
+  parentId?: string | null;
+}
 
 interface Page {
   path: string;
@@ -54,6 +68,9 @@ interface Page {
 }
 
 const PAGE_EXT = /\.(md|markdown|html?|csv)$/i;
+/** Loose files that become pages of their own when no page uses them. */
+const MEDIA_EXT =
+  /\.(png|jpe?g|gif|webp|avif|svg|heic|mp4|mov|webm|m4v|mp3|m4a|wav|ogg|aac|flac|pdf)$/i;
 const EXT = /\.[^.]+$/;
 const NOTION_ID = /^(.*?)\s+([0-9a-f]{32})$/i;
 /** Pages exported from these notes end in the note's own id. */
@@ -82,6 +99,9 @@ function nameParts(path: string) {
 }
 
 function kindOf(path: string): Kind {
+  if (MEDIA_EXT.test(path)) {
+    return "media";
+  }
   const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
   if (ext === "csv") {
     return "csv";
@@ -91,7 +111,9 @@ function kindOf(path: string): Kind {
 
 /** Databases come as "X.csv" and "X_all.csv": keep the complete one. */
 function pagePaths(vfs: Vfs) {
-  const paths = [...vfs.keys()].filter((p) => PAGE_EXT.test(p));
+  const paths = [...vfs.keys()].filter(
+    (p) => PAGE_EXT.test(p) || MEDIA_EXT.test(p)
+  );
   const all = new Set(paths.filter((p) => ALL_SUFFIX.test(p.replace(EXT, ""))));
   return paths.filter((p) => {
     if (p === "index.html") {
@@ -171,6 +193,9 @@ function boldProperties(body: string) {
 }
 
 function readPage(page: Page, vfs: Vfs) {
+  if (page.kind === "media") {
+    return;
+  }
   const raw = text(vfs.get(page.path) ?? new Uint8Array());
   if (page.kind === "html") {
     const h = htmlToMarkdown(raw);
@@ -356,7 +381,24 @@ function save(
 }
 
 /** Saves a page; very long ones continue in "parte 2, 3…" sub-pages. */
-function savePage(page: Page, byOrigin: Map<string, Note>, createdAt: number) {
+/** The icon/cover a page gets, given the import screen's choices. */
+function looks(page: Page, opts: ImportOptions) {
+  const row = page.parent?.kind === "csv";
+  const icon = (row ? opts.rowIcon : undefined) ?? opts.icon;
+  const cover = (row ? opts.rowCover : undefined) ?? opts.cover;
+  return {
+    icon: opts.override ? (icon ?? page.icon) : (page.icon ?? icon),
+    cover: opts.override ? (cover ?? page.cover) : (page.cover ?? cover),
+  };
+}
+
+function savePage(
+  page: Page,
+  byOrigin: Map<string, Note>,
+  createdAt: number,
+  opts: ImportOptions
+) {
+  const { icon, cover } = looks(page, opts);
   const parts = splitContent(page.body);
   const ids = parts.map((_, i) =>
     i === 0
@@ -374,10 +416,13 @@ function savePage(page: Page, byOrigin: Map<string, Note>, createdAt: number) {
         id: ids[i] as string,
         title: i === 0 ? page.title : `${page.title} — parte ${i + 1}`,
         content,
-        parentId: i === 0 ? (page.parent?.noteId ?? null) : page.noteId,
+        parentId:
+          i === 0
+            ? (page.parent?.noteId ?? opts.parentId ?? null)
+            : page.noteId,
         origin,
-        ...(i === 0 && page.icon ? { icon: page.icon } : {}),
-        ...(i === 0 && page.cover ? { cover: page.cover } : {}),
+        ...(icon ? { icon } : {}),
+        ...(cover ? { cover } : {}),
       },
       byOrigin.get(origin),
       createdAt + i
@@ -424,9 +469,17 @@ function saveOrder(pages: Page[]) {
   );
 }
 
+/** A loose image/video/audio/PDF: a page that shows it. */
+async function mediaPage(ctx: Context, p: Page) {
+  const id = await upload(ctx, p.path);
+  p.title = baseOf(p.path).replace(EXT, "");
+  p.body = id ? `![${p.title}](att:${id})` : "";
+}
+
 export async function importNotion(
   files: File[],
-  onProgress: (p: ImportProgress) => void
+  onProgress: (p: ImportProgress) => void,
+  opts: ImportOptions = {}
 ): Promise<ImportResult> {
   onProgress({ done: 0, total: 1, label: "Lendo o arquivo…" });
   const vfs = await readInputs(files);
@@ -435,7 +488,7 @@ export async function importNotion(
       .filter((n) => n.origin)
       .map((n) => [n.origin as string, n])
   );
-  const pages = buildPages(vfs, byOrigin);
+  let pages = buildPages(vfs, byOrigin);
   if (pages.length === 0) {
     throw new Error(
       "Nenhuma página encontrada. Envie o .zip exportado do Notion (Markdown e CSV ou HTML)."
@@ -447,7 +500,10 @@ export async function importNotion(
   }
   const ctx: Context = {
     vfs,
-    byPath: new Map(pages.map((p) => [p.path, p])),
+    // Files are embedded where linked, not linked as pages
+    byPath: new Map(
+      pages.filter((p) => p.kind !== "media").map((p) => [p.path, p])
+    ),
     byNotionId: new Map(
       pages
         .filter((p) => p.key.startsWith("notion:"))
@@ -459,6 +515,10 @@ export async function importNotion(
   let done = 0;
   for (const p of pages) {
     onProgress({ done, total: pages.length, label: p.title });
+    if (p.kind === "media") {
+      done++;
+      continue; // after the pages: only files no page uses
+    }
     if (p.kind === "csv") {
       p.body = databaseTable(p, pages);
     } else {
@@ -477,9 +537,14 @@ export async function importNotion(
     p.cover = await imageRef(ctx, p, p.cover);
     done++;
   }
+  const used = new Set(ctx.uploads.keys());
+  pages = pages.filter((p) => p.kind !== "media" || !used.has(p.path));
+  for (const p of pages.filter((q) => q.kind === "media")) {
+    await mediaPage(ctx, p);
+  }
   const start = Date.now();
   for (const [i, p] of saveOrder(pages).entries()) {
-    savePage(p, byOrigin, start + i * 10);
+    savePage(p, byOrigin, start + i * 10, opts);
   }
   onProgress({ done: pages.length, total: pages.length, label: "Pronto" });
   const roots = saveOrder(pages).filter((p) => !p.parent);

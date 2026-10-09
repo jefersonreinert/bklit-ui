@@ -12,14 +12,166 @@ import { Spinner } from "@/components/ui/spinner";
 import { Icon } from "@/lib/icons";
 import { downloadBlob, exportNotion } from "@/lib/notes/notion/export";
 import {
+  type ImportOptions,
   type ImportProgress,
   type ImportResult,
   importNotion,
 } from "@/lib/notes/notion/import";
 import type { Note } from "@/lib/notes/types";
 import { cn } from "@/lib/utils";
+import { AssetPicker } from "./note-assets";
+import { CoverPreview, NoteIcon } from "./note-hero";
 
-const ACCEPT = ".zip,.md,.markdown,.html,.htm,.csv,.txt";
+const ACCEPT =
+  ".zip,.md,.markdown,.html,.htm,.csv,.txt,image/*,video/*,audio/*,.pdf";
+const OPTS_KEY = "cb:notes:import-opts";
+
+function readOpts(): ImportOptions {
+  try {
+    return JSON.parse(localStorage.getItem(OPTS_KEY) ?? "{}") as ImportOptions;
+  } catch {
+    return {};
+  }
+}
+
+function writeOpts(o: ImportOptions) {
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(o));
+  } catch {
+    // private mode: choices last this session
+  }
+}
+
+/** Icon + cover pickers for one group of pages. */
+function LooksRow({
+  label,
+  icon,
+  cover,
+  onIcon,
+  onCover,
+}: {
+  label: string;
+  icon?: string;
+  cover?: string;
+  onIcon: (v: string | undefined) => void;
+  onCover: (v: string | undefined) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <AssetPicker hasValue={Boolean(icon)} mode="icon" onPick={onIcon}>
+        <button
+          aria-label={`Ícone: ${label}`}
+          className="flex size-14 shrink-0 items-center justify-center rounded-2xl border bg-card text-3xl"
+          type="button"
+        >
+          {icon ? (
+            <NoteIcon icon={icon} />
+          ) : (
+            <Icon
+              className="size-5 text-muted-foreground"
+              name="IconEmojiGrinning"
+            />
+          )}
+        </button>
+      </AssetPicker>
+      <AssetPicker hasValue={Boolean(cover)} mode="cover" onPick={onCover}>
+        <button
+          aria-label={`Capa: ${label}`}
+          className="h-14 min-w-0 flex-1 overflow-hidden rounded-2xl border"
+          type="button"
+        >
+          <CoverPreview
+            className="flex size-full items-center justify-center"
+            cover={cover}
+          >
+            {cover ? null : (
+              <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                <Icon className="size-4" name="IconImages1" />
+                Escolher capa
+              </span>
+            )}
+          </CoverPreview>
+        </button>
+      </AssetPicker>
+    </div>
+  );
+}
+
+const byTitle = (a: Note, b: Note) => a.title.localeCompare(b.title);
+
+/** Default icon/cover, database rows, and where the import goes. */
+function ImportOptionsForm({
+  opts,
+  onChange,
+  notes,
+}: {
+  opts: ImportOptions;
+  onChange: (o: ImportOptions) => void;
+  notes: Note[];
+}) {
+  const [rows, setRows] = useState(Boolean(opts.rowIcon || opts.rowCover));
+  const set = (patch: Partial<ImportOptions>) =>
+    onChange({ ...opts, ...patch });
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-muted/40 p-3">
+      <p className="font-medium text-sm">Aparência das páginas criadas</p>
+      <LooksRow
+        cover={opts.cover}
+        icon={opts.icon}
+        label="todas as páginas"
+        onCover={(cover) => set({ cover })}
+        onIcon={(icon) => set({ icon })}
+      />
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          checked={rows}
+          className="size-4 accent-[#d97757]"
+          onChange={(e) => {
+            setRows(e.target.checked);
+            if (!e.target.checked) {
+              set({ rowIcon: undefined, rowCover: undefined });
+            }
+          }}
+          type="checkbox"
+        />
+        Ícone e capa próprios para itens de banco de dados
+      </label>
+      {rows ? (
+        <LooksRow
+          cover={opts.rowCover}
+          icon={opts.rowIcon}
+          label="itens de banco de dados"
+          onCover={(rowCover) => set({ rowCover })}
+          onIcon={(rowIcon) => set({ rowIcon })}
+        />
+      ) : null}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          checked={Boolean(opts.override)}
+          className="size-4 accent-[#d97757]"
+          onChange={(e) => set({ override: e.target.checked })}
+          type="checkbox"
+        />
+        Substituir também os ícones e capas que vieram do Notion
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">Importar dentro de</span>
+        <select
+          className="h-10 rounded-xl border bg-card px-3"
+          onChange={(e) => set({ parentId: e.target.value || null })}
+          value={opts.parentId ?? ""}
+        >
+          <option value="">Início (páginas no topo)</option>
+          {[...notes].sort(byTitle).map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.title}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
@@ -29,8 +181,19 @@ type Status =
   | { kind: "done"; result: ImportResult }
   | { kind: "error"; message: string };
 
-function ImportCard({ onOpen }: { onOpen: (id: string) => void }) {
+function ImportCard({
+  onOpen,
+  notes,
+}: {
+  onOpen: (id: string) => void;
+  notes: Note[];
+}) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [opts, setOpts] = useState<ImportOptions>(readOpts);
+  const changeOpts = (o: ImportOptions) => {
+    setOpts(o);
+    writeOpts(o);
+  };
   const [over, setOver] = useState(false);
   const run = async (files: File[]) => {
     if (files.length === 0) {
@@ -41,8 +204,11 @@ function ImportCard({ onOpen }: { onOpen: (id: string) => void }) {
       progress: { done: 0, total: 1, label: "Lendo o arquivo…" },
     });
     try {
-      const result = await importNotion(files, (progress) =>
-        setStatus({ kind: "busy", progress })
+      const parentOk = notes.some((n) => n.id === opts.parentId);
+      const result = await importNotion(
+        files,
+        (progress) => setStatus({ kind: "busy", progress }),
+        { ...opts, parentId: parentOk ? opts.parentId : null }
       );
       setStatus({ kind: "done", result });
     } catch (e) {
@@ -67,6 +233,7 @@ function ImportCard({ onOpen }: { onOpen: (id: string) => void }) {
         </li>
         <li>Envie aqui o .zip baixado, sem descompactar.</li>
       </ol>
+      <ImportOptionsForm notes={notes} onChange={changeOpts} opts={opts} />
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: file drop zone; the input inside is the accessible control */}
       <label
         className={cn(
@@ -88,7 +255,8 @@ function ImportCard({ onOpen }: { onOpen: (id: string) => void }) {
         <Icon className="size-7 text-muted-foreground" name="IconImport" />
         <span className="font-medium text-sm">Escolher o .zip do Notion</span>
         <span className="text-muted-foreground text-xs">
-          Também aceita arquivos .md, .html e .csv soltos
+          Também aceita .md, .html, .csv (banco de dados), imagens, vídeos,
+          áudios e PDFs soltos — cada um vira uma página
         </span>
         <input
           accept={ACCEPT}
@@ -238,6 +406,7 @@ export function TransferSheet({
         </SheetHeader>
         <div className="flex flex-col gap-6 px-4 pb-6">
           <ImportCard
+            notes={notes}
             onOpen={(id) => {
               onOpen(id);
               onClose();

@@ -221,7 +221,11 @@ function LinkMenu({ onInsert }: { onInsert: (block: string) => void }) {
     if (!URL_START.test(u)) {
       return;
     }
-    onInsert(YOUTUBE.test(u) ? `![Vídeo](${u})` : `[${u}](${u})`);
+    const asLink =
+      (e.nativeEvent as SubmitEvent).submitter?.dataset.link === "1";
+    onInsert(
+      asLink ? `[${u}](${u})` : `![${YOUTUBE.test(u) ? "Vídeo" : ""}](${u})`
+    );
     setUrl("");
     setOpen(false);
   };
@@ -230,9 +234,9 @@ function LinkMenu({ onInsert }: { onInsert: (block: string) => void }) {
       <PopoverTrigger
         render={
           <button
-            aria-label="Inserir link ou vídeo do YouTube"
+            aria-label="Incorporar link: vídeo, áudio, PDF, imagem ou site"
             className={TOOL}
-            title="Link ou vídeo do YouTube"
+            title="Incorporar (YouTube, Vimeo, Spotify, PDF, MP3, imagem, site…)"
             type="button"
           />
         }
@@ -244,12 +248,28 @@ function LinkMenu({ onInsert }: { onInsert: (block: string) => void }) {
           <Input
             autoFocus
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://youtube.com/… ou qualquer link"
+            placeholder="Cole o link (YouTube, PDF, MP3, imagem, site…)"
             value={url}
           />
-          <Button size="sm" type="submit">
-            Inserir
-          </Button>
+          <p className="text-muted-foreground text-xs">
+            Funciona com YouTube, Vimeo, Spotify, SoundCloud, Loom, Google
+            Drive/Docs, Figma, links diretos de imagem, vídeo, MP3 e PDF, e
+            qualquer site.
+          </p>
+          <div className="flex gap-2">
+            <Button className="flex-1" size="sm" type="submit">
+              Incorporar
+            </Button>
+            <Button
+              className="flex-1"
+              data-link="1"
+              size="sm"
+              type="submit"
+              variant="outline"
+            >
+              Só o link
+            </Button>
+          </div>
         </form>
       </PopoverContent>
     </Popover>

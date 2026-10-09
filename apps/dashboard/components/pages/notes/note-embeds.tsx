@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AiChart } from "@/components/pages/ai/ai-chart";
+import { NEVER_EMBED } from "@/lib/browser/embed";
 import { Icon } from "@/lib/icons";
 import { fileMeta, fileUrl } from "@/lib/notes/db";
 
@@ -12,8 +13,98 @@ const VIDEO_EXT = /\.(mp4|webm|mov|m4v)(\?|$)/i;
 const AUDIO_EXT = /\.(mp3|m4a|wav|ogg)(\?|$)/i;
 const PDF_EXT = /\.pdf(\?|$)/i;
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i;
+const HTTP = /^https?:\/\//i;
+const IMAGE_HOSTS =
+  /(^|\.)(images\.unsplash\.com|i\.imgur\.com|pbs\.twimg\.com|i\.pinimg\.com|lh\d\.googleusercontent\.com)$/i;
+const VIMEO = /vimeo\.com\/(?:video\/)?(\d+)/;
+const SPOTIFY =
+  /open\.spotify\.com\/(?:intl-[\w-]+\/)?(track|album|playlist|episode|show|artist)\/(\w+)/;
+const LOOM = /loom\.com\/(?:share|embed)\/(\w+)/;
+const DRIVE_FILE = /drive\.google\.com\/file\/d\/([\w-]+)/;
+const GOOGLE_DOC =
+  /(docs\.google\.com\/(?:document|spreadsheets|presentation|forms)\/d\/[\w-]+)/;
+const FIGMA = /figma\.com\/(file|design|proto|board)\//;
+const SOUNDCLOUD = /soundcloud\.com\//;
+const WWW = /^www\./;
+
+interface Provider {
+  src: string;
+  /** CSS aspect ratio, or a fixed height for players. */
+  height: string;
+  name: string;
+}
+
+/** Sites that offer an embeddable player for a normal link. */
+export function providerEmbed(url: string): Provider | null {
+  const vimeo = VIMEO.exec(url);
+  if (vimeo) {
+    return {
+      src: `https://player.vimeo.com/video/${vimeo[1]}`,
+      height: "aspect-video",
+      name: "Vimeo",
+    };
+  }
+  const spotify = SPOTIFY.exec(url);
+  if (spotify) {
+    const tall = spotify[1] === "track" || spotify[1] === "episode";
+    return {
+      src: `https://open.spotify.com/embed/${spotify[1]}/${spotify[2]}`,
+      height: tall ? "h-[152px]" : "h-[380px]",
+      name: "Spotify",
+    };
+  }
+  const loom = LOOM.exec(url);
+  if (loom) {
+    return {
+      src: `https://www.loom.com/embed/${loom[1]}`,
+      height: "aspect-video",
+      name: "Loom",
+    };
+  }
+  const drive = DRIVE_FILE.exec(url);
+  if (drive) {
+    return {
+      src: `https://drive.google.com/file/d/${drive[1]}/preview`,
+      height: "h-[70vh]",
+      name: "Google Drive",
+    };
+  }
+  const doc = GOOGLE_DOC.exec(url);
+  if (doc) {
+    return {
+      src: `https://${doc[1]}/preview`,
+      height: "h-[70vh]",
+      name: "Google Docs",
+    };
+  }
+  if (FIGMA.test(url)) {
+    return {
+      src: `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(url)}`,
+      height: "h-[60vh]",
+      name: "Figma",
+    };
+  }
+  if (SOUNDCLOUD.test(url)) {
+    return {
+      src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}`,
+      height: "h-[166px]",
+      name: "SoundCloud",
+    };
+  }
+  return null;
+}
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(WWW, "");
+  } catch {
+    return url;
+  }
+};
 
 export type MediaKind =
+  | "web"
+  | "provider"
   | "image"
   | "video"
   | "audio"
@@ -38,7 +129,13 @@ function kindOf(src: string, type: string | undefined): MediaKind {
   if (t === "application/pdf" || PDF_EXT.test(src)) {
     return "pdf";
   }
-  return src.startsWith("att:") ? "file" : "image";
+  if (src.startsWith("att:")) {
+    return "file";
+  }
+  if (providerEmbed(src)) {
+    return "provider";
+  }
+  return HTTP.test(src) && !IMAGE_HOSTS.test(hostOf(src)) ? "web" : "image";
 }
 
 /** att:<id> → object URL from IndexedDB; other URLs pass through. */
@@ -99,9 +196,86 @@ function FileChip({
   );
 }
 
+/** Any web page: a card with the site, and a live preview when allowed. */
+function WebEmbed({ url, alt }: { url: string; alt: string }) {
+  const host = hostOf(url);
+  const blocked = NEVER_EMBED.test(host);
+  const [preview, setPreview] = useState(!blocked);
+  return (
+    <span className="my-3 block overflow-hidden rounded-2xl border bg-card">
+      <span className="flex items-center gap-3 px-3 py-2.5">
+        {/* biome-ignore lint/performance/noImgElement: remote favicon */}
+        <img
+          alt=""
+          className="size-5 shrink-0 rounded"
+          height={20}
+          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`}
+          width={20}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium text-sm">
+            {alt && alt !== url ? alt : host}
+          </span>
+          <span className="block truncate text-muted-foreground text-xs">
+            {url}
+          </span>
+        </span>
+        {blocked ? null : (
+          <button
+            className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs"
+            onClick={() => setPreview((v) => !v)}
+            type="button"
+          >
+            {preview ? "Ocultar" : "Prévia"}
+          </button>
+        )}
+        <a
+          className="shrink-0 rounded-full bg-foreground px-2.5 py-1 text-background text-xs no-underline"
+          href={url}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Abrir
+        </a>
+      </span>
+      {preview ? (
+        <iframe
+          className="block h-[60vh] w-full border-t bg-white"
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          src={url}
+          title={alt || host}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+function ProviderEmbed({ url, alt }: { url: string; alt: string }) {
+  const p = providerEmbed(url);
+  if (!p) {
+    return null;
+  }
+  return (
+    <iframe
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      allowFullScreen
+      className={`my-3 block w-full rounded-2xl border ${p.height}`}
+      src={p.src}
+      title={alt || p.name}
+    />
+  );
+}
+
 export function MediaEmbed({ src, alt }: { src: string; alt: string }) {
   const { url, meta, missing } = useResolved(src);
   const kind = kindOf(src, meta?.type);
+  if (kind === "web") {
+    return <WebEmbed alt={alt} url={src} />;
+  }
+  if (kind === "provider") {
+    return <ProviderEmbed alt={alt} url={src} />;
+  }
   const name = meta?.name ?? (alt || src.split("/").pop() || "arquivo");
   if (missing) {
     return (
