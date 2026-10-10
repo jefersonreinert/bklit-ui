@@ -13,9 +13,11 @@ import { MenuItemsTab, NewDishSheet } from "./items-tab";
 import { MenuOverviewTab } from "./overview-tab";
 import { MenuRecipesTab } from "./recipes-tab";
 import { MenuStockTab } from "./stock-tab";
+import { MenuStudio } from "./studio/menu-studio";
 
 const TABS = [
   { value: "geral", label: "Visão geral" },
+  { value: "editor", label: "Editor de cardápio" },
   { value: "itens", label: "Itens do cardápio" },
   { value: "engenharia", label: "Engenharia de cardápio" },
   { value: "fichas", label: "Fichas técnicas" },
@@ -55,7 +57,7 @@ export function MenuPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button onClick={() => setTab("editor")} variant="outline">
             <Icon className="size-4" name="IconFilePdf" />
             Cardápio PDF
           </Button>
@@ -131,6 +133,9 @@ export function MenuPage() {
         </div>
         <TabsContent className="pt-4" value="geral">
           <MenuOverviewTab />
+        </TabsContent>
+        <TabsContent className="pt-4" value="editor">
+          <MenuStudio />
         </TabsContent>
         <TabsContent className="pt-4" value="itens">
           <MenuItemsTab items={items} onUpdate={update} />

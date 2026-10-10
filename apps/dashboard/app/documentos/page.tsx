@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/dashboard/coming-soon";
+import { InvoicesPage } from "@/components/pages/invoices/invoices-page";
 
 export default function Page() {
-  return <ComingSoon icon="IconFolder1" title="Documentos" />;
+  return <InvoicesPage />;
 }

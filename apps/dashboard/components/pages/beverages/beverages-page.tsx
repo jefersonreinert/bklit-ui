@@ -20,6 +20,7 @@ import { brlFormatOptions, formatBRL, formatPercent } from "@/lib/format";
 import { Icon } from "@/lib/icons";
 import { BeersTab, SoftDrinksTab } from "./beers-tab";
 import { CartaTab } from "./carta-tab";
+import { CellarTab } from "./cellar-tab";
 import { CocktailsTab } from "./cocktails-tab";
 import { InventoryTab } from "./inventory-tab";
 import { BeverageOverviewTab } from "./overview-tab";
@@ -28,6 +29,7 @@ import { WinesTab } from "./wines-tab";
 
 const TABS = [
   { value: "geral", label: "Visão geral", icon: "IconChart3" },
+  { value: "adega", label: "Adega (Notion)", icon: "IconGlass" },
   { value: "vinhos", label: "Vinhos", icon: "IconGlass" },
   { value: "destilados", label: "Destilados", icon: "IconBottle" },
   { value: "cervejas", label: "Cervejas", icon: "IconBeer" },
@@ -191,6 +193,9 @@ export function BeveragesPage() {
         </div>
         <TabsContent className="pt-4" value="geral">
           <BeverageOverviewTab inventory={inventory} lines={lines} />
+        </TabsContent>
+        <TabsContent className="pt-4" value="adega">
+          <CellarTab />
         </TabsContent>
         <TabsContent className="pt-4" value="vinhos">
           <WinesTab onUpdate={update("wines")} wines={state.wines} />
