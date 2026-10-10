@@ -285,6 +285,63 @@ describe("ICT monitor backend", () => {
     ).rejects.toThrow();
   });
 
+  it("uses keys saved in the panel and never returns them", async () => {
+    for (const name of ["X_BEARER_TOKEN", "XAI_API_KEY", "XAI_MODEL"]) {
+      Reflect.deleteProperty(process.env, name);
+    }
+    const t = convexTest(schema, modules);
+    const before = await overview(t);
+    expect(before.configured.x).toBe(false);
+    const calls = apis(() => json({ data: [tweet("800")] }));
+    const r = await t.withIdentity(panel).action(api.ict.saveKeys, {
+      xBearer: " panel-bearer-1234 \n",
+      xaiKey: "xai-panelkey-9876",
+      xaiModel: "grok-test",
+    });
+    expect(r.ok).toBe(true);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const o = await overview(t);
+    expect(o.configured).toMatchObject({
+      x: true,
+      grok: true,
+      xSource: "panel",
+      xHint: "…1234",
+    });
+    expect(JSON.stringify(o)).not.toContain("panel-bearer");
+    expect(JSON.stringify(o)).not.toContain("xai-panelkey");
+    expect(o.counts.total).toBe(1);
+    expect(o.counts.unanalyzed).toBe(0);
+    expect(calls.some((c) => c.includes("/tweets"))).toBe(true);
+  });
+
+  it("exchanges an X API key and secret for a bearer token", async () => {
+    for (const name of ["X_BEARER_TOKEN", "XAI_API_KEY"]) {
+      Reflect.deleteProperty(process.env, name);
+    }
+    const t = convexTest(schema, modules);
+    vi.stubGlobal("fetch", (input: string | URL) =>
+      String(input).includes("oauth2/token")
+        ? Promise.resolve(
+            json({ token_type: "bearer", access_token: "from-keys-abcd" })
+          )
+        : Promise.resolve(json({ data: [] }))
+    );
+    const r = await t.withIdentity(panel).action(api.ict.saveKeys, {
+      xApiKey: "key",
+      xApiSecret: "secret",
+    });
+    expect(r.ok).toBe(true);
+    expect((await overview(t)).configured.xHint).toBe("…abcd");
+  });
+
+  it("refuses key changes and tests without the panel token", async () => {
+    const t = convexTest(schema, modules);
+    await expect(
+      t.action(api.ict.saveKeys, { xBearer: "x" })
+    ).rejects.toThrow();
+    await expect(t.action(api.ict.testKeys, {})).rejects.toThrow();
+  });
+
   it("pauses collection when monitoring is turned off", async () => {
     const t = convexTest(schema, modules);
     const calls = apis(() => json({ data: [] }));
