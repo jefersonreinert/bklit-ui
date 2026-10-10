@@ -61,8 +61,11 @@ jobs:
 
       - name: Deploy Convex (functions, schema, crons)
         if: steps.secrets.outputs.ok == 'true' && env.CONVEX_DEPLOY_KEY != ''
+        # A bad deploy key must not stop the site itself from publishing
+        continue-on-error: true
         working-directory: apps/dashboard
-        run: npx convex deploy
+        # Secrets pasted with a trailing newline or spaces still work
+        run: CONVEX_DEPLOY_KEY="$(printf '%s' "$CONVEX_DEPLOY_KEY" | tr -d '[:space:]')" npx convex deploy
 
       - name: Build and deploy
         if: steps.secrets.outputs.ok == 'true'
