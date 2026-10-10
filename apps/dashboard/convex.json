@@ -1,6 +1,3 @@
 {
-  "$schema": "./node_modules/convex/schemas/convex.schema.json",
-  "node": {
-    "externalPackages": ["telegram", "big-integer"]
-  }
+  "$schema": "./node_modules/convex/schemas/convex.schema.json"
 }

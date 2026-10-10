@@ -31,7 +31,7 @@ pnpm --filter dashboard add @overpod/mcp-telegram@<versão> telegram@<versão qu
 node apps/dashboard/scripts/gen-telegram-catalog.mjs   # regenera lib/telegram/tool-catalog.json
 ```
 
-`convex.json` marca `telegram` e `big-integer` como pacotes externos do Node (instalados pelo Convex no deploy).
+O GramJS (`telegram`) é empacotado no bundle da action (não use `externalPackages`: a instalação no Convex falha ao compilar `utf-8-validate`, dependência nativa do `websocket`).
 
 ## Testes
 
