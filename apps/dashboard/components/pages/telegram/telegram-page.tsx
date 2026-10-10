@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TG_TOOLS } from "@/lib/telegram/catalog";
 import { TelegramChats, TelegramSearch } from "./telegram-chats";
+import { TelegramGallery } from "./telegram-gallery";
 import {
   BASE_PATH,
   Notice,
@@ -13,11 +14,12 @@ import {
 } from "./telegram-shared";
 import { ToolExplorer } from "./tool-explorer";
 
-type Tab = "chats" | "search" | "tools";
+type Tab = "chats" | "search" | "gallery" | "tools";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "chats", label: "Conversas" },
   { value: "search", label: "Buscar" },
+  { value: "gallery", label: "Galeria" },
   { value: "tools", label: `Ferramentas (${TG_TOOLS.length - 2})` },
 ];
 
@@ -36,9 +38,13 @@ function NotConnected({ text }: { text: string }) {
   );
 }
 
+const NOT_CONNECTED =
+  "O Telegram ainda não está conectado. Entre com QR code ou com o número em Conectores → Telegram.";
+
 function Workspace() {
   const status = useTelegramStatus();
   const [tab, setTab] = useState<Tab>("chats");
+  const [galleryChat, setGalleryChat] = useState<string | undefined>();
   if (status === undefined) {
     return <p className="text-muted-foreground text-sm">Carregando…</p>;
   }
@@ -50,15 +56,18 @@ function Workspace() {
       </Notice>
     );
   }
-  if (!status.connected) {
-    return (
-      <NotConnected text="O Telegram ainda não está conectado. Entre com QR code ou com o número em Conectores → Telegram." />
-    );
-  }
+  const live = (body: React.ReactNode) =>
+    status.connected ? body : <NotConnected text={NOT_CONNECTED} />;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
+        <Tabs
+          onValueChange={(v) => {
+            setGalleryChat(undefined);
+            setTab(v as Tab);
+          }}
+          value={tab}
+        >
           <TabsList>
             {TABS.map((t) => (
               <TabsTrigger key={t.value} value={t.value}>
@@ -72,9 +81,25 @@ function Workspace() {
           {status.me?.username ? ` · @${status.me.username}` : ""}
         </p>
       </div>
-      {tab === "chats" ? <TelegramChats me={status.me?.name ?? null} /> : null}
-      {tab === "search" ? <TelegramSearch /> : null}
-      {tab === "tools" ? <ToolExplorer optIn={status.optIn} /> : null}
+      {tab === "chats"
+        ? live(
+            <TelegramChats
+              me={status.me?.name ?? null}
+              onOpenGallery={(chatId) => {
+                setGalleryChat(chatId);
+                setTab("gallery");
+              }}
+            />
+          )
+        : null}
+      {tab === "search" ? live(<TelegramSearch />) : null}
+      {tab === "gallery" ? (
+        <TelegramGallery
+          initialChatId={galleryChat}
+          key={galleryChat ?? "all"}
+        />
+      ) : null}
+      {tab === "tools" ? live(<ToolExplorer optIn={status.optIn} />) : null}
     </div>
   );
 }

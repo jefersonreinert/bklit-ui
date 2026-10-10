@@ -422,6 +422,36 @@ export default defineSchema({
     lastErrorAt: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
+  /**
+   * Telegram media saved to the gallery: the file lives in Convex storage,
+   * keyed by chat + message so nothing is saved twice. day/month/year are
+   * in the time zone of the browser that saved it.
+   */
+  tgMedia: defineTable({
+    chatId: v.string(),
+    chatName: v.string(),
+    messageId: v.number(),
+    kind: v.string(),
+    mime: v.string(),
+    fileName: v.string(),
+    size: v.number(),
+    storageId: v.id("_storage"),
+    /** When the message was sent (ms). */
+    date: v.number(),
+    day: v.string(),
+    month: v.string(),
+    year: v.string(),
+    sender: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    savedAt: v.number(),
+  })
+    .index("by_message", ["chatId", "messageId"])
+    .index("by_date", ["date"])
+    .index("by_day", ["day", "date"])
+    .index("by_month", ["month", "date"])
+    .index("by_year", ["year", "date"])
+    .index("by_chat", ["chatId", "date"]),
+
   /** Audit trail of Telegram tool calls (no message bodies). */
   tgCalls: defineTable({
     tool: v.string(),

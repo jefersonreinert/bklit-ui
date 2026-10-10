@@ -33,6 +33,8 @@ import {
   rpcCode,
   SESSION_DEAD,
 } from "../lib/telegram/login";
+import { dateKeys, formatBytes, mediaFileName } from "../lib/telegram/media";
+import { describeMedia } from "../lib/telegram/media-node";
 // tools/ is not in the package's exports map; the relative path is bundled
 import { registerTools } from "../node_modules/@overpod/mcp-telegram/dist/tools/index.js";
 import { internal } from "./_generated/api";
@@ -546,5 +548,286 @@ export const callTool = action({
       }
       return out;
     });
+  },
+});
+
+// ─── Media gallery ─────────────────────────────────────────────────────
+
+/** Stop starting new downloads after this (the lock lasts 90 s). */
+const MEDIA_BUDGET_MS = 45_000;
+const MEDIA_PAGE = 100;
+const MAX_MEDIA_BYTES = 200_000_000;
+
+interface SavedItem {
+  messageId: number;
+  id: string;
+  url: string | null;
+  fileName: string;
+  mime: string;
+}
+
+interface SaveResult {
+  ok: boolean;
+  message?: string;
+  saved: number;
+  already: number;
+  skipped: { messageId: number; reason: string }[];
+  items: SavedItem[];
+  /** Continue from here (older messages); null when the chat is done. */
+  nextOffsetId: number | null;
+  scanned: number;
+}
+
+function chatTitle(entity: unknown) {
+  const e = entity as {
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+  };
+  return (
+    e.title ||
+    [e.firstName, e.lastName].filter(Boolean).join(" ") ||
+    (e.username ? `@${e.username}` : "Conversa")
+  );
+}
+
+async function senderName(m: Api.Message) {
+  try {
+    const s = (await m.getSender()) as
+      | { title?: string; firstName?: string; lastName?: string }
+      | undefined;
+    if (!s) {
+      return undefined;
+    }
+    return (
+      s.title ||
+      [s.firstName, s.lastName].filter(Boolean).join(" ") ||
+      undefined
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+interface MediaRun {
+  ctx: ActionCtx;
+  client: TelegramClient;
+  chatId: string;
+  chatName: string;
+  kinds: string[] | null;
+  tz?: string;
+  out: SaveResult;
+}
+
+/** Downloads one message's media into storage and the gallery. */
+async function saveOne(run: MediaRun, m: Api.Message) {
+  const info = describeMedia(m.media);
+  if (!info) {
+    return;
+  }
+  if (run.kinds && !run.kinds.includes(info.kind)) {
+    return;
+  }
+  const [found] = await run.ctx.runQuery(internal.tgmedia.existing, {
+    chatId: run.chatId,
+    messageIds: [m.id],
+  });
+  const fileName = mediaFileName(info.kind, m.id, info.mime, info.fileName);
+  if (found) {
+    run.out.already += 1;
+    run.out.items.push({ ...found, fileName, mime: info.mime });
+    return;
+  }
+  if (info.size > MAX_MEDIA_BYTES) {
+    run.out.skipped.push({
+      messageId: m.id,
+      reason: `${formatBytes(info.size)} (máx. ${formatBytes(MAX_MEDIA_BYTES)})`,
+    });
+    return;
+  }
+  const data = (await run.client.downloadMedia(m, {})) as Buffer | undefined;
+  if (!data?.length) {
+    run.out.skipped.push({
+      messageId: m.id,
+      reason: "sem arquivo para baixar",
+    });
+    return;
+  }
+  const storageId = await run.ctx.storage.store(
+    new Blob([new Uint8Array(data)], { type: info.mime })
+  );
+  const date = (m.date ?? 0) * 1000 || Date.now();
+  const sender = await senderName(m);
+  const caption = m.message?.trim();
+  const added = await run.ctx.runMutation(internal.tgmedia.add, {
+    chatId: run.chatId,
+    chatName: run.chatName,
+    messageId: m.id,
+    kind: info.kind,
+    mime: info.mime,
+    fileName,
+    size: data.length,
+    storageId,
+    date,
+    ...dateKeys(date, run.tz),
+    ...(sender ? { sender } : {}),
+    ...(caption ? { caption: caption.slice(0, 1000) } : {}),
+  });
+  run.out.saved += 1;
+  run.out.items.push({
+    messageId: m.id,
+    id: added.id,
+    url: added.url,
+    fileName,
+    mime: info.mime,
+  });
+}
+
+async function saveMessages(
+  run: MediaRun,
+  messages: (Api.Message | undefined)[],
+  paging: boolean
+) {
+  const started = Date.now();
+  let last: number | null = null;
+  for (const m of messages) {
+    if (!m) {
+      continue;
+    }
+    if (Date.now() - started > MEDIA_BUDGET_MS) {
+      // Resume from the last message handled
+      run.out.nextOffsetId = last ?? m.id + 1;
+      return;
+    }
+    run.out.scanned += 1;
+    try {
+      await saveOne(run, m);
+    } catch (err) {
+      run.out.skipped.push({ messageId: m.id, reason: friendlyError(err) });
+    }
+    last = m.id;
+  }
+  run.out.nextOffsetId =
+    paging && messages.length >= MEDIA_PAGE && last !== null ? last : null;
+}
+
+/** Loads the requested messages and saves their media (inside the lock). */
+async function loadAndSave(
+  tg: TelegramService,
+  ctx: ActionCtx,
+  a: SaveArgs,
+  out: SaveResult
+) {
+  if (!((await tg.ensureConnected()) && tg.getClient())) {
+    out.ok = false;
+    out.message = tg.lastError || "Sem conexão com o Telegram.";
+    return;
+  }
+  const live = tg.getClient() as TelegramClient;
+  const entity = await tg.resolveChat(a.chatId);
+  const run: MediaRun = {
+    ctx,
+    client: live,
+    chatId: a.chatId,
+    chatName: chatTitle(entity),
+    kinds: a.kinds?.length ? a.kinds : null,
+    ...(a.tz ? { tz: a.tz } : {}),
+    out,
+  };
+  const paging = !a.messageIds?.length;
+  const messages = paging
+    ? await live.getMessages(entity, {
+        limit: MEDIA_PAGE,
+        ...(a.offsetId ? { offsetId: a.offsetId } : {}),
+      })
+    : await live.getMessages(entity, {
+        ids: (a.messageIds ?? []).slice(0, 50),
+      });
+  await saveMessages(run, [...messages], paging);
+}
+
+interface SaveArgs {
+  chatId: string;
+  messageIds?: number[];
+  offsetId?: number;
+  kinds?: string[];
+  tz?: string;
+}
+
+async function runSaveMedia(
+  ctx: ActionCtx,
+  a: SaveArgs,
+  creds: { apiId: number; apiHash: string; session: string },
+  out: SaveResult
+) {
+  const dir = await mkdtemp(join(tmpdir(), "casa-brasa-tg-"));
+  const tg = new TelegramService(creds.apiId, creds.apiHash, {
+    sessionPath: join(dir, "session"),
+  });
+  tg.setSessionString(creds.session);
+  try {
+    await loadAndSave(tg, ctx, a, out);
+  } catch (err) {
+    out.ok = false;
+    out.message = friendlyError(err);
+  } finally {
+    await tg.disconnect().catch(() => undefined);
+    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    const error = out.ok ? {} : { error: out.message ?? "Falhou." };
+    await ctx.runMutation(internal.telegram.afterCall, {
+      session: tg.getSessionString() || null,
+      ...error,
+    });
+    await ctx.runMutation(internal.telegram.logCall, {
+      tool: "save-media",
+      source: "panel",
+      ok: out.ok,
+      ms: 0,
+      ...error,
+    });
+  }
+  return out;
+}
+
+/**
+ * Saves a chat's media to the gallery: given messages (the "Baixar" button)
+ * or a page of history (the "Salvar todas" loop — call again with
+ * nextOffsetId until it is null). Files already saved are not downloaded
+ * twice.
+ */
+export const saveMedia = action({
+  args: {
+    chatId: v.string(),
+    messageIds: v.optional(v.array(v.number())),
+    offsetId: v.optional(v.number()),
+    kinds: v.optional(v.array(v.string())),
+    tz: v.optional(v.string()),
+  },
+  handler: async (ctx, a): Promise<SaveResult> => {
+    await requireAuth(ctx);
+    const out: SaveResult = {
+      ok: true,
+      saved: 0,
+      already: 0,
+      skipped: [],
+      items: [],
+      nextOffsetId: null,
+      scanned: 0,
+    };
+    const s = await readSecrets(ctx);
+    const { apiId, apiHash } = credentials(s);
+    if (!s.session) {
+      return {
+        ...out,
+        ok: false,
+        message:
+          "O Telegram não está conectado. Entre em Conectores → Telegram.",
+      };
+    }
+    const session = s.session;
+    return await withLock(ctx, () =>
+      runSaveMedia(ctx, a, { apiId, apiHash, session }, out)
+    );
   },
 });

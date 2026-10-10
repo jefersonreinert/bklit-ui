@@ -36,3 +36,10 @@ O GramJS (`telegram`) é empacotado no bundle da action (não use `externalPacka
 ## Testes
 
 `pnpm --filter dashboard test` — `lib/telegram/__tests__` (catálogo, passos de login com as classes reais do GramJS, arquivos, a action `callTool` sem rede) e `convex/telegram.test.ts` (estado nunca expõe hash/sessão, lock, configurações).
+
+## Mídias e galeria
+
+- **Baixar uma mídia**: em Conversas, mensagens com foto, vídeo, áudio ou arquivo têm o botão **Baixar** — o arquivo vai para a galeria e para o aparelho.
+- **Salvar todas**: em Conversas → **Mídias**, escolha os tipos e clique **Salvar na galeria**. O histórico é percorrido em lotes (`mtproto.saveMedia` com `nextOffsetId`) e nada é baixado duas vezes (índice `by_message`). **Baixar tudo (.zip)** junta os arquivos da conversa num zip (pastas por dia).
+- **Galeria** (aba da página Telegram, `convex/tgmedia.ts`): navegação ano → mês → dia, filtros por tipo e conversa, visualizador de foto, vídeo, áudio/MP3 e PDF, download individual, de uma seleção ou de tudo do filtro (.zip, em partes de 500), e apagar.
+- Arquivos ficam no armazenamento do Convex (o plano gratuito tem 1 GB); limite de 200 MB por arquivo. As chaves de dia/mês/ano usam o fuso horário do navegador que salvou.
