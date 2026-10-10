@@ -21,6 +21,7 @@ import {
 } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 import { GithubCard } from "./connectors-github-card";
+import { TelegramCard } from "./connectors-telegram-card";
 
 const ERRORS: Record<string, string> = {
   missing_secret:
@@ -488,6 +489,7 @@ export function ConnectorsPage() {
       <GoogleCard onDisconnect={disconnectGoogle} status={status} />
       <YoutubeCard status={status} />
       <WhatsappCard status={status} />
+      <TelegramCard />
     </div>
   );
 }

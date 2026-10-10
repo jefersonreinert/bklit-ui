@@ -8,7 +8,9 @@ import {
   YOUTUBE_MANAGE_SCOPE,
 } from "@/lib/server/google-connector";
 import { readConnection } from "@/lib/server/notion-connector";
+import { panelAuthConfigured } from "@/lib/server/panel-jwt";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
+import { telegramSummary } from "@/lib/server/telegram-tools";
 import { geminiKey } from "@/lib/server/transcript";
 import { hasAccess, whatsappConfig } from "@/lib/server/whatsapp";
 import { youtubeKey } from "@/lib/server/youtube";
@@ -21,6 +23,9 @@ export async function GET(request: NextRequest) {
   const notion = configured ? await readConnection(request) : null;
   const google = configured ? await readGoogleConnection(request) : null;
   const github = configured ? await readGithubConnection(request) : null;
+  const unlocked = await hasAccess(request);
+  const telegram =
+    unlocked && panelAuthConfigured() ? await telegramSummary() : null;
   return NextResponse.json(
     {
       configured,
@@ -50,7 +55,13 @@ export async function GET(request: NextRequest) {
       },
       whatsapp: {
         available: Boolean(whatsappConfig()),
-        unlocked: await hasAccess(request),
+        unlocked,
+      },
+      telegram: {
+        available: panelAuthConfigured(),
+        unlocked,
+        connected: Boolean(telegram?.connected),
+        ...(telegram?.name ? { name: telegram.name } : {}),
       },
     },
     { headers: { "Cache-Control": "no-store" } }

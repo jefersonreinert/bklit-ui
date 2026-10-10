@@ -41,6 +41,12 @@ import {
   runPanelTool,
 } from "@/lib/server/panel-tools";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
+import {
+  isTelegramTool,
+  runTelegramTool,
+  TELEGRAM_INSTRUCTIONS,
+  TELEGRAM_TOOLS,
+} from "@/lib/server/telegram-tools";
 import { hasAccess, whatsappConfig } from "@/lib/server/whatsapp";
 import {
   isWhatsappTool,
@@ -128,6 +134,8 @@ interface Connectors {
   panel: boolean;
   /** WhatsApp bridge, only for a browser that entered the access code. */
   whatsapp: boolean;
+  /** Telegram account (Convex session); needs the access code too. */
+  telegram: boolean;
   notices: string[];
   cookies: string[];
 }
@@ -323,6 +331,11 @@ async function resolveConnectors(
         whatsappConfig() &&
         (await hasAccess(request))
     ),
+    telegram: Boolean(
+      requested?.includes("telegram") &&
+        panelToolsAvailable() &&
+        (await hasAccess(request))
+    ),
     notices: [],
     cookies: [],
   };
@@ -347,6 +360,19 @@ async function resolveConnectors(
       : null,
   ]);
   return out;
+}
+
+/** System instructions of each connector switched on for this turn. */
+function connectorInstructions(c: Connectors, google: string) {
+  return [
+    c.notion ? NOTION_INSTRUCTIONS : "",
+    google,
+    c.github ? GITHUB_INSTRUCTIONS(c.github.login) : "",
+    c.youtube ? YOUTUBE_INSTRUCTIONS : "",
+    c.whatsapp ? WHATSAPP_INSTRUCTIONS : "",
+    c.telegram ? TELEGRAM_INSTRUCTIONS : "",
+    c.panel ? PANEL_INSTRUCTIONS : "",
+  ].filter(Boolean);
 }
 
 function buildParams(
@@ -377,6 +403,7 @@ function buildParams(
     ...(c.google ? googleTools({ gmail: c.gmail, drive: c.drive }) : []),
     ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
     ...(c.whatsapp ? WHATSAPP_TOOLS : []),
+    ...(c.telegram ? TELEGRAM_TOOLS : []),
     ...(c.panel ? PANEL_TOOLS : []),
   ];
   return {
@@ -390,20 +417,10 @@ function buildParams(
         cache_control: { type: "ephemeral" },
       },
       ...extras.map((text) => ({ type: "text" as const, text })),
-      ...(c.notion
-        ? [{ type: "text" as const, text: NOTION_INSTRUCTIONS }]
-        : []),
-      ...(google ? [{ type: "text" as const, text: google }] : []),
-      ...(c.github
-        ? [{ type: "text" as const, text: GITHUB_INSTRUCTIONS(c.github.login) }]
-        : []),
-      ...(c.youtube
-        ? [{ type: "text" as const, text: YOUTUBE_INSTRUCTIONS }]
-        : []),
-      ...(c.whatsapp
-        ? [{ type: "text" as const, text: WHATSAPP_INSTRUCTIONS }]
-        : []),
-      ...(c.panel ? [{ type: "text" as const, text: PANEL_INSTRUCTIONS }] : []),
+      ...connectorInstructions(c, google).map((text) => ({
+        type: "text" as const,
+        text,
+      })),
     ],
     messages,
     ...(betas.length > 0 ? { betas } : {}),
@@ -485,6 +502,9 @@ function runClientTool(c: Connectors, name: string, input: unknown) {
   }
   if (c.whatsapp && isWhatsappTool(name)) {
     return runWhatsappTool(name, input);
+  }
+  if (c.telegram && isTelegramTool(name)) {
+    return runTelegramTool(name, input);
   }
   if (c.youtube && isYoutubeTool(name)) {
     return runYoutubeTool(
@@ -679,6 +699,7 @@ export async function POST(request: NextRequest) {
     connectors.drive ? "drive" : null,
     connectors.youtube ? "youtube" : null,
     connectors.whatsapp ? "whatsapp" : null,
+    connectors.telegram ? "telegram" : null,
   ].filter(Boolean);
   const response = new Response(readable, {
     headers: {

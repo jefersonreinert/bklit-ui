@@ -51,6 +51,12 @@ export const navItems: NavItem[] = [
     icon: "IconWhatsapp",
   },
   {
+    href: "/telegram",
+    label: "Telegram",
+    description: "Conversas, busca e todas as ferramentas do Telegram",
+    icon: "IconTelegram",
+  },
+  {
     href: "/videos",
     label: "Meus vídeos",
     description: "Biblioteca: salvos, playlists e player",
@@ -65,7 +71,7 @@ export const navItems: NavItem[] = [
   {
     href: "/conectores",
     label: "Conectores",
-    description: "Notion, GitHub, Gmail, Drive, YouTube e WhatsApp",
+    description: "Notion, GitHub, Gmail, Drive, YouTube, WhatsApp e Telegram",
     icon: "IconConnectors1",
   },
   {

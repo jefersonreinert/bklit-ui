@@ -15,9 +15,11 @@ const POLL_MS = 3000;
 export function QrCode({
   value,
   size = 232,
+  label = "QR code de pagamento",
 }: {
   value: string;
   size?: number;
+  label?: string;
 }) {
   const { data, size: n } = encode(value, { ecc: "M", border: 2 });
   let path = "";
@@ -30,7 +32,7 @@ export function QrCode({
   });
   return (
     <svg
-      aria-label="QR code de pagamento"
+      aria-label={label}
       className="rounded-2xl bg-white p-1"
       height={size}
       role="img"
