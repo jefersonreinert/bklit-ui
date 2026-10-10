@@ -9,6 +9,8 @@
  */
 
 import type * as access from "../access.js";
+import type * as crons from "../crons.js";
+import type * as ict from "../ict.js";
 import type * as lib from "../lib.js";
 import type * as notes from "../notes.js";
 import type * as pos from "../pos.js";
@@ -24,6 +26,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   access: typeof access;
+  crons: typeof crons;
+  ict: typeof ict;
   lib: typeof lib;
   notes: typeof notes;
   pos: typeof pos;
