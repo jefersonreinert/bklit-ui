@@ -159,6 +159,9 @@ export function toolServer(name: string) {
   if (name.startsWith("whatsapp_")) {
     return "whatsapp";
   }
+  if (name.startsWith("telegram_")) {
+    return "telegram";
+  }
   return name.startsWith("drive_") ? "drive" : "gmail";
 }
 

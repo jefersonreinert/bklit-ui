@@ -30,6 +30,13 @@ export interface ConnectorsStatus {
   youtube: { available: boolean; transcripts: boolean };
   /** WhatsApp bridge configured; `unlocked` = this browser has the access code. */
   whatsapp: { available: boolean; unlocked: boolean };
+  /** Telegram session in Convex; usable with the access code. */
+  telegram: {
+    available: boolean;
+    unlocked: boolean;
+    connected: boolean;
+    name?: string;
+  };
 }
 
 const OFFLINE: ConnectorsStatus = {
@@ -41,6 +48,7 @@ const OFFLINE: ConnectorsStatus = {
   github: { connected: false },
   youtube: { available: false, transcripts: false },
   whatsapp: { available: false, unlocked: false },
+  telegram: { available: false, unlocked: false, connected: false },
 };
 
 export function notionStartUrl(returnTo?: string) {
@@ -159,6 +167,9 @@ export function connectedKeys(status: ConnectorsStatus | null) {
   }
   if (status.whatsapp.available && status.whatsapp.unlocked) {
     keys.push("whatsapp");
+  }
+  if (status.telegram?.connected && status.telegram.unlocked) {
+    keys.push("telegram");
   }
   return keys;
 }
