@@ -17,6 +17,7 @@ import { ICT_ACCOUNT, type MonitorStatus, STATUS_LABEL } from "@/lib/ict/types";
 import { convexClient, useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 import { IctFeed } from "./ict-feed";
+import { IctKeysSheet } from "./ict-keys";
 import { IctSettingsSheet } from "./ict-settings";
 import type { FeedPost } from "./post-card";
 
@@ -71,7 +72,15 @@ function StatusLine({ o }: { o: Overview }) {
   );
 }
 
-function Controls({ o, onSettings }: { o: Overview; onSettings: () => void }) {
+function Controls({
+  o,
+  onSettings,
+  onKeys,
+}: {
+  o: Overview;
+  onSettings: () => void;
+  onKeys: () => void;
+}) {
   const update = useMutation(api.ict.updateSettings);
   const syncNow = useMutation(api.ict.syncNow);
   const analyzePending = useMutation(api.ict.analyzePending);
@@ -112,6 +121,10 @@ function Controls({ o, onSettings }: { o: Overview; onSettings: () => void }) {
           Analisar pendentes
         </Button>
       ) : null}
+      <Button onClick={onKeys} size="sm" variant="ghost">
+        <Icon className="size-4" name="IconLock" />
+        Chaves das APIs
+      </Button>
       <Button onClick={onSettings} size="sm" variant="ghost">
         <Icon className="size-4" name="IconSettingsGear1" />
         Configurar
@@ -201,7 +214,7 @@ const DIAG_TEXT: Record<string, string> = {
   ok: "OK",
   never_ran: "Ainda não executou",
   late: "Atrasado — o agendador do Convex pode estar parado",
-  not_configured: "Chave não configurada no Convex",
+  not_configured: "Chave não configurada (Chaves das APIs)",
   recent_errors: "Erros na última hora",
 };
 
@@ -279,6 +292,7 @@ function Monitor() {
   const o = useQuery(api.ict.overview);
   const d = useQuery(api.ict.diagnostics);
   const [settings, setSettings] = useState(false);
+  const [keys, setKeys] = useState(false);
 
   if (o === undefined) {
     return <Notice text="A ligar à base de dados…" title="A carregar" />;
@@ -311,20 +325,25 @@ function Monitor() {
               </a>
             </p>
           </div>
-          <Controls o={o} onSettings={() => setSettings(true)} />
+          <Controls
+            o={o}
+            onKeys={() => setKeys(true)}
+            onSettings={() => setSettings(true)}
+          />
         </div>
         <StatusLine o={o} />
-        {o.configured.x ? null : (
-          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
-            A chave da API do X ainda não foi configurada no servidor (variável{" "}
-            <code>X_BEARER_TOKEN</code> no Convex). Nada é recolhido até lá.
-          </p>
-        )}
-        {o.configured.grok ? null : (
-          <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-            A análise por IA precisa da variável <code>XAI_API_KEY</code> no
-            Convex. As publicações são guardadas na mesma.
-          </p>
+        {o.configured.x && o.configured.grok ? null : (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
+            <span className="flex-1">
+              {o.configured.x
+                ? "Falta a chave da xAI (Grok): as publicações são guardadas, mas sem análise."
+                : "Falta a chave da API do X: nada é recolhido até ela ser adicionada."}
+            </span>
+            <Button onClick={() => setKeys(true)} size="sm">
+              <Icon className="size-4" name="IconLock" />
+              Adicionar chaves
+            </Button>
+          </div>
         )}
       </div>
 
@@ -350,6 +369,11 @@ function Monitor() {
         </div>
       </div>
 
+      <IctKeysSheet
+        info={o.configured}
+        onClose={() => setKeys(false)}
+        open={keys}
+      />
       <IctSettingsSheet
         onClose={() => setSettings(false)}
         open={settings}

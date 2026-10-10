@@ -305,6 +305,21 @@ export default defineSchema({
     .index("by_post", ["postId"])
     .index("by_created", ["createdAt"]),
 
+  /**
+   * API keys typed in the panel (ICT Monitor → Chaves). Only internal
+   * functions read them; queries return whether they exist, never values.
+   * Convex environment variables, when set, take precedence.
+   */
+  ictSecrets: defineTable({
+    name: v.union(
+      v.literal("xBearer"),
+      v.literal("xaiKey"),
+      v.literal("xaiModel")
+    ),
+    value: v.string(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
   /** One document: settings, sync cursor, lock and last errors. */
   ictState: defineTable({
     key: v.literal("main"),

@@ -1,7 +1,13 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { alertReasons } from "../lib/ict/alerts";
-import { analyzePost, GrokError, listModels, pickModel } from "../lib/ict/grok";
+import {
+  analyzePost,
+  GrokError,
+  listModels,
+  pickModel,
+  XAI_API,
+} from "../lib/ict/grok";
 import {
   DEFAULT_ALERT_RULES,
   ICT_ACCOUNT,
@@ -9,10 +15,16 @@ import {
   type MonitorStatus,
   type XPost,
 } from "../lib/ict/types";
-import { fetchTimeline, resolveUser, XApiError } from "../lib/ict/x-client";
+import {
+  bearerFromKeys,
+  fetchTimeline,
+  resolveUser,
+  XApiError,
+} from "../lib/ict/x-client";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
+  action,
   internalAction,
   internalMutation,
   internalQuery,
@@ -89,9 +101,59 @@ async function ensureState(ctx: MutationCtx): Promise<State> {
   return (await ctx.db.get(id)) as State;
 }
 
-const configured = () => ({
-  x: Boolean(process.env.X_BEARER_TOKEN),
-  grok: Boolean(process.env.XAI_API_KEY),
+type SecretName = "xBearer" | "xaiKey" | "xaiModel";
+
+const ENV_NAME: Record<SecretName, string> = {
+  xBearer: "X_BEARER_TOKEN",
+  xaiKey: "XAI_API_KEY",
+  xaiModel: "XAI_MODEL",
+};
+
+/** Key from the Convex environment, else the one saved in the panel. */
+async function readKeys(ctx: QueryCtx) {
+  const rows = await ctx.db.query("ictSecrets").take(10);
+  const pick = (name: SecretName) => {
+    const env = process.env[ENV_NAME[name]];
+    if (env) {
+      return { value: env, source: "env" as const };
+    }
+    const row = rows.find((r) => r.name === name);
+    return row ? { value: row.value, source: "panel" as const } : null;
+  };
+  return {
+    xBearer: pick("xBearer"),
+    xaiKey: pick("xaiKey"),
+    xaiModel: pick("xaiModel"),
+  };
+}
+
+/** Which keys exist and where from; the last 4 characters at most. */
+async function configured(ctx: QueryCtx) {
+  const k = await readKeys(ctx);
+  const hint = (v: { value: string } | null) =>
+    v ? `…${v.value.slice(-4)}` : null;
+  return {
+    x: Boolean(k.xBearer),
+    grok: Boolean(k.xaiKey),
+    xSource: k.xBearer?.source ?? null,
+    grokSource: k.xaiKey?.source ?? null,
+    xHint: hint(k.xBearer),
+    grokHint: hint(k.xaiKey),
+    model: k.xaiModel?.value ?? null,
+  };
+}
+
+/** Plain key values, for the actions that call the APIs. */
+export const apiKeys = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const k = await readKeys(ctx);
+    return {
+      xBearer: k.xBearer?.value ?? null,
+      xaiKey: k.xaiKey?.value ?? null,
+      xaiModel: k.xaiModel?.value ?? null,
+    };
+  },
 });
 
 const log = (event: string, data: Record<string, unknown> = {}) =>
@@ -328,7 +390,8 @@ async function collect(state: State, bearer: string) {
 export const tick = internalAction({
   args: { force: v.optional(v.boolean()) },
   handler: async (ctx, { force = false }) => {
-    const bearer = process.env.X_BEARER_TOKEN;
+    const keys = await ctx.runQuery(internal.ict.apiKeys, {});
+    const bearer = keys.xBearer;
     const state = await ctx.runMutation(internal.ict.acquire, { force });
     if (!state) {
       return;
@@ -338,7 +401,8 @@ export const tick = internalAction({
         status: "not_configured",
         ok: false,
         patch: {
-          lastError: "X_BEARER_TOKEN não está configurado no Convex.",
+          lastError:
+            "Chave da API do X em falta: adicione-a em ICT Monitor → Chaves das APIs.",
           nextAllowedAt: Date.now() + 60 * 60_000,
         },
       });
@@ -383,7 +447,7 @@ export const tick = internalAction({
         patch: { lastError: e.message, nextAllowedAt: e.nextAllowedAt },
       });
     }
-    if (state.aiEnabled && process.env.XAI_API_KEY) {
+    if (state.aiEnabled && keys.xaiKey) {
       const ids = await ctx.runQuery(internal.ict.pendingPosts, {
         limit: ANALYSES_PER_TICK,
       });
@@ -532,7 +596,8 @@ export const analyze = internalAction({
     force: v.optional(v.boolean()),
   },
   handler: async (ctx, { postId, attempt, force = false }) => {
-    const key = process.env.XAI_API_KEY;
+    const keys = await ctx.runQuery(internal.ict.apiKeys, {});
+    const key = keys.xaiKey;
     if (!key) {
       return;
     }
@@ -543,7 +608,7 @@ export const analyze = internalAction({
     if (!claimed) {
       return;
     }
-    let model = process.env.XAI_MODEL || claimed.model;
+    let model = keys.xaiModel || claimed.model;
     try {
       if (!model) {
         model = pickModel(await listModels(key));
@@ -648,7 +713,7 @@ export const overview = query({
       .take(20);
     return {
       account: ICT_ACCOUNT,
-      configured: configured(),
+      configured: await configured(ctx),
       settings: settingsOf(s),
       state: s
         ? {
@@ -987,7 +1052,7 @@ export const diagnostics = query({
     }
     const s = await readState(ctx);
     const now = Date.now();
-    const cfg = configured();
+    const cfg = await configured(ctx);
     const overdue =
       s?.enabled &&
       s.lastCheckAt !== undefined &&
@@ -1003,5 +1068,196 @@ export const diagnostics = query({
       lastError: s?.lastError ?? null,
       lastGrokError: s?.lastGrokError ?? null,
     };
+  },
+});
+
+/* ============================== API keys ================================ */
+
+const secretName = v.union(
+  v.literal("xBearer"),
+  v.literal("xaiKey"),
+  v.literal("xaiModel")
+);
+
+export const storeKeys = internalMutation({
+  args: {
+    set: v.array(v.object({ name: secretName, value: v.string() })),
+    clear: v.array(secretName),
+  },
+  handler: async (ctx, { set, clear }) => {
+    const now = Date.now();
+    for (const name of [...clear, ...set.map((s) => s.name)]) {
+      const old = await ctx.db
+        .query("ictSecrets")
+        .withIndex("by_name", (q) => q.eq("name", name))
+        .first();
+      if (old) {
+        await ctx.db.delete(old._id);
+      }
+    }
+    for (const s of set) {
+      await ctx.db.insert("ictSecrets", { ...s, updatedAt: now });
+    }
+    // New keys: try again right away instead of waiting for the backoff
+    const state = await ensureState(ctx);
+    await ctx.db.patch(state._id, {
+      nextAllowedAt: 0,
+      consecutiveFailures: 0,
+      status: state.enabled ? "idle" : "paused",
+    });
+  },
+});
+
+const clean = (s: string | undefined) => (s ?? "").replace(/\s+/g, "");
+
+/**
+ * Saves the keys typed in the panel (only on the server). X accepts a
+ * Bearer token, or the app's API Key + API Secret, which are exchanged
+ * for one here. Starts a sync afterwards.
+ */
+export const saveKeys = action({
+  args: {
+    xBearer: v.optional(v.string()),
+    xApiKey: v.optional(v.string()),
+    xApiSecret: v.optional(v.string()),
+    xaiKey: v.optional(v.string()),
+    xaiModel: v.optional(v.string()),
+    clear: v.optional(v.array(secretName)),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean; message: string }> => {
+    if (!(await ctx.auth.getUserIdentity())) {
+      throw new Error("Unauthenticated");
+    }
+    const set: { name: SecretName; value: string }[] = [];
+    let bearer = clean(args.xBearer);
+    if (!bearer && clean(args.xApiKey) && clean(args.xApiSecret)) {
+      try {
+        bearer = await bearerFromKeys(
+          clean(args.xApiKey),
+          clean(args.xApiSecret)
+        );
+      } catch (err) {
+        return {
+          ok: false,
+          message: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+    if (bearer) {
+      // A pasted URL-encoded token (%3D) works the same decoded
+      set.push({ name: "xBearer", value: decodeURIComponent(bearer) });
+    }
+    if (clean(args.xaiKey)) {
+      set.push({ name: "xaiKey", value: clean(args.xaiKey) });
+    }
+    if (args.xaiModel !== undefined && clean(args.xaiModel)) {
+      set.push({ name: "xaiModel", value: clean(args.xaiModel) });
+    }
+    await ctx.runMutation(internal.ict.storeKeys, {
+      set,
+      clear: args.clear ?? [],
+    });
+    await ctx.scheduler.runAfter(0, internal.ict.tick, { force: true });
+    return { ok: true, message: "Chaves guardadas. A sincronizar…" };
+  },
+});
+
+export interface KeyTest {
+  ok: boolean;
+  message: string;
+}
+
+async function testX(bearer: string | null): Promise<KeyTest> {
+  if (!bearer) {
+    return { ok: false, message: "Sem chave do X." };
+  }
+  try {
+    const user = await resolveUser(ICT_ACCOUNT.username, bearer, {
+      retries: 0,
+    });
+    const timeline = await fetchTimeline(
+      user.id,
+      ICT_ACCOUNT.username,
+      bearer,
+      {
+        maxPages: 1,
+        pageSize: 5,
+        retries: 0,
+      }
+    );
+    return {
+      ok: true,
+      message: `Ligado. @${user.username} encontrado e timeline acessível (${timeline.posts.length} publicações de teste).`,
+    };
+  } catch (err) {
+    const e = errorStatus(err);
+    const hint =
+      e.status === "auth_error"
+        ? " Confirme o Bearer Token e se o plano da API do X inclui leitura de timelines."
+        : "";
+    return { ok: false, message: `${e.message}${hint}` };
+  }
+}
+
+async function testGrok(
+  key: string | null,
+  configuredModel: string | null
+): Promise<KeyTest> {
+  if (!key) {
+    return { ok: false, message: "Sem chave da xAI." };
+  }
+  try {
+    const models = await listModels(key);
+    const model = pickModel(models, configuredModel);
+    if (!model) {
+      return {
+        ok: false,
+        message: "A chave funciona mas não lista nenhum modelo Grok.",
+      };
+    }
+    // A tiny real request: confirms the key also has credits
+    const res = await fetch(`${XAI_API}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 5,
+        messages: [{ role: "user", content: "Responda só: OK" }],
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      return {
+        ok: false,
+        message: `Modelo ${model} recusou (${res.status}): ${body}`,
+      };
+    }
+    return { ok: true, message: `Ligado. Modelo ${model} respondeu.` };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/** "Testar ligação": one real call to each API with the saved keys. */
+export const testKeys = action({
+  args: {},
+  handler: async (ctx): Promise<{ x: KeyTest; grok: KeyTest }> => {
+    if (!(await ctx.auth.getUserIdentity())) {
+      throw new Error("Unauthenticated");
+    }
+    const keys = await ctx.runQuery(internal.ict.apiKeys, {});
+    const [x, grok] = await Promise.all([
+      testX(keys.xBearer),
+      testGrok(keys.xaiKey, keys.xaiModel),
+    ]);
+    log("key_test", { x: x.ok, grok: grok.ok });
+    return { x, grok };
   },
 });

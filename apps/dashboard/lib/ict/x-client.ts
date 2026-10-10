@@ -309,3 +309,47 @@ export async function fetchTimeline(
     rateLimit,
   };
 }
+
+/**
+ * App-only Bearer token from the app's API Key and API Key Secret
+ * (OAuth 2.0 client credentials), for people who only have those two.
+ */
+export async function bearerFromKeys(
+  apiKey: string,
+  apiSecret: string,
+  doFetch: FetchFn = fetch
+): Promise<string> {
+  const basic = btoa(
+    `${encodeURIComponent(apiKey)}:${encodeURIComponent(apiSecret)}`
+  );
+  let res: Response;
+  try {
+    res = await doFetch("https://api.x.com/oauth2/token", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err) {
+    throw new XApiError(
+      "unavailable",
+      0,
+      `Sem ligação à API do X: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+  const body = (await res.json().catch(() => ({}))) as {
+    access_token?: string;
+    token_type?: string;
+  };
+  if (!(res.ok && body.access_token)) {
+    throw new XApiError(
+      "auth",
+      res.status,
+      "O X recusou a API Key / API Secret (confira se são da mesma app)."
+    );
+  }
+  return body.access_token;
+}
