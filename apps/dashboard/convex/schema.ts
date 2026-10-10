@@ -342,6 +342,10 @@ export default defineSchema({
     }),
     // Sync state
     userId: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    profileImageUrl: v.optional(v.string()),
+    /** Analyse every new post with Grok on its own (off: only on request). */
+    autoAnalyze: v.optional(v.boolean()),
     sinceId: v.optional(v.string()),
     /** Pagination interrupted by maxPages: continue from here. */
     resumeToken: v.optional(v.string()),
