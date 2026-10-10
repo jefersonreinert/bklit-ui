@@ -26,6 +26,8 @@ jobs:
       # Repository secrets (Settings → Secrets and variables → Actions)
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Optional: publishes the Convex functions, schema and crons first
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - name: Check secrets
@@ -56,6 +58,11 @@ jobs:
       - name: Install dependencies
         if: steps.secrets.outputs.ok == 'true'
         run: pnpm install --frozen-lockfile
+
+      - name: Deploy Convex (functions, schema, crons)
+        if: steps.secrets.outputs.ok == 'true' && env.CONVEX_DEPLOY_KEY != ''
+        working-directory: apps/dashboard
+        run: npx convex deploy
 
       - name: Build and deploy
         if: steps.secrets.outputs.ok == 'true'

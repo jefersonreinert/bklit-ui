@@ -89,6 +89,13 @@ export const navItems: NavItem[] = [
     icon: "IconTradingViewCandles",
   },
   {
+    href: "/ict",
+    label: "The Inner Circle Trader",
+    description:
+      "ICT Monitor: posts de @I_Am_The_ICT no X, analisados pelo Grok",
+    icon: "IconTarget",
+  },
+  {
     href: "/calendario",
     label: "Calendário econômico",
     description:

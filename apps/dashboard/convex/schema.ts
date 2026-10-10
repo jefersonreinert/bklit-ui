@@ -229,6 +229,128 @@ export default defineSchema({
     at: v.number(),
   }).index("by_at", ["at"]),
 
+  /* ------------------------- The Inner Circle Trader ---------------------- */
+  // Posts of @I_Am_The_ICT collected by the ict cron; the text is stored
+  // exactly as the X API returned it, Grok's analysis lives apart.
+
+  ictPosts: defineTable({
+    postId: v.string(),
+    authorId: v.string(),
+    username: v.string(),
+    text: v.string(),
+    createdAt: v.number(),
+    url: v.string(),
+    conversationId: v.optional(v.string()),
+    references: v.array(v.object({ type: v.string(), id: v.string() })),
+    media: v.array(
+      v.object({
+        type: v.string(),
+        url: v.optional(v.string()),
+        previewUrl: v.optional(v.string()),
+      })
+    ),
+    urls: v.array(v.string()),
+    metrics: v.optional(v.record(v.string(), v.number())),
+    /** Untouched API object (JSON). */
+    raw: v.string(),
+    fetchedAt: v.number(),
+    // Denormalized from the current analysis, for filters and search
+    analysisStatus: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    analysisStartedAt: v.optional(v.number()),
+    category: v.optional(v.string()),
+    relevance: v.optional(v.string()),
+    concepts: v.optional(v.array(v.string())),
+    /** Original text + Portuguese summary (one search index for both). */
+    searchText: v.string(),
+    favorite: v.boolean(),
+    read: v.boolean(),
+  })
+    .index("by_postId", ["postId"])
+    .index("by_created", ["createdAt"])
+    .index("by_status", ["analysisStatus", "createdAt"])
+    .index("by_category", ["category", "createdAt"])
+    .index("by_relevance", ["relevance", "createdAt"])
+    .index("by_favorite", ["favorite", "createdAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["category", "relevance", "favorite"],
+    }),
+
+  /** Every Grok run; the newest completed one is the post's analysis. */
+  ictAnalyses: defineTable({
+    postId: v.string(),
+    model: v.string(),
+    status: v.union(v.literal("completed"), v.literal("failed")),
+    /** IctAnalysisResult as JSON (completed only). */
+    result: v.optional(v.string()),
+    summary: v.optional(v.string()),
+    category: v.optional(v.string()),
+    relevance: v.optional(v.string()),
+    error: v.optional(v.string()),
+    attempt: v.number(),
+    createdAt: v.number(),
+  }).index("by_post", ["postId", "createdAt"]),
+
+  ictAlerts: defineTable({
+    postId: v.string(),
+    reasons: v.array(v.string()),
+    read: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_post", ["postId"])
+    .index("by_created", ["createdAt"]),
+
+  /** One document: settings, sync cursor, lock and last errors. */
+  ictState: defineTable({
+    key: v.literal("main"),
+    // Settings
+    enabled: v.boolean(),
+    aiEnabled: v.boolean(),
+    intervalMinutes: v.number(),
+    interests: v.array(v.string()),
+    alertRules: v.object({
+      newPost: v.boolean(),
+      categories: v.array(v.string()),
+      keywords: v.array(v.string()),
+      concepts: v.array(v.string()),
+      minRelevance: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.null()
+      ),
+    }),
+    // Sync state
+    userId: v.optional(v.string()),
+    sinceId: v.optional(v.string()),
+    /** Pagination interrupted by maxPages: continue from here. */
+    resumeToken: v.optional(v.string()),
+    resumeNewestId: v.optional(v.string()),
+    status: v.string(),
+    lockUntil: v.number(),
+    nextAllowedAt: v.number(),
+    lastCheckAt: v.optional(v.number()),
+    lastSuccessAt: v.optional(v.number()),
+    lastPostAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    lastErrorAt: v.optional(v.number()),
+    lastGrokError: v.optional(v.string()),
+    lastGrokErrorAt: v.optional(v.number()),
+    grokModel: v.optional(v.string()),
+    rateRemaining: v.optional(v.number()),
+    rateResetAt: v.optional(v.number()),
+    consecutiveFailures: v.number(),
+    syncs: v.number(),
+    postsStored: v.number(),
+    analysesDone: v.number(),
+    analysesFailed: v.number(),
+  }).index("by_key", ["key"]),
+
   stores: defineTable({
     key: v.string(),
     value: v.string(),
