@@ -294,7 +294,7 @@ ${priceCss}
 .toolbar{position:fixed;top:12px;right:12px;display:flex;gap:8px;align-items:center;font:13px system-ui;background:#111;color:#fff;padding:8px 10px;border-radius:10px;z-index:9}
 .toolbar button{font:inherit;background:#fff;color:#111;border:0;border-radius:6px;padding:5px 10px;cursor:pointer}
 @media print{.toolbar{display:none}html,body{background:var(--bg)}.page{margin:0}}
-@media screen and (max-width:${Math.round(w * 3.78)}px){.page{width:100%;padding:8vw 6vw}}
+${opts.preview ? "" : `@media screen and (max-width:${Math.floor(w * 3.78) - 2}px){.page{width:100%;padding:8vw 6vw}}`}
 </style>
 </head>
 <body>
