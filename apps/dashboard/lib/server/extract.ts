@@ -25,6 +25,8 @@ export interface ExtractFile {
   mimeType: string;
 }
 
+const NO_CREDITS = /credit balance|billing|insufficient.*(credit|fund)/i;
+
 const IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -214,6 +216,12 @@ async function run<T>(
     }
     if (error instanceof Anthropic.RateLimitError) {
       throw new ExtractError("Limite da API atingido; tente de novo.", 429);
+    }
+    if (error instanceof Anthropic.APIError && NO_CREDITS.test(error.message)) {
+      throw new ExtractError(
+        "Sem créditos na API da Anthropic. Adicione créditos em console.anthropic.com → Billing para ler fotos e PDFs.",
+        402
+      );
     }
     if (error instanceof Anthropic.BadRequestError) {
       throw new ExtractError(`Arquivo recusado: ${error.message}`, 400);
