@@ -376,4 +376,63 @@ export default defineSchema({
     updatedAt: v.number(),
     device: v.string(),
   }).index("by_key", ["key"]),
+
+  /**
+   * Telegram connector (one document). The API hash and the MTProto
+   * session never leave the server: public queries only report whether
+   * they exist.
+   */
+  tgState: defineTable({
+    key: v.literal("main"),
+    apiId: v.optional(v.number()),
+    apiHash: v.optional(v.string()),
+    /** GramJS StringSession of the logged-in account. */
+    session: v.optional(v.string()),
+    me: v.optional(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        username: v.optional(v.string()),
+        phone: v.optional(v.string()),
+      })
+    ),
+    connectedAt: v.optional(v.number()),
+    /** A login in progress (QR or phone code), with its temporary session. */
+    pending: v.optional(
+      v.object({
+        kind: v.union(v.literal("qr"), v.literal("phone")),
+        session: v.string(),
+        startedAt: v.number(),
+        phone: v.optional(v.string()),
+        phoneCodeHash: v.optional(v.string()),
+        codeVia: v.optional(v.string()),
+        qrUrl: v.optional(v.string()),
+        qrExpiresAt: v.optional(v.number()),
+        needsPassword: v.optional(v.boolean()),
+        passwordHint: v.optional(v.string()),
+      })
+    ),
+    /** The assistant may run tools that send or change things. */
+    assistantWrites: v.boolean(),
+    /** Opt-in groups of mcp-telegram (Stars, group calls, quick replies). */
+    optIn: v.array(v.string()),
+    lockUntil: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    lastErrorAt: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
+  /** Audit trail of Telegram tool calls (no message bodies). */
+  tgCalls: defineTable({
+    tool: v.string(),
+    source: v.union(
+      v.literal("panel"),
+      v.literal("assistant"),
+      v.literal("login")
+    ),
+    ok: v.boolean(),
+    ms: v.number(),
+    error: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_at", ["at"]),
 });

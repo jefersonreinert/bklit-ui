@@ -467,7 +467,8 @@ type ConnectorKey =
   | "gmail"
   | "drive"
   | "youtube"
-  | "whatsapp";
+  | "whatsapp"
+  | "telegram";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
 const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
@@ -477,6 +478,7 @@ const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
   { key: "drive", label: "Google Drive" },
   { key: "youtube", label: "YouTube" },
   { key: "whatsapp", label: "WhatsApp" },
+  { key: "telegram", label: "Telegram" },
 ];
 
 const SERVICE_KEYS = new Set<string>([
@@ -486,6 +488,7 @@ const SERVICE_KEYS = new Set<string>([
   "drive",
   "youtube",
   "whatsapp",
+  "telegram",
 ]);
 const isService = (server: string): server is ServiceBrand =>
   SERVICE_KEYS.has(server);
@@ -499,6 +502,9 @@ function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   }
   if (key === "whatsapp") {
     return Boolean(status.whatsapp?.available && status.whatsapp.unlocked);
+  }
+  if (key === "telegram") {
+    return Boolean(status.telegram?.connected && status.telegram.unlocked);
   }
   if (key === "github") {
     return Boolean(status.github?.connected);
@@ -518,6 +524,9 @@ function connectorSubtitle(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "whatsapp") {
     return "Ler conversas";
   }
+  if (key === "telegram") {
+    return status?.telegram.name ?? "Conectado";
+  }
   if (key === "github") {
     return status?.github.login ? `@${status.github.login}` : "Conectado";
   }
@@ -532,7 +541,7 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "notion") {
     return notionStartUrl(back);
   }
-  if (key === "youtube" || key === "github") {
+  if (key === "youtube" || key === "github" || key === "telegram") {
     return `${BASE_PATH}/conectores/`;
   }
   if (key === "whatsapp") {
@@ -670,6 +679,7 @@ const SERVICE_NAMES: Record<string, string> = {
   drive: "Google Drive",
   youtube: "YouTube",
   whatsapp: "WhatsApp",
+  telegram: "Telegram",
 };
 
 /** "Usou Gmail e Notion · 3 ações ›", expandable (like Claude's tool line). */
@@ -940,6 +950,7 @@ export function AiPage() {
     drive: true,
     youtube: true,
     whatsapp: true,
+    telegram: true,
   });
   const { status: connectors } = useConnectors();
   const profile = usePreferences();
