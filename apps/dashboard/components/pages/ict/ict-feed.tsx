@@ -146,7 +146,9 @@ function SearchResults({
   text,
   args,
   interests,
+  avatar,
 }: {
+  avatar: string | null;
   text: string;
   args: ReturnType<typeof toArgs>;
   interests: string[];
@@ -164,17 +166,24 @@ function SearchResults({
         {hits.length} resultado(s) (máx. 50)
       </p>
       {hits.map((p) => (
-        <PostCard interests={interests} key={p.postId} post={p as FeedPost} />
+        <PostCard
+          avatar={avatar}
+          interests={interests}
+          key={p.postId}
+          post={p as FeedPost}
+        />
       ))}
     </div>
   );
 }
 
 export function IctFeed({
+  avatar,
   interests,
   latestId,
   hasPosts,
 }: {
+  avatar: string | null;
   interests: string[];
   latestId: string | null;
   hasPosts: boolean;
@@ -191,7 +200,14 @@ export function IctFeed({
 
   let body: React.ReactNode;
   if (text) {
-    body = <SearchResults args={args} interests={interests} text={text} />;
+    body = (
+      <SearchResults
+        args={args}
+        avatar={avatar}
+        interests={interests}
+        text={text}
+      />
+    );
   } else if (status === "LoadingFirstPage") {
     body = <Empty text="A carregar publicações…" />;
   } else if (results.length === 0) {
@@ -209,6 +225,7 @@ export function IctFeed({
       <div className="flex flex-col gap-3">
         {results.map((p) => (
           <PostCard
+            avatar={avatar}
             featured={p.postId === latestId && filter === EMPTY_FILTER}
             interests={interests}
             key={p.postId}

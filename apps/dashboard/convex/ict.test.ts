@@ -92,6 +92,13 @@ afterEach(() => {
   }
 });
 
+/** Turns on automatic analysis (off by default: only on request). */
+async function autoAnalyze(t: ReturnType<typeof convexTest>) {
+  await t
+    .withIdentity(panel)
+    .mutation(api.ict.updateSettings, { autoAnalyze: true });
+}
+
 async function overview(t: ReturnType<typeof convexTest>) {
   const o = await t.withIdentity(panel).query(api.ict.overview, {});
   if (!o) {
@@ -103,6 +110,7 @@ async function overview(t: ReturnType<typeof convexTest>) {
 describe("ICT monitor backend", () => {
   it("collects, stores and analyses new posts, and the feed shows them", async () => {
     const t = convexTest(schema, modules);
+    await autoAnalyze(t);
     const calls = apis(() =>
       json({ data: [tweet("102"), tweet("101")], meta: {} })
     );
@@ -197,6 +205,7 @@ describe("ICT monitor backend", () => {
 
   it("keeps the post when the Grok analysis fails or is invalid", async () => {
     const t = convexTest(schema, modules);
+    await autoAnalyze(t);
     apis(
       () => json({ data: [tweet("500")] }),
       () => json({ choices: [{ message: { content: "not json" } }] })
@@ -208,6 +217,42 @@ describe("ICT monitor backend", () => {
     expect(o.counts.failed).toBe(1);
     expect(o.latest?.text).toBe("post 500");
     expect(o.latest?.analysis.result).toBeNull();
+  });
+
+  it("analyses only on request when automatic analysis is off (default)", async () => {
+    const t = convexTest(schema, modules);
+    const calls = apis(() => json({ data: [tweet("900")] }));
+    await t.action(internal.ict.tick, { force: true });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(calls.some((c) => c.includes("api.x.ai"))).toBe(false);
+    expect((await overview(t)).counts.unanalyzed).toBe(1);
+    await t.withIdentity(panel).mutation(api.ict.reanalyze, { postId: "900" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(calls.filter((c) => c.includes("api.x.ai")).length).toBe(1);
+    expect((await overview(t)).counts.unanalyzed).toBe(0);
+  });
+
+  it("stores the profile photo in a larger size", async () => {
+    const t = convexTest(schema, modules);
+    vi.stubGlobal("fetch", (input: string | URL) =>
+      String(input).includes("/users/by/username/")
+        ? Promise.resolve(
+            json({
+              data: {
+                id: "77",
+                name: "ICT",
+                username: "I_Am_The_ICT",
+                profile_image_url:
+                  "https://pbs.twimg.com/profile_images/1/a_normal.jpg",
+              },
+            })
+          )
+        : Promise.resolve(json({ data: [] }))
+    );
+    await t.action(internal.ict.tick, { force: true });
+    expect((await overview(t)).account.profileImageUrl).toBe(
+      "https://pbs.twimg.com/profile_images/1/a_400x400.jpg"
+    );
   });
 
   it("does not call Grok when AI is off or nothing is new", async () => {
@@ -223,6 +268,7 @@ describe("ICT monitor backend", () => {
 
   it("searches the original text and the AI summary, and filters by category", async () => {
     const t = convexTest(schema, modules);
+    await autoAnalyze(t);
     apis(() => json({ data: [tweet("600", "Watch the London killzone")] }));
     await t.action(internal.ict.tick, { force: true });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -247,6 +293,7 @@ describe("ICT monitor backend", () => {
 
   it("raises one alert per post from the configured rules", async () => {
     const t = convexTest(schema, modules);
+    await autoAnalyze(t);
     await t.withIdentity(panel).mutation(api.ict.updateSettings, {
       alertRules: {
         newPost: true,
@@ -290,6 +337,7 @@ describe("ICT monitor backend", () => {
       Reflect.deleteProperty(process.env, name);
     }
     const t = convexTest(schema, modules);
+    await autoAnalyze(t);
     const before = await overview(t);
     expect(before.configured.x).toBe(false);
     const calls = apis(() => json({ data: [tweet("800")] }));

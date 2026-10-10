@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { IctFeed } from "./ict-feed";
 import { IctKeysSheet } from "./ict-keys";
 import { IctSettingsSheet } from "./ict-settings";
-import type { FeedPost } from "./post-card";
+import { Avatar, type FeedPost } from "./post-card";
 
 type Overview = NonNullable<FunctionReturnType<typeof api.ict.overview>>;
 type Diagnostics = NonNullable<FunctionReturnType<typeof api.ict.diagnostics>>;
@@ -97,11 +97,11 @@ function Controls({
       </span>
       <span className="flex items-center gap-2 text-sm">
         <Switch
-          aria-label="Análise por IA"
-          checked={o.settings.aiEnabled}
-          onCheckedChange={(aiEnabled) => update({ aiEnabled })}
+          aria-label="Análise automática por IA"
+          checked={o.settings.autoAnalyze}
+          onCheckedChange={(autoAnalyze) => update({ autoAnalyze })}
         />
-        Análise por IA
+        Análise automática
       </span>
       <Button
         disabled={busy || o.state?.status === "syncing"}
@@ -115,10 +115,10 @@ function Controls({
         <Icon className="size-4" name="IconArrowRotateClockwise" />
         Atualizar agora
       </Button>
-      {o.counts.unanalyzed && o.settings.aiEnabled ? (
+      {o.counts.unanalyzed && o.configured.grok ? (
         <Button onClick={() => analyzePending({})} size="sm" variant="ghost">
           <Icon className="size-4" name="IconSparklesSoft" />
-          Analisar pendentes
+          Analisar as 10 mais recentes
         </Button>
       ) : null}
       <Button onClick={onKeys} size="sm" variant="ghost">
@@ -178,8 +178,8 @@ function Kpis({ o, d }: { o: Overview; d: Diagnostics | null | undefined }) {
       <MetricTile
         hint={o.counts.failed ? `${o.counts.failed} falharam` : undefined}
         icon="IconSparklesSoft"
-        label="Por analisar"
-        tone={o.counts.unanalyzed ? "warn" : "good"}
+        label="Sem análise"
+        tone="neutral"
         value={String(o.counts.unanalyzed)}
       />
       <MetricTile
@@ -309,21 +309,24 @@ function Monitor() {
     <div className="flex flex-col gap-4 md:gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-xl tracking-tight">
-              ICT Monitor
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              {ICT_ACCOUNT.name} ·{" "}
-              <a
-                className="underline-offset-2 hover:underline"
-                href={ICT_ACCOUNT.url}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                @{ICT_ACCOUNT.username}
-              </a>
-            </p>
+          <div className="flex items-center gap-3">
+            <Avatar size={56} src={o.account.profileImageUrl} />
+            <div>
+              <h2 className="font-semibold text-xl tracking-tight">
+                ICT Monitor
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {o.account.name} ·{" "}
+                <a
+                  className="underline-offset-2 hover:underline"
+                  href={ICT_ACCOUNT.url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  @{ICT_ACCOUNT.username}
+                </a>
+              </p>
+            </div>
           </div>
           <Controls
             o={o}
@@ -352,6 +355,7 @@ function Monitor() {
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div className="min-w-0">
           <IctFeed
+            avatar={o.account.profileImageUrl}
             hasPosts={o.counts.total > 0}
             interests={o.settings.interests}
             latestId={(o.latest as FeedPost | null)?.postId ?? null}

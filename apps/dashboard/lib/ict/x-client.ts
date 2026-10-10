@@ -140,7 +140,12 @@ export async function xGet<T>(
 }
 
 interface XUserResponse {
-  data?: { id: string; name: string; username: string };
+  data?: {
+    id: string;
+    name: string;
+    username: string;
+    profile_image_url?: string;
+  };
   errors?: { detail?: string }[];
 }
 

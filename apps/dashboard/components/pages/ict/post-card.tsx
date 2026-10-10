@@ -180,9 +180,41 @@ function AnalysisBody({
   );
 }
 
+function AnalyzeButton({ post }: { post: FeedPost }) {
+  const reanalyze = useMutation(api.ict.reanalyze);
+  const [asked, setAsked] = useState(false);
+  const failed = post.analysisStatus === "failed";
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3">
+      <Button
+        disabled={asked}
+        onClick={async () => {
+          setAsked(true);
+          await reanalyze({ postId: post.postId }).catch(() => setAsked(false));
+        }}
+        size="sm"
+      >
+        <Icon
+          className="size-4"
+          name={asked ? "IconLoader" : "IconSparklesSoft"}
+        />
+        {asked ? "Pedido enviado…" : "Analisar com IA"}
+      </Button>
+      <span className="text-muted-foreground text-xs">
+        {failed
+          ? `A última análise falhou${post.analysis.lastError ? `: ${post.analysis.lastError}` : "."}`
+          : "Resumo, conceitos ICT e relevância pelo Grok (consome créditos da xAI)."}
+      </span>
+    </div>
+  );
+}
+
 function AnalysisSection({ post }: { post: FeedPost }) {
   const [open, setOpen] = useState(true);
   const a = post.analysis.result;
+  if (!a && post.analysisStatus !== "running") {
+    return <AnalyzeButton post={post} />;
+  }
   let state = "Análise pendente";
   if (post.analysisStatus === "running") {
     state = "A analisar com o Grok…";
@@ -233,11 +265,97 @@ function AnalysisSection({ post }: { post: FeedPost }) {
   );
 }
 
+/** Profile photo (X avatar), or the initials when there is none yet. */
+export function Avatar({
+  src,
+  size = 36,
+}: {
+  src: string | null;
+  size?: number;
+}) {
+  if (!src) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-full bg-foreground font-semibold text-background text-xs"
+        style={{ height: size, width: size }}
+      >
+        ICT
+      </span>
+    );
+  }
+  return (
+    // biome-ignore lint/performance/noImgElement: X CDN image
+    <img
+      alt="The Inner Circle Trader"
+      className="shrink-0 rounded-full object-cover"
+      height={size}
+      referrerPolicy="no-referrer"
+      src={src}
+      style={{ height: size, width: size }}
+      width={size}
+    />
+  );
+}
+
+function MediaGrid({ post }: { post: FeedPost }) {
+  const shown = post.media.filter((m) => m.url || m.previewUrl).slice(0, 4);
+  if (shown.length === 0) {
+    return null;
+  }
+  return (
+    <div
+      className={cn(
+        "grid gap-1.5 overflow-hidden rounded-xl",
+        shown.length > 1 && "grid-cols-2"
+      )}
+    >
+      {shown.map((m) => {
+        const src = m.type === "photo" ? (m.url ?? m.previewUrl) : m.previewUrl;
+        return (
+          <a
+            className="relative block bg-muted"
+            href={post.url}
+            key={src}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {/* biome-ignore lint/performance/noImgElement: X CDN image */}
+            <img
+              alt=""
+              className={cn(
+                "w-full object-cover",
+                shown.length > 1 ? "aspect-square" : "max-h-[520px]"
+              )}
+              height={400}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              src={src}
+              width={600}
+            />
+            {m.type === "photo" ? null : (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-black/60 text-white">
+                  <Icon className="size-5" name="IconPlay" />
+                </span>
+              </span>
+            )}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Links of the post itself (photo/video pages) are not shown as links. */
+const MEDIA_LINK = /x\.com\/[^/]+\/status\/\d+\/(photo|video)\//;
+
 export function PostCard({
   post,
   featured,
   interests,
+  avatar,
 }: {
+  avatar: string | null;
   post: FeedPost;
   featured?: boolean;
   interests: string[];
@@ -247,6 +365,7 @@ export function PostCard({
   const [copied, setCopied] = useState(false);
   const interesting =
     post.analysis.result && interests.includes(post.analysis.result.category);
+  const links = post.urls.filter((u) => !MEDIA_LINK.test(u));
 
   return (
     <article
@@ -257,6 +376,7 @@ export function PostCard({
       )}
     >
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Avatar src={avatar} />
         <span className="font-semibold text-sm">{ICT_ACCOUNT.name}</span>
         <span className="text-muted-foreground text-sm">@{post.username}</span>
         <span className="text-muted-foreground text-xs">
@@ -284,18 +404,10 @@ export function PostCard({
       <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
         {post.text}
       </p>
-      {post.media.length || post.urls.length ? (
+      <MediaGrid post={post} />
+      {links.length ? (
         <div className="flex flex-wrap gap-2 text-muted-foreground text-xs">
-          {post.media.map((m, i) => (
-            <span className="flex items-center gap-1" key={`${m.type}-${i}`}>
-              <Icon
-                className="size-3.5"
-                name={m.type === "photo" ? "IconImages1" : "IconPlay"}
-              />
-              {m.type === "photo" ? "Imagem" : "Vídeo"}
-            </span>
-          ))}
-          {post.urls.map((u) => (
+          {links.map((u) => (
             <a
               className="truncate underline underline-offset-2"
               href={u}
@@ -330,15 +442,17 @@ export function PostCard({
           <Icon className="size-4" name="IconCheckmark1Small" />
           {post.read ? "Marcar não lida" : "Marcar lida"}
         </Button>
-        <Button
-          disabled={post.analysisStatus === "running"}
-          onClick={() => reanalyze({ postId: post.postId })}
-          size="sm"
-          variant="ghost"
-        >
-          <Icon className="size-4" name="IconArrowsRepeat" />
-          {post.analysis.result ? "Reanalisar" : "Analisar"}
-        </Button>
+        {post.analysis.result ? (
+          <Button
+            disabled={post.analysisStatus === "running"}
+            onClick={() => reanalyze({ postId: post.postId })}
+            size="sm"
+            variant="ghost"
+          >
+            <Icon className="size-4" name="IconArrowsRepeat" />
+            Reanalisar
+          </Button>
+        ) : null}
         <Button
           onClick={async () => {
             await navigator.clipboard

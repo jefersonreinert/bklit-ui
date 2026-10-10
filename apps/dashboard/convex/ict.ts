@@ -196,6 +196,8 @@ export const finish = internalMutation({
     status: v.string(),
     patch: v.object({
       userId: v.optional(v.string()),
+      displayName: v.optional(v.string()),
+      profileImageUrl: v.optional(v.string()),
       sinceId: v.optional(v.string()),
       resumeToken: v.optional(v.union(v.string(), v.null())),
       resumeNewestId: v.optional(v.union(v.string(), v.null())),
@@ -368,9 +370,23 @@ function errorStatus(err: unknown): {
   };
 }
 
+/** Bigger avatar than X's default 48 px "_normal" one. */
+const largeAvatar = (url: string | undefined) =>
+  url?.replace("_normal.", "_400x400.");
+
 async function collect(state: State, bearer: string) {
-  const userId =
-    state.userId ?? (await resolveUser(ICT_ACCOUNT.username, bearer)).id;
+  // Resolved once, and again only to fetch a missing profile photo
+  const user =
+    state.userId && state.profileImageUrl
+      ? null
+      : await resolveUser(ICT_ACCOUNT.username, bearer);
+  const userId = state.userId ?? (user?.id as string);
+  const profile = user
+    ? {
+        displayName: user.name,
+        profileImageUrl: largeAvatar(user.profile_image_url),
+      }
+    : {};
   const resuming = Boolean(state.resumeToken);
   const first = !(state.sinceId || resuming);
   const result = await fetchTimeline(userId, ICT_ACCOUNT.username, bearer, {
@@ -384,7 +400,7 @@ async function collect(state: State, bearer: string) {
     : result.newestId;
   // Stop history backfill at BACKFILL_PAGES; later gaps resume next tick
   const resumeToken = first ? null : result.nextToken;
-  return { userId, result, newest, resumeToken };
+  return { userId, result, newest, resumeToken, profile };
 }
 
 export const tick = internalAction({
@@ -409,7 +425,7 @@ export const tick = internalAction({
       return;
     }
     try {
-      const { userId, result, newest, resumeToken } = await collect(
+      const { userId, result, newest, resumeToken, profile } = await collect(
         state,
         bearer
       );
@@ -421,6 +437,7 @@ export const tick = internalAction({
         ok: true,
         patch: {
           userId,
+          ...profile,
           // Advance the cursor only once the whole gap was read
           ...(resumeToken
             ? { resumeToken, resumeNewestId: newest ?? undefined }
@@ -447,7 +464,9 @@ export const tick = internalAction({
         patch: { lastError: e.message, nextAllowedAt: e.nextAllowedAt },
       });
     }
-    if (state.aiEnabled && keys.xaiKey) {
+    // Grok runs on its own only when "Análise automática" is on;
+    // otherwise each post is analysed when the button is pressed
+    if (state.autoAnalyze && keys.xaiKey) {
       const ids = await ctx.runQuery(internal.ict.pendingPosts, {
         limit: ANALYSES_PER_TICK,
       });
@@ -686,6 +705,7 @@ const settingsOf = (s: State | null) => {
   return {
     enabled: base.enabled,
     aiEnabled: base.aiEnabled,
+    autoAnalyze: base.autoAnalyze ?? false,
     intervalMinutes: base.intervalMinutes,
     interests: base.interests,
     alertRules: base.alertRules,
@@ -712,7 +732,11 @@ export const overview = query({
       .order("desc")
       .take(20);
     return {
-      account: ICT_ACCOUNT,
+      account: {
+        ...ICT_ACCOUNT,
+        name: s?.displayName ?? ICT_ACCOUNT.name,
+        profileImageUrl: s?.profileImageUrl ?? null,
+      },
       configured: await configured(ctx),
       settings: settingsOf(s),
       state: s
@@ -875,6 +899,7 @@ export const updateSettings = mutation({
   args: {
     enabled: v.optional(v.boolean()),
     aiEnabled: v.optional(v.boolean()),
+    autoAnalyze: v.optional(v.boolean()),
     intervalMinutes: v.optional(v.number()),
     interests: v.optional(v.array(v.string())),
     alertRules: v.optional(
@@ -906,6 +931,9 @@ export const updateSettings = mutation({
       if (args.enabled) {
         patch.nextAllowedAt = 0;
       }
+    }
+    if (args.autoAnalyze !== undefined) {
+      patch.autoAnalyze = args.autoAnalyze;
     }
     if (args.aiEnabled !== undefined) {
       patch.aiEnabled = args.aiEnabled;
