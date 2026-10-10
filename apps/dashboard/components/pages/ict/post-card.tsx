@@ -210,7 +210,8 @@ function AnalyzeButton({ post }: { post: FeedPost }) {
 }
 
 function AnalysisSection({ post }: { post: FeedPost }) {
-  const [open, setOpen] = useState(true);
+  // Collapsed until the header is tapped
+  const [open, setOpen] = useState(false);
   const a = post.analysis.result;
   if (!a && post.analysisStatus !== "running") {
     return <AnalyzeButton post={post} />;
@@ -224,6 +225,7 @@ function AnalysisSection({ post }: { post: FeedPost }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <button
+        aria-expanded={open}
         className="flex w-full items-center gap-2 text-left"
         onClick={() => setOpen(!open)}
         type="button"
