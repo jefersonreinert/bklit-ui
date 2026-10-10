@@ -17,6 +17,7 @@ import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
 import type * as telegram from "../telegram.js";
+import type * as tgmedia from "../tgmedia.js";
 import type * as mtproto from "../mtproto.js";
 import type * as vouchers from "../vouchers.js";
 
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   staff: typeof staff;
   stores: typeof stores;
   telegram: typeof telegram;
+  tgmedia: typeof tgmedia;
   mtproto: typeof mtproto;
   vouchers: typeof vouchers;
 }>;

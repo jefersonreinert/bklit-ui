@@ -15,7 +15,9 @@ import {
   parseMessages,
   type ToolOutput,
 } from "@/lib/telegram/core";
+import { mediaMarker } from "@/lib/telegram/media";
 import { cn } from "@/lib/utils";
+import { MediaButton, SaveAllPanel } from "./telegram-media-save";
 import { Notice, ToolResultView, useRunTool } from "./telegram-shared";
 import { readUpload } from "./tool-form";
 
@@ -88,8 +90,17 @@ function ChatList({
   );
 }
 
-function Bubble({ m, me }: { m: MessageRow; me: string | null }) {
-  const mine = Boolean(me) && m.sender === me;
+function Bubble({
+  m,
+  me,
+  chatId,
+}: {
+  m: MessageRow;
+  me: string | null;
+  chatId: string;
+}) {
+  const mine = Boolean(me) && m.sender.startsWith(me ?? "\u0000");
+  const media = mediaMarker(m.text);
   return (
     <div
       className={cn(
@@ -101,6 +112,7 @@ function Bubble({ m, me }: { m: MessageRow; me: string | null }) {
         {m.sender} · {time(m.date)} · #{m.id}
       </p>
       <p className="whitespace-pre-wrap break-words">{m.text}</p>
+      {media ? <MediaButton chatId={chatId} messageId={m.id} /> : null}
     </div>
   );
 }
@@ -166,8 +178,17 @@ function Composer({ chatId, onSent }: { chatId: string; onSent: () => void }) {
   );
 }
 
-function Conversation({ chat, me }: { chat: ChatRow; me: string | null }) {
+function Conversation({
+  chat,
+  me,
+  onOpenGallery,
+}: {
+  chat: ChatRow;
+  me: string | null;
+  onOpenGallery: (chatId: string) => void;
+}) {
   const { run, busy } = useRunTool();
+  const [showMedia, setShowMedia] = useState(false);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -204,6 +225,15 @@ function Conversation({ chat, me }: { chat: ChatRow; me: string | null }) {
         <p className="font-medium">{chat.name}</p>
         <div className="flex gap-1">
           <Button
+            aria-pressed={showMedia}
+            onClick={() => setShowMedia(!showMedia)}
+            size="sm"
+            variant={showMedia ? "secondary" : "ghost"}
+          >
+            <Icon className="size-4" name="IconArrowDown" />
+            Mídias
+          </Button>
+          <Button
             disabled={busy}
             onClick={() => run("telegram-mark-as-read", { chatId: chat.id })}
             size="sm"
@@ -221,6 +251,13 @@ function Conversation({ chat, me }: { chat: ChatRow; me: string | null }) {
           </Button>
         </div>
       </div>
+      {showMedia ? (
+        <SaveAllPanel
+          chatId={chat.id}
+          chatName={chat.name}
+          onOpenGallery={onOpenGallery}
+        />
+      ) : null}
       {messages.length >= PAGE ? (
         <Button
           disabled={busy}
@@ -233,7 +270,7 @@ function Conversation({ chat, me }: { chat: ChatRow; me: string | null }) {
       ) : null}
       <div className="flex max-h-[55vh] flex-1 flex-col gap-2 overflow-y-auto">
         {messages.map((m) => (
-          <Bubble key={m.id} m={m} me={me} />
+          <Bubble chatId={chat.id} key={m.id} m={m} me={me} />
         ))}
         {busy && messages.length === 0 ? (
           <p className="text-muted-foreground text-sm">Carregando…</p>
@@ -247,7 +284,13 @@ function Conversation({ chat, me }: { chat: ChatRow; me: string | null }) {
   );
 }
 
-export function TelegramChats({ me }: { me: string | null }) {
+export function TelegramChats({
+  me,
+  onOpenGallery,
+}: {
+  me: string | null;
+  onOpenGallery: (chatId: string) => void;
+}) {
   const { run, busy } = useRunTool();
   const [filter, setFilter] = useState("all");
   const [chats, setChats] = useState<ChatRow[]>([]);
@@ -298,7 +341,12 @@ export function TelegramChats({ me }: { me: string | null }) {
       </div>
       <div className="min-w-0 rounded-xl border p-4">
         {selected ? (
-          <Conversation chat={selected} key={selected.id} me={me} />
+          <Conversation
+            chat={selected}
+            key={selected.id}
+            me={me}
+            onOpenGallery={onOpenGallery}
+          />
         ) : (
           <p className="text-muted-foreground text-sm">Escolha uma conversa.</p>
         )}
