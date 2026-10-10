@@ -113,7 +113,9 @@ export function recordWinePurchase(
   wineId: string,
   unitCostExVat: number,
   date: string,
-  supplier: string
+  supplier: string,
+  /** False when an approved invoice is approved again after edits. */
+  isNewPurchase = true
 ) {
   cellarStore.update((prev) => ({
     ...prev,
@@ -127,7 +129,7 @@ export function recordWinePurchase(
         cost: newer ? round2(unitCostExVat) : w.cost,
         lastPurchaseAt: newer ? date : w.lastPurchaseAt,
         lastSupplier: newer ? supplier : w.lastSupplier,
-        purchaseCount: w.purchaseCount + 1,
+        purchaseCount: w.purchaseCount + (isNewPurchase ? 1 : 0),
       };
     }),
   }));

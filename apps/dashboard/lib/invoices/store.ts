@@ -323,11 +323,13 @@ interface Purchase {
  */
 export function approveInvoice(id: string): { winesUpdated: number } {
   const purchases: Purchase[] = [];
+  let again = false;
   invoiceStore.update((prev) => {
     const invoice = prev.invoices.find((i) => i.id === id);
     if (!invoice) {
       return prev;
     }
+    again = invoice.status === "approved";
     const ingredients = [...prev.ingredients];
     const lines = linkAll(invoice.lines, ingredients);
     const supplier =
@@ -359,7 +361,7 @@ export function approveInvoice(id: string): { winesUpdated: number } {
     };
   });
   for (const p of purchases) {
-    recordWinePurchase(p.wineId, p.cost, p.date, p.supplier);
+    recordWinePurchase(p.wineId, p.cost, p.date, p.supplier, !again);
   }
   return { winesUpdated: purchases.length };
 }
