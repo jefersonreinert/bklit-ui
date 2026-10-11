@@ -25,9 +25,17 @@ import {
   useCandles,
   useQuotes,
   useTrading,
+  type WatchItem,
 } from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
+import { ExploreView } from "./explore-view";
+import {
+  ChartToolbar,
+  type MobileView,
+  type MoreAction,
+  TabBar,
+} from "./mobile-chrome";
 import type { Candle } from "./mt5/engine/ChartEngine";
 import { SVGChart } from "./mt5/SVGChart";
 import { ChartSettingsDialog } from "./mt5/tv/chart-settings-dialog";
@@ -41,10 +49,42 @@ import { DrawingSettingsDialog } from "./mt5/tv/drawing-settings-dialog";
 import { GoToDateDialog } from "./mt5/tv/go-to-date-dialog";
 import { ReplayControls } from "./mt5/tv/replay-controls";
 import { useReplay } from "./mt5/tv/use-replay";
-import { ToolRail, ToolsSheet, toolLabel } from "./trading-tools";
+import { SymbolOverview } from "./symbol-overview";
+import { ToolRail, toolLabel } from "./trading-tools";
 import { changeClass, pct, SymbolSearch, Watchlist } from "./trading-watchlist";
 
-type Panel = "watchlist" | "tools" | "search" | "settings" | "goto" | null;
+type Panel = "watchlist" | "search" | "settings" | "goto" | null;
+type View = MobileView;
+
+const VIEW_KEY = "cb:trading:view";
+
+const VIEWS = new Set<string>(["list", "chart", "explore"]);
+
+function initialView(): View {
+  try {
+    const saved = localStorage.getItem(VIEW_KEY) ?? "";
+    return VIEWS.has(saved) ? (saved as View) : "list";
+  } catch {
+    return "list";
+  }
+}
+
+/** Phone: watchlist or chart (like TradingView's tabs); saved per device. */
+function useMobileView() {
+  const [view, setViewState] = useState<View>("list");
+  useEffect(() => {
+    setViewState(initialView());
+  }, []);
+  const setView = useCallback((v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // private mode
+    }
+  }, []);
+  return { view, setView };
+}
 
 const REPLAY_BARS = 150;
 
@@ -147,6 +187,126 @@ function useDrawingState(symbol: string, drawings: Drawing[]) {
   };
 }
 
+/** Overview sheet target, chart opening and prev/next symbol. */
+function useSymbolNav({
+  watchlist,
+  symbol,
+  quotes,
+  pickSymbol,
+  overview,
+  setOverview,
+  setView,
+}: {
+  watchlist: WatchItem[];
+  symbol: string;
+  quotes: Record<string, Quote>;
+  pickSymbol: (s: string) => void;
+  overview: string | null;
+  setOverview: (s: string | null) => void;
+  setView: (v: View) => void;
+}) {
+  const openChart = (s: string) => {
+    pickSymbol(s);
+    setOverview(null);
+    setView("chart");
+  };
+  const cycle = (dir: -1 | 1) => {
+    const i = watchlist.findIndex((w) => w.symbol === symbol);
+    const next = watchlist[(i + dir + watchlist.length) % watchlist.length];
+    if (next) {
+      pickSymbol(next.symbol);
+    }
+  };
+  let overviewItem: WatchItem | null = null;
+  if (overview !== null) {
+    overviewItem = watchlist.find((w) => w.symbol === overview) ?? {
+      symbol: overview,
+      label: labelOf(overview),
+      name: quotes[overview]?.name ?? overview,
+    };
+  }
+  return { openChart, cycle, overviewItem };
+}
+
+/** Fixed precision from the settings, or automatic for the instrument. */
+function chartDigits(
+  precision: number,
+  symbol: string,
+  price: number | undefined,
+  hint: number | undefined
+) {
+  return precision >= 0 ? precision : autoDigits(symbol, price ?? 1, hint);
+}
+
+/** Tablet: the watchlist in a bottom sheet. */
+function WatchlistSheet({
+  open,
+  onClose,
+  ...props
+}: React.ComponentProps<typeof Watchlist> & {
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet onOpenChange={(o) => (o ? null : onClose())} open={open}>
+      <SheetContent
+        className="h-[80dvh] gap-0 rounded-t-3xl p-0 pb-[env(safe-area-inset-bottom)] md:mx-auto md:max-w-lg"
+        side="bottom"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Lista de ativos</SheetTitle>
+        </SheetHeader>
+        <div className="mt5 flex min-h-0 flex-1 flex-col pt-3">
+          <Watchlist {...props} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Phone: the full-screen watchlist (TradingView's first tab). */
+function MobileWatchlist({
+  onView,
+  ...props
+}: React.ComponentProps<typeof Watchlist> & {
+  onView: (v: View) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col md:hidden">
+      <Watchlist {...props} />
+      <TabBar onView={onView} view="list" />
+    </div>
+  );
+}
+
+/** Explore (all sizes): market cards, shortcuts and top stories. */
+function ExplorePanel({
+  onView,
+  onPick,
+  onSearch,
+}: {
+  onView: (v: View) => void;
+  onPick: (s: string) => void;
+  onSearch: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden border-b px-3 py-2 md:block">
+        <button
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => onView("chart")}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar ao gráfico
+        </button>
+      </div>
+      <ExploreView onPick={onPick} onSearch={onSearch} />
+      <TabBar onView={onView} view="explore" />
+    </div>
+  );
+}
+
 /** Charting platform (MT5 / TradingView style), mobile first. */
 export function TradingPage() {
   const data = useTrading();
@@ -158,22 +318,27 @@ export function TradingPage() {
   }, [watchlist, symbol]);
   const { quotes, locked, reload: reloadQuotes } = useQuotes(symbols);
   const [panel, setPanel] = useState<Panel>(null);
+  const { view, setView } = useMobileView();
+  const [overview, setOverview] = useState<string | null>(null);
+  const [rail, setRail] = useState(false);
   const [drawSettings, setDrawSettings] = useState(false);
   const [goTo, setGoTo] = useState<Date | null>(null);
   const candles = feed.candles ?? [];
   const replay = useReplay({ fullData: candles, activeTF: tf });
   const drawings = data.drawings[symbol] ?? [];
   const draw = useDrawingState(symbol, drawings);
-  const { tool, selected, selectedId } = draw;
+  const { tool, selected } = draw;
 
   const item = watchlist.find((w) => w.symbol === symbol);
   const label = item?.label ?? labelOf(symbol);
   const quote = quotes[symbol];
   const price = candles.at(-1)?.close ?? quote?.price;
-  const digits =
-    settings.precision >= 0
-      ? settings.precision
-      : autoDigits(symbol, price ?? 1, feed.digits ?? quote?.digits);
+  const digits = chartDigits(
+    settings.precision,
+    symbol,
+    price,
+    feed.digits ?? quote?.digits
+  );
 
   const pickSymbol = (s: string) => {
     replay.stop();
@@ -181,6 +346,15 @@ export function TradingPage() {
     setSymbol(s);
     setPanel(null);
   };
+  const nav = useSymbolNav({
+    watchlist,
+    symbol,
+    quotes,
+    pickSymbol,
+    overview,
+    setOverview,
+    setView,
+  });
   const toggleReplay = () =>
     replay.active
       ? replay.stop()
@@ -199,119 +373,127 @@ export function TradingPage() {
 
   const toolActions = draw.actions;
 
-  const shown = draw.hidden
-    ? drawings.map((d) => ({ ...d, visible: false }))
-    : drawings;
-  const chartData = replay.active ? replay.replayData : candles;
+  const shown = visibleDrawings(drawings, draw.hidden);
 
   return (
     <div className="mt5 -m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
-      <ToolRail {...toolActions} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar
-          change={quote}
-          digits={digits}
-          label={label}
-          name={item?.name ?? quote?.name ?? symbol}
-          onPanel={setPanel}
-          onReplay={toggleReplay}
-          price={price}
-          replayActive={replay.active}
-          tf={tf}
+      {view === "list" ? (
+        <MobileWatchlist
+          active={symbol}
+          items={watchlist}
+          onPick={setOverview}
+          onSearch={() => setPanel("search")}
+          onView={setView}
+          quotes={quotes}
+          sections={data.sections}
         />
-        <div
-          className={cn(
-            "relative min-h-0 flex-1 overflow-hidden",
-            replay.active && "pt-9"
-          )}
-        >
-          {candles.length > 0 ? (
-            <SVGChart
-              data={chartData}
-              drawingProps={{
-                drawings: shown,
-                selectedId,
-                activeTool: tool,
-                onDrawingsChange: draw.change,
-                onSelectedChange: draw.setSelectedId,
-                onToolDone: () => draw.setTool(null),
-              }}
-              followLast={replay.active && replay.playing}
-              goToDate={replay.active ? undefined : goTo}
-              key={`${symbol}-${tf}`}
-              settings={{ ...settings, precision: digits }}
-            />
-          ) : null}
-          <ChartStatus
-            candles={candles}
-            error={feed.error}
-            loading={feed.candles === null}
-            onRetry={feed.reload}
-            source={feed.source}
-          />
-          <ReplayControls
-            precision={digits}
-            replay={replay}
-            symbol={symbol}
-            timezone={settings.timezone}
-          />
-          <DrawOverlays
-            draw={draw}
+      ) : null}
+      {view === "explore" ? (
+        <ExplorePanel
+          onPick={setOverview}
+          onSearch={() => setPanel("search")}
+          onView={setView}
+        />
+      ) : null}
+      <div
+        className={cn(
+          "flex min-w-0 flex-1",
+          view === "list" && "max-md:hidden",
+          view === "explore" && "hidden"
+        )}
+      >
+        <ToolRail {...toolActions} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar
+            change={quote}
+            digits={digits}
             label={label}
-            onSettings={() => setDrawSettings(true)}
-            settingsOpen={drawSettings || panel !== null}
+            name={item?.name ?? quote?.name ?? symbol}
+            onCycle={nav.cycle}
+            onExplore={() => setView("explore")}
+            onOverview={() => setOverview(symbol)}
+            onPanel={setPanel}
+            onReplay={toggleReplay}
+            price={price}
+            replayActive={replay.active}
+            tf={tf}
           />
+          <ChartViewport
+            candles={candles}
+            digits={digits}
+            draw={draw}
+            drawings={shown}
+            feed={feed}
+            goTo={goTo}
+            label={label}
+            onDrawSettings={() => setDrawSettings(true)}
+            rail={rail}
+            replay={replay}
+            settings={settings}
+            settingsOpen={drawSettings || panel !== null}
+            symbol={symbol}
+            tf={tf}
+          />
+          <ChartToolbar
+            canUndo={drawings.length > 0}
+            drawing={rail || tool !== null}
+            labelOf={(s) =>
+              watchlist.find((w) => w.symbol === s)?.label ?? labelOf(s)
+            }
+            more={moreActions({ setPanel, setOverview, symbol })}
+            onDraw={() => setRail((r) => !r)}
+            onReplay={toggleReplay}
+            onSymbol={pickSymbol}
+            onTf={setTimeframe}
+            onUndo={() => draw.change(drawings.slice(0, -1))}
+            replay={replay.active}
+            symbol={symbol}
+            symbols={watchlist.map((w) => w.symbol)}
+            tf={tf}
+          />
+          <TabBar onView={setView} view="chart" />
         </div>
-        <MobileBar
-          onPanel={setPanel}
-          onReplay={toggleReplay}
-          replayActive={replay.active}
-          tool={tool}
-        />
       </div>
-      <aside className="hidden w-72 shrink-0 flex-col border-l lg:flex">
+      <aside
+        className={cn(
+          "hidden w-72 shrink-0 flex-col border-l lg:flex",
+          view === "explore" && "lg:hidden"
+        )}
+      >
         <Watchlist
           active={symbol}
+          compact
           items={watchlist}
           onPick={pickSymbol}
           onSearch={() => setPanel("search")}
           quotes={quotes}
+          sections={data.sections}
         />
       </aside>
 
-      <Sheet
-        onOpenChange={(o) => (o ? null : setPanel(null))}
-        open={panel === "watchlist"}
-      >
-        <SheetContent
-          className="h-[80dvh] gap-0 rounded-t-3xl p-0 pb-[env(safe-area-inset-bottom)] md:mx-auto md:max-w-lg"
-          side="bottom"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Lista de ativos</SheetTitle>
-          </SheetHeader>
-          <div className="flex min-h-0 flex-1 flex-col pt-3">
-            <Watchlist
-              active={symbol}
-              inSheet
-              items={watchlist}
-              onPick={pickSymbol}
-              onSearch={() => setPanel("search")}
-              quotes={quotes}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-      <SymbolSearch
+      <WatchlistSheet
+        active={symbol}
+        compact
+        inSheet
+        items={watchlist}
         onClose={() => setPanel(null)}
         onPick={pickSymbol}
+        onSearch={() => setPanel("search")}
+        open={panel === "watchlist"}
+        quotes={quotes}
+        sections={data.sections}
+      />
+      <SymbolSearch
+        onClose={() => setPanel(null)}
+        onPick={(s) => (view === "list" ? setOverview(s) : pickSymbol(s))}
         open={panel === "search"}
         watchlist={watchlist}
       />
-      <ToolsSheet
-        onClose={() => setPanel(null)}
-        open={panel === "tools"}
-        {...toolActions}
+      <SymbolOverview
+        item={nav.overviewItem}
+        onClose={() => setOverview(null)}
+        onOpenChart={nav.openChart}
+        quote={overview ? quotes[overview] : undefined}
       />
       <ChartSettingsDialog
         onClose={() => setPanel(null)}
@@ -348,7 +530,13 @@ function TopBar({
   replayActive,
   onPanel,
   onReplay,
+  onCycle,
+  onOverview,
+  onExplore,
 }: {
+  onExplore: () => void;
+  onCycle: (dir: -1 | 1) => void;
+  onOverview: () => void;
   label: string;
   name: string;
   price: number | undefined;
@@ -364,7 +552,15 @@ function TopBar({
   const diffPct = change?.prevClose ? (diff / change.prevClose) * 100 : 0;
   return (
     <div className="flex shrink-0 flex-col border-b md:flex-row md:items-center">
-      <div className="flex min-w-0 items-center gap-2 px-3 py-2 md:py-1.5">
+      <div className="flex min-w-0 items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-1.5">
+        <button
+          aria-label="Ativo anterior"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          onClick={() => onCycle(-1)}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+        </button>
         <button
           className="flex min-w-0 items-center gap-1.5 rounded-md py-0.5 pr-1.5 text-left hover:bg-muted"
           onClick={() => onPanel("search")}
@@ -382,6 +578,14 @@ function TopBar({
               {name}
             </span>
           </span>
+        </button>
+        <button
+          aria-label="Próximo ativo"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          onClick={() => onCycle(1)}
+          type="button"
+        >
+          <Icon className="size-4 rotate-180" name="IconChevronLeft" />
         </button>
         <span className="ml-auto text-right md:ml-2">
           <span className="block font-mono font-semibold text-[15px] tabular-nums leading-tight">
@@ -415,7 +619,24 @@ function TopBar({
             {t.label}
           </button>
         ))}
+        <button
+          className="ml-auto h-7 shrink-0 rounded-md px-2.5 font-medium text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+          onClick={onOverview}
+          type="button"
+        >
+          Visão geral
+        </button>
         <div className="ml-auto hidden items-center gap-0.5 md:flex">
+          <BarButton
+            icon="IconChart1"
+            label="Visão geral do ativo"
+            onClick={onOverview}
+          />
+          <BarButton
+            icon="IconCompassRound"
+            label="Explorar mercados"
+            onClick={onExplore}
+          />
           <BarButton
             active={replayActive}
             icon="IconReplay"
@@ -472,79 +693,132 @@ function BarButton({
   );
 }
 
-/** Phone: thumb-reach actions under the chart. */
-function MobileBar({
-  onPanel,
-  onReplay,
-  replayActive,
-  tool,
+function moreActions({
+  setPanel,
+  setOverview,
+  symbol,
 }: {
-  onPanel: (p: Panel) => void;
-  onReplay: () => void;
-  replayActive: boolean;
-  tool: DrawToolType | null;
-}) {
-  const items: {
-    icon: IconName;
-    label: string;
-    onClick: () => void;
-    active?: boolean;
-  }[] = [
+  setPanel: (p: Panel) => void;
+  setOverview: (s: string) => void;
+  symbol: string;
+}): MoreAction[] {
+  return [
     {
-      icon: "IconListBullets",
-      label: "Lista",
-      onClick: () => onPanel("watchlist"),
+      label: "Visão geral do ativo",
+      icon: "IconChart1",
+      onClick: () => setOverview(symbol),
     },
     {
-      icon: "IconPencil",
-      label: "Desenhar",
-      onClick: () => onPanel("tools"),
-      active: tool !== null,
+      label: "Buscar ativo",
+      icon: "IconMagnifyingGlass",
+      onClick: () => setPanel("search"),
     },
     {
-      icon: "IconReplay",
-      label: "Replay",
-      onClick: onReplay,
-      active: replayActive,
-    },
-    {
+      label: "Ir para data",
       icon: "IconCalendarClock",
-      label: "Data",
-      onClick: () => onPanel("goto"),
+      onClick: () => setPanel("goto"),
     },
     {
+      label: "Configurações do gráfico",
       icon: "IconSettingsGear1",
-      label: "Ajustes",
-      onClick: () => onPanel("settings"),
+      onClick: () => setPanel("settings"),
     },
   ];
+}
+
+function ChartViewport({
+  symbol,
+  tf,
+  candles,
+  feed,
+  replay,
+  draw,
+  drawings,
+  settings,
+  digits,
+  goTo,
+  label,
+  rail,
+  settingsOpen,
+  onDrawSettings,
+}: {
+  symbol: string;
+  tf: Timeframe;
+  candles: Candle[];
+  feed: ReturnType<typeof useCandles>;
+  replay: ReturnType<typeof useReplay>;
+  draw: ReturnType<typeof useDrawingState>;
+  drawings: Drawing[];
+  settings: ReturnType<typeof useTrading>["settings"];
+  digits: number;
+  goTo: Date | null;
+  label: string;
+  rail: boolean;
+  settingsOpen: boolean;
+  onDrawSettings: () => void;
+}) {
+  const { tool, selectedId } = draw;
+  const chartData = replay.active ? replay.replayData : candles;
   return (
-    <div className="grid shrink-0 grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] md:hidden">
-      {items.map((i) => (
-        <button
-          className={cn(
-            "flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted",
-            i.active && "text-[#2962ff]"
-          )}
-          key={i.label}
-          onClick={i.onClick}
-          type="button"
-        >
-          <Icon className="size-5" name={i.icon} />
-          {i.label}
-        </button>
-      ))}
+    <div
+      className={cn(
+        "relative min-h-0 flex-1 overflow-hidden",
+        replay.active && "pt-9"
+      )}
+    >
+      {candles.length > 0 ? (
+        <SVGChart
+          data={chartData}
+          drawingProps={{
+            drawings,
+            selectedId,
+            activeTool: tool,
+            onDrawingsChange: draw.change,
+            onSelectedChange: draw.setSelectedId,
+            onToolDone: () => draw.setTool(null),
+          }}
+          followLast={replay.active && replay.playing}
+          goToDate={replay.active ? undefined : goTo}
+          key={`${symbol}-${tf}`}
+          settings={{ ...settings, precision: digits }}
+        />
+      ) : null}
+      <ChartStatus
+        candles={candles}
+        error={feed.error}
+        loading={feed.candles === null}
+        onRetry={feed.reload}
+        source={feed.source}
+      />
+      <ReplayControls
+        precision={digits}
+        replay={replay}
+        symbol={symbol}
+        timezone={settings.timezone}
+      />
+      <DrawOverlays
+        draw={draw}
+        label={label}
+        onSettings={onDrawSettings}
+        rail={rail}
+        settingsOpen={settingsOpen}
+      />
     </div>
   );
 }
 
+const visibleDrawings = (drawings: Drawing[], hidden: boolean) =>
+  hidden ? drawings.map((d) => ({ ...d, visible: false })) : drawings;
+
 function DrawOverlays({
   draw,
+  rail,
   label,
   settingsOpen,
   onSettings,
 }: {
   draw: ReturnType<typeof useDrawingState>;
+  rail: boolean;
   label: string;
   settingsOpen: boolean;
   onSettings: () => void;
@@ -552,6 +826,7 @@ function DrawOverlays({
   const { tool, selected } = draw;
   return (
     <>
+      {rail ? <ToolRail floating {...draw.actions} /> : null}
       {tool ? (
         <DrawHint onCancel={() => draw.setTool(null)} tool={tool} />
       ) : null}
