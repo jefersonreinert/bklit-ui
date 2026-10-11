@@ -538,4 +538,71 @@ export default defineSchema({
   })
     .index("by_folder", ["folderId"])
     .index("by_updated", ["updatedAt"]),
+
+  /** Trading journal: webhook token and connector state. */
+  jrnState: defineTable({
+    key: v.literal("main"),
+    /** Secret in the webhook URLs (EA and TradingView). */
+    token: v.string(),
+    lastMt5At: v.optional(v.number()),
+    lastTvAt: v.optional(v.number()),
+    /** Accounts seen by the EA (login → server/broker). */
+    accounts: v.optional(
+      v.array(
+        v.object({ login: v.string(), server: v.string(), name: v.string() })
+      )
+    ),
+  }).index("by_key", ["key"]),
+
+  /** MT5 deals sent by the CasaBrasaJournal EA (one row per deal ticket). */
+  jrnDeals: defineTable({
+    account: v.string(),
+    ticket: v.string(),
+    position: v.string(),
+    symbol: v.string(),
+    side: v.union(v.literal("buy"), v.literal("sell")),
+    entry: v.union(
+      v.literal("in"),
+      v.literal("out"),
+      v.literal("inout"),
+      v.literal("out_by")
+    ),
+    volume: v.number(),
+    price: v.number(),
+    sl: v.number(),
+    tp: v.number(),
+    profit: v.number(),
+    commission: v.number(),
+    swap: v.number(),
+    fee: v.number(),
+    magic: v.number(),
+    comment: v.string(),
+    time: v.number(),
+  })
+    .index("by_ticket", ["account", "ticket"])
+    .index("by_time", ["time"]),
+
+  /** TradingView alert messages received by the webhook. */
+  jrnSignals: defineTable({
+    ticker: v.string(),
+    action: v.string(),
+    price: v.union(v.number(), v.null()),
+    qty: v.union(v.number(), v.null()),
+    position: v.string(),
+    interval: v.string(),
+    strategy: v.string(),
+    message: v.string(),
+    time: v.number(),
+    receivedAt: v.number(),
+  }).index("by_received", ["receivedAt"]),
+
+  /** The trader's notes on a trade (key = account:position). */
+  jrnNotes: defineTable({
+    key: v.string(),
+    setup: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    rating: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

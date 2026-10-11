@@ -1,0 +1,289 @@
+"use client";
+
+import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "@/convex/_generated/api";
+import { buildTrades, computeStats } from "@/lib/journal/metrics";
+import { cn } from "@/lib/utils";
+import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
+import { JournalConnector } from "./journal-connector";
+import { JournalSummary, money, tone } from "./journal-summary";
+import { JournalTrades, type SignalRow } from "./journal-trades";
+
+/**
+ * Trading journal inside Gráficos: MT5 operations sent by the EA,
+ * TradingView alerts, metrics, notes, and the connector setup.
+ */
+
+export type JournalTab = "summary" | "trades" | "signals" | "connector";
+type Tab = JournalTab;
+type Period = "7" | "30" | "90" | "ytd" | "all";
+
+const DAY = 86_400_000;
+const PERIODS: { id: Period; label: string }[] = [
+  { id: "7", label: "7 d" },
+  { id: "30", label: "30 d" },
+  { id: "90", label: "90 d" },
+  { id: "ytd", label: "Ano" },
+  { id: "all", label: "Tudo" },
+];
+
+function since(p: Period) {
+  if (p === "all") {
+    return 0;
+  }
+  if (p === "ytd") {
+    return new Date(new Date().getFullYear(), 0, 1).getTime();
+  }
+  return Date.now() - Number(p) * DAY;
+}
+
+function Signals({ signals }: { signals: SignalRow[] }) {
+  const remove = useMutation(api.journal.deleteSignal);
+  if (signals.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground text-sm">
+        Nenhum alerta recebido. Configure o webhook do TradingView na aba
+        Conector.
+      </p>
+    );
+  }
+  return (
+    <ul className="flex flex-col divide-y rounded-xl border text-sm">
+      {signals.map((s) => (
+        <li
+          className="flex flex-wrap items-baseline gap-x-2 px-3 py-2"
+          key={s.id}
+        >
+          <span className="font-semibold">{s.ticker || "—"}</span>
+          <span
+            className={cn(
+              "font-medium text-xs uppercase",
+              s.action.includes("buy") || s.action.includes("long")
+                ? "text-[var(--up)]"
+                : "text-[var(--down)]"
+            )}
+          >
+            {s.action || "alerta"}
+          </span>
+          {s.price ? <span className="tabular-nums">@ {s.price}</span> : null}
+          {s.qty ? (
+            <span className="text-muted-foreground text-xs">× {s.qty}</span>
+          ) : null}
+          {s.interval ? (
+            <span className="text-muted-foreground text-xs">{s.interval}</span>
+          ) : null}
+          <span className="ml-auto text-muted-foreground text-xs">
+            {new Date(s.receivedAt).toLocaleString("pt-BR", {
+              dateStyle: "short",
+              timeStyle: "medium",
+            })}
+          </span>
+          <button
+            aria-label="Apagar alerta"
+            className="text-muted-foreground text-xs hover:text-foreground"
+            onClick={() => remove({ id: s.id })}
+            type="button"
+          >
+            ✕
+          </button>
+          {s.strategy || s.message ? (
+            <span className="w-full break-words text-muted-foreground text-xs">
+              {[s.strategy, s.message].filter(Boolean).join(" · ")}
+            </span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Filters({
+  period,
+  onPeriod,
+  accounts,
+  account,
+  onAccount,
+  symbols,
+  symbol,
+  onSymbol,
+}: {
+  period: Period;
+  onPeriod: (p: Period) => void;
+  accounts: string[];
+  account: string;
+  onAccount: (a: string) => void;
+  symbols: string[];
+  symbol: string;
+  onSymbol: (s: string) => void;
+}) {
+  const select = "h-8 rounded-md border bg-background px-2 text-sm";
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex rounded-lg border p-0.5">
+        {PERIODS.map((p) => (
+          <button
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs",
+              period === p.id && "bg-muted font-semibold"
+            )}
+            key={p.id}
+            onClick={() => onPeriod(p.id)}
+            type="button"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {accounts.length > 1 ? (
+        <select
+          aria-label="Conta"
+          className={select}
+          onChange={(e) => onAccount(e.target.value)}
+          value={account}
+        >
+          <option value="">Todas as contas</option>
+          {accounts.map((a) => (
+            <option key={a}>{a}</option>
+          ))}
+        </select>
+      ) : null}
+      <select
+        aria-label="Ativo"
+        className={select}
+        onChange={(e) => onSymbol(e.target.value)}
+        value={symbol}
+      >
+        <option value="">Todos os ativos</option>
+        {symbols.map((s) => (
+          <option key={s}>{s}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+export function JournalContent({ initialTab }: { initialTab: Tab }) {
+  const settings = useQuery(api.journal.settings, {});
+  const ensureToken = useMutation(api.journal.ensureToken);
+  const [tab, setTab] = useState<Tab>(initialTab);
+  useEffect(() => setTab(initialTab), [initialTab]);
+  const [period, setPeriod] = useState<Period>("90");
+  const [account, setAccount] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const from = useMemo(() => since(period), [period]);
+  // Deals from 30 days before the window, so positions opened earlier close
+  const deals = useQuery(api.journal.deals, {
+    from: from ? from - 30 * DAY : 0,
+  });
+  const signals = useQuery(api.journal.signals, { limit: 500 });
+  const notes = useQuery(api.journal.notes, {});
+
+  useEffect(() => {
+    if (settings && !settings.token) {
+      ensureToken({});
+    }
+  }, [settings, ensureToken]);
+
+  const allTrades = useMemo(() => buildTrades(deals ?? []), [deals]);
+  const accounts = useMemo(
+    () => [...new Set(allTrades.map((t) => t.account))],
+    [allTrades]
+  );
+  const symbols = useMemo(
+    () => [...new Set(allTrades.map((t) => t.symbol))].sort(),
+    [allTrades]
+  );
+  const trades = useMemo(
+    () =>
+      allTrades.filter(
+        (t) =>
+          (t.closeTime ?? t.openTime) >= from &&
+          (!account || t.account === account) &&
+          (!symbol || t.symbol === symbol)
+      ),
+    [allTrades, from, account, symbol]
+  );
+  const stats = useMemo(() => computeStats(trades), [trades]);
+
+  if (settings === undefined) {
+    return <p className="p-4 text-muted-foreground text-sm">Carregando…</p>;
+  }
+  if (settings === null) {
+    return (
+      <div className="p-4">
+        <Notice>
+          Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code)
+          para ver o diário de trading.
+        </Notice>
+      </div>
+    );
+  }
+  const open = trades.filter((t) => t.closeTime === null).length;
+  return (
+    <div className="flex flex-col gap-4 p-3 md:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-semibold text-lg">Diário de trading</h2>
+          <p className={cn("text-sm tabular-nums", tone(stats.net))}>
+            {money(stats.net, true)} · {stats.trades} operações ·{" "}
+            {(stats.winRate * 100).toFixed(0)}% acerto
+          </p>
+        </div>
+        <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
+          <TabsList>
+            <TabsTrigger value="summary">Resumo</TabsTrigger>
+            <TabsTrigger value="trades">Operações</TabsTrigger>
+            <TabsTrigger value="signals">Sinais TV</TabsTrigger>
+            <TabsTrigger value="connector">Conector</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      {tab === "summary" || tab === "trades" ? (
+        <Filters
+          account={account}
+          accounts={accounts}
+          onAccount={setAccount}
+          onPeriod={setPeriod}
+          onSymbol={setSymbol}
+          period={period}
+          symbol={symbol}
+          symbols={symbols}
+        />
+      ) : null}
+      {deals === undefined && tab !== "connector" ? (
+        <p className="text-muted-foreground text-sm">A carregar operações…</p>
+      ) : null}
+      {tab === "summary" && deals ? (
+        <JournalSummary currency="" open={open} stats={stats} />
+      ) : null}
+      {tab === "trades" && deals ? (
+        <JournalTrades
+          notes={notes ?? []}
+          signals={signals ?? []}
+          trades={trades}
+        />
+      ) : null}
+      {tab === "signals" ? <Signals signals={signals ?? []} /> : null}
+      {tab === "connector" ? <JournalConnector settings={settings} /> : null}
+    </div>
+  );
+}
+
+export function JournalPanel({ initialTab = "summary" }: { initialTab?: Tab }) {
+  return (
+    <TelegramProvider
+      fallback={
+        <div className="p-4">
+          <Notice>
+            O diário usa o banco central do painel (Convex), que não está
+            configurado nesta instalação.
+          </Notice>
+        </div>
+      }
+    >
+      <JournalContent initialTab={initialTab} />
+    </TelegramProvider>
+  );
+}

@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
 import { ExploreView } from "./explore-view";
 import { FloatingTimeframes } from "./floating-timeframes";
+import { JournalPanel, type JournalTab } from "./journal/journal-panel";
 import {
   ChartToolbar,
   type MobileView,
@@ -59,7 +60,7 @@ type View = MobileView;
 
 const VIEW_KEY = "cb:trading:view";
 
-const VIEWS = new Set<string>(["list", "chart", "explore"]);
+const VIEWS = new Set<string>(["list", "chart", "explore", "journal"]);
 
 function initialView(): View {
   try {
@@ -280,6 +281,34 @@ function MobileWatchlist({
   );
 }
 
+/** Trading journal (all sizes): MT5 operations, metrics, TV alerts. */
+function JournalView({
+  onView,
+  tab,
+}: {
+  onView: (v: View) => void;
+  tab: JournalTab;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden border-b px-3 py-2 md:block">
+        <button
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => onView("chart")}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar ao gráfico
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <JournalPanel initialTab={tab} />
+      </div>
+      <TabBar onView={onView} view="journal" />
+    </div>
+  );
+}
+
 /** Explore (all sizes): market cards, shortcuts and top stories. */
 function ExplorePanel({
   onView,
@@ -320,6 +349,8 @@ export function TradingPage() {
   const { quotes, locked, reload: reloadQuotes } = useQuotes(symbols);
   const [panel, setPanel] = useState<Panel>(null);
   const { view, setView } = useMobileView();
+  const [journalTab, setJournalTab] = useState<JournalTab>("summary");
+  const sidePanel = view === "explore" || view === "journal";
   const [overview, setOverview] = useState<string | null>(null);
   const [rail, setRail] = useState(false);
   const [drawSettings, setDrawSettings] = useState(false);
@@ -389,6 +420,9 @@ export function TradingPage() {
           sections={data.sections}
         />
       ) : null}
+      {view === "journal" ? (
+        <JournalView onView={setView} tab={journalTab} />
+      ) : null}
       {view === "explore" ? (
         <ExplorePanel
           onPick={setOverview}
@@ -400,7 +434,7 @@ export function TradingPage() {
         className={cn(
           "flex min-w-0 flex-1",
           view === "list" && "max-md:hidden",
-          view === "explore" && "hidden"
+          sidePanel && "hidden"
         )}
       >
         <ToolRail {...toolActions} />
@@ -412,6 +446,10 @@ export function TradingPage() {
             name={item?.name ?? quote?.name ?? symbol}
             onCycle={nav.cycle}
             onExplore={() => setView("explore")}
+            onJournal={(tab) => {
+              setJournalTab(tab);
+              setView("journal");
+            }}
             onOverview={() => setOverview(symbol)}
             onPanel={setPanel}
             onReplay={toggleReplay}
@@ -441,7 +479,15 @@ export function TradingPage() {
             labelOf={(s) =>
               watchlist.find((w) => w.symbol === s)?.label ?? labelOf(s)
             }
-            more={moreActions({ setPanel, setOverview, symbol })}
+            more={moreActions({
+              setPanel,
+              setOverview,
+              symbol,
+              onJournal: (tab) => {
+                setJournalTab(tab);
+                setView("journal");
+              },
+            })}
             onDraw={() => setRail((r) => !r)}
             onReplay={toggleReplay}
             onSymbol={pickSymbol}
@@ -458,7 +504,7 @@ export function TradingPage() {
       <aside
         className={cn(
           "hidden w-72 shrink-0 flex-col border-l lg:flex",
-          view === "explore" && "lg:hidden"
+          sidePanel && "lg:hidden"
         )}
       >
         <Watchlist
@@ -534,7 +580,9 @@ function TopBar({
   onCycle,
   onOverview,
   onExplore,
+  onJournal,
 }: {
+  onJournal: (tab: JournalTab) => void;
   onExplore: () => void;
   onCycle: (dir: -1 | 1) => void;
   onOverview: () => void;
@@ -614,6 +662,16 @@ function TopBar({
             onClick={onExplore}
           />
           <BarButton
+            icon="IconNotebook"
+            label="Diário de trading"
+            onClick={() => onJournal("summary")}
+          />
+          <BarButton
+            icon="IconArrowsRepeat"
+            label="Conector TradingView → MetaTrader"
+            onClick={() => onJournal("connector")}
+          />
+          <BarButton
             active={replayActive}
             icon="IconReplay"
             label="Replay"
@@ -673,12 +731,19 @@ function moreActions({
   setPanel,
   setOverview,
   symbol,
+  onJournal,
 }: {
   setPanel: (p: Panel) => void;
   setOverview: (s: string) => void;
   symbol: string;
+  onJournal: (tab: JournalTab) => void;
 }): MoreAction[] {
   return [
+    {
+      label: "Conector TradingView → MT5",
+      icon: "IconArrowsRepeat",
+      onClick: () => onJournal("connector"),
+    },
     {
       label: "Visão geral do ativo",
       icon: "IconChart1",
