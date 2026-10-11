@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brlFormatOptions, formatPercent } from "@/lib/format";
 import { Icon } from "@/lib/icons";
 import { type Dish, dailyItems, dishes, menuSummary } from "@/lib/menu-data";
+import { DesignGallery } from "./canvas/design-gallery";
 import { MenuEngineeringTab } from "./engineering-tab";
 import { MenuItemsTab, NewDishSheet } from "./items-tab";
 import { MenuOverviewTab } from "./overview-tab";
@@ -17,6 +18,7 @@ import { MenuStudio } from "./studio/menu-studio";
 
 const TABS = [
   { value: "geral", label: "Visão geral" },
+  { value: "design", label: "Design livre (IA)" },
   { value: "editor", label: "Editor de cardápio" },
   { value: "itens", label: "Itens do cardápio" },
   { value: "engenharia", label: "Engenharia de cardápio" },
@@ -133,6 +135,9 @@ export function MenuPage() {
         </div>
         <TabsContent className="pt-4" value="geral">
           <MenuOverviewTab />
+        </TabsContent>
+        <TabsContent className="pt-4" value="design">
+          <DesignGallery />
         </TabsContent>
         <TabsContent className="pt-4" value="editor">
           <MenuStudio />

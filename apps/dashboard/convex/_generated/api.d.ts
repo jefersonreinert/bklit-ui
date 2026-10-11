@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as crons from "../crons.js";
+import type * as designs from "../designs.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as ict from "../ict.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   crons: typeof crons;
+  designs: typeof designs;
   files: typeof files;
   http: typeof http;
   ict: typeof ict;
