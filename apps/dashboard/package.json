@@ -8,7 +8,7 @@
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "icons": "node scripts/gen-icons.mjs",
-    "test": "node --import tsx --test lib/ict/__tests__/*.test.ts lib/telegram/__tests__/*.test.ts lib/markets/__tests__/*.test.ts && vitest run"
+    "test": "node --import tsx --test lib/ict/__tests__/*.test.ts lib/telegram/__tests__/*.test.ts lib/markets/__tests__/*.test.ts lib/metatrader/__tests__/*.test.ts && vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

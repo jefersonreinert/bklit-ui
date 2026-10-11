@@ -21,6 +21,7 @@ import {
 } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 import { GithubCard } from "./connectors-github-card";
+import { MetatraderCard } from "./connectors-metatrader-card";
 import { TelegramCard } from "./connectors-telegram-card";
 
 const ERRORS: Record<string, string> = {
@@ -490,6 +491,7 @@ export function ConnectorsPage() {
       <YoutubeCard status={status} />
       <WhatsappCard status={status} />
       <TelegramCard />
+      <MetatraderCard />
     </div>
   );
 }

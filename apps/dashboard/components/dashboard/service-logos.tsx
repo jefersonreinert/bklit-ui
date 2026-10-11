@@ -13,7 +13,8 @@ export type ServiceBrand =
   | "notion"
   | "github"
   | "whatsapp"
-  | "telegram";
+  | "telegram"
+  | "metatrader";
 
 const TITLES: Record<ServiceBrand, string> = {
   gmail: "Gmail",
@@ -23,6 +24,7 @@ const TITLES: Record<ServiceBrand, string> = {
   github: "GitHub",
   whatsapp: "WhatsApp",
   telegram: "Telegram",
+  metatrader: "MetaTrader 5",
 };
 
 function Gmail() {
@@ -169,6 +171,20 @@ function Telegram() {
   );
 }
 
+/** A neutral candlestick mark for the MetaTrader connector. */
+function Metatrader() {
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <title>{TITLES.metatrader}</title>
+      <rect fill="#1f6feb" height="24" rx="6" width="24" />
+      <path d="M7 5v14M12 3v18M17 6v12" stroke="#fff" strokeWidth="1.2" />
+      <rect fill="#fff" height="6" width="3" x="5.5" y="9" />
+      <rect fill="#9ec5ff" height="9" width="3" x="10.5" y="6" />
+      <rect fill="#fff" height="5" width="3" x="15.5" y="8" />
+    </svg>
+  );
+}
+
 const MARKS: Record<ServiceBrand, () => React.JSX.Element> = {
   gmail: Gmail,
   drive: Drive,
@@ -177,6 +193,7 @@ const MARKS: Record<ServiceBrand, () => React.JSX.Element> = {
   github: Github,
   whatsapp: Whatsapp,
   telegram: Telegram,
+  metatrader: Metatrader,
 };
 
 /** A service's official logo, sized by `className` (defaults to 1rem). */

@@ -57,6 +57,12 @@ export const navItems: NavItem[] = [
     icon: "IconTelegram",
   },
   {
+    href: "/metatrader",
+    label: "MetaTrader",
+    description: "Conta MT5: ordens, posições, mercado e histórico",
+    icon: "IconChart1",
+  },
+  {
     href: "/videos",
     label: "Meus vídeos",
     description: "Biblioteca: salvos, playlists e player",
@@ -71,7 +77,8 @@ export const navItems: NavItem[] = [
   {
     href: "/conectores",
     label: "Conectores",
-    description: "Notion, GitHub, Gmail, Drive, YouTube, WhatsApp e Telegram",
+    description:
+      "Notion, GitHub, Gmail, Drive, YouTube, WhatsApp, Telegram e MetaTrader",
     icon: "IconConnectors1",
   },
   {
