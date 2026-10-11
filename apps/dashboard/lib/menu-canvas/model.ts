@@ -223,6 +223,7 @@ export function imageElement(patch: Partial<ImageElement> = {}): ImageElement {
     flipX: false,
     borderColor: "",
     borderWidth: 0,
+    tint: "",
     ...patch,
   };
 }
@@ -663,9 +664,14 @@ function elementHtml(e: DesignElement, icons: Record<string, string>) {
       const border = e.borderWidth
         ? `;border:${e.borderWidth}px solid ${esc(e.borderColor || "#000")}`
         : "";
-      return src
-        ? `<img alt="" src="${esc(src)}" style="${box};object-fit:${e.fit};border-radius:${e.radius}px${border}${e.flipX ? ";scale:-1 1" : ""}">`
-        : "";
+      if (!src) {
+        return "";
+      }
+      if (e.tint) {
+        const mask = `url('${esc(src)}') center/${e.fit === "cover" ? "cover" : "contain"} no-repeat`;
+        return `<div style="${box};background:${esc(e.tint)};-webkit-mask:${mask};mask:${mask}${e.flipX ? ";scale:-1 1" : ""}"></div>`;
+      }
+      return `<img alt="" src="${esc(src)}" style="${box};object-fit:${e.fit};border-radius:${e.radius}px${border}${e.flipX ? ";scale:-1 1" : ""}">`;
     }
     case "shape":
       return `<div style="${box}">${shapeSvg(e)}</div>`;

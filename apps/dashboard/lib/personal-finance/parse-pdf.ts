@@ -311,7 +311,8 @@ export function parsePdfItems(pages: PdfItem[][]): ParseResult {
 }
 
 /** Same version as the pdfjs-dist dev dependency (used for types). */
-const PDFJS_CDN = "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build";
+const PDFJS_CDN =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/legacy/build";
 
 /** Browser: PDF file → positioned text items per page (pdf.js). */
 export async function pdfItems(file: File): Promise<PdfItem[][]> {

@@ -359,3 +359,35 @@ ${JSON.stringify(input.elements)}
 Instruction: ${input.instruction}`;
   return run<AiEdit>([], prompt, EDIT_SCHEMA);
 }
+
+const ELEMENTS_SCHEMA = obj({
+  named: arr(
+    obj({ index: num, name: str, kind: str, isDecoration: { type: "boolean" } })
+  ),
+  extra: arr(obj({ name: str, kind: str, x: num, y: num, w: num, h: num })),
+});
+
+const ELEMENTS_PROMPT = `This is a page of a restaurant/bar menu with numbered red boxes drawn around the drawings found automatically.
+For each numbered box return { index, name, kind, isDecoration }:
+- name: a short descriptive name in Portuguese for a design library (e.g. "Taça coupe", "Copo highball", "Ornamento art déco", "Divisória dupla", "Ilustração marinheiros", "Logotipo").
+- kind: icon (small pictogram like a glass or bottle), ornament, illustration (picture/drawing), divider (rule/line), logo, frame (border/box), text (the box holds mostly text), other.
+- isDecoration: true for anything worth reusing in another design; false for text, page numbers or empty boxes.
+In "extra" list important decorative drawings that no box covers well, as fractions (0-1) of the page (x, y = top-left corner).`;
+
+export const extractElements = (files: ExtractFile[], hint?: string) =>
+  run<{
+    named: {
+      index: number;
+      name: string;
+      kind: string;
+      isDecoration: boolean;
+    }[];
+    extra: {
+      name: string;
+      kind: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }[];
+  }>(files, ELEMENTS_PROMPT, ELEMENTS_SCHEMA, hint);

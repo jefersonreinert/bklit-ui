@@ -53,6 +53,11 @@ export interface ImageElement extends Base {
   flipX: boolean;
   borderColor: string;
   borderWidth: number;
+  /**
+   * Recolor for one-color drawings (extracted icons/ornaments): the image
+   * becomes a mask filled with this color. "" = original colors.
+   */
+  tint?: string;
 }
 
 export interface ShapeElement extends Base {

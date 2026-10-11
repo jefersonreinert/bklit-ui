@@ -115,7 +115,7 @@ export async function thumbnail(
 }
 
 export async function callExtract<T>(
-  kind: "menu" | "invoice" | "design",
+  kind: "menu" | "invoice" | "design" | "elements",
   files: UploadFile[],
   hint?: string
 ): Promise<T> {
