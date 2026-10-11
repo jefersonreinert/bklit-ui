@@ -160,7 +160,7 @@ export const navItems: NavItem[] = [
   {
     href: "/documentos",
     label: "Documentos",
-    description: "Licenças, contratos e arquivos",
+    description: "Pastas, fotos, vídeos, PDFs, digitalizar e notas fiscais",
     icon: "IconFolder1",
   },
   {

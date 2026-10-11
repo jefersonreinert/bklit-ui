@@ -1,5 +1,5 @@
-import { InvoicesPage } from "@/components/pages/invoices/invoices-page";
+import { DocumentsPage } from "@/components/pages/files/documents-page";
 
 export default function Page() {
-  return <InvoicesPage />;
+  return <DocumentsPage />;
 }

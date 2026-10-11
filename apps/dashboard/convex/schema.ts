@@ -501,4 +501,41 @@ export default defineSchema({
     error: v.optional(v.string()),
     at: v.number(),
   }).index("by_at", ["at"]),
+
+  /** Documentos → Arquivos: the person's own folders (nested). */
+  docFolders: defineTable({
+    name: v.string(),
+    parentId: v.optional(v.id("docFolders")),
+    color: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_parent", ["parentId"]),
+
+  /**
+   * Files and sheets in those folders. Uploads keep their bytes in Convex
+   * storage; a "sheet" (e.g. a scanned page turned into text) keeps its
+   * text here and may point to the scan image.
+   */
+  docFiles: defineTable({
+    name: v.string(),
+    folderId: v.optional(v.id("docFolders")),
+    kind: v.union(
+      v.literal("image"),
+      v.literal("video"),
+      v.literal("pdf"),
+      v.literal("audio"),
+      v.literal("sheet"),
+      v.literal("other")
+    ),
+    mimeType: v.string(),
+    size: v.number(),
+    storageId: v.optional(v.id("_storage")),
+    /** Sheet text (Markdown) or the OCR text of a scan. */
+    text: v.optional(v.string()),
+    /** Scan images a sheet was made from. */
+    sourceIds: v.optional(v.array(v.id("_storage"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_folder", ["folderId"])
+    .index("by_updated", ["updatedAt"]),
 });
