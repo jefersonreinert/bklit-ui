@@ -25,6 +25,7 @@ import {
   useCandles,
   useQuotes,
   useTrading,
+  type WatchItem,
 } from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
@@ -41,10 +42,39 @@ import { DrawingSettingsDialog } from "./mt5/tv/drawing-settings-dialog";
 import { GoToDateDialog } from "./mt5/tv/go-to-date-dialog";
 import { ReplayControls } from "./mt5/tv/replay-controls";
 import { useReplay } from "./mt5/tv/use-replay";
-import { ToolRail, ToolsSheet, toolLabel } from "./trading-tools";
+import { SymbolOverview } from "./symbol-overview";
+import { ToolRail, toolLabel } from "./trading-tools";
 import { changeClass, pct, SymbolSearch, Watchlist } from "./trading-watchlist";
 
-type Panel = "watchlist" | "tools" | "search" | "settings" | "goto" | null;
+type Panel = "watchlist" | "search" | "settings" | "goto" | null;
+type View = "list" | "chart";
+
+const VIEW_KEY = "cb:trading:view";
+
+function initialView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "chart" ? "chart" : "list";
+  } catch {
+    return "list";
+  }
+}
+
+/** Phone: watchlist or chart (like TradingView's tabs); saved per device. */
+function useMobileView() {
+  const [view, setViewState] = useState<View>("list");
+  useEffect(() => {
+    setViewState(initialView());
+  }, []);
+  const setView = useCallback((v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // private mode
+    }
+  }, []);
+  return { view, setView };
+}
 
 const REPLAY_BARS = 150;
 
@@ -147,6 +177,96 @@ function useDrawingState(symbol: string, drawings: Drawing[]) {
   };
 }
 
+/** Overview sheet target, chart opening and prev/next symbol. */
+function useSymbolNav({
+  watchlist,
+  symbol,
+  quotes,
+  pickSymbol,
+  overview,
+  setOverview,
+  setView,
+}: {
+  watchlist: WatchItem[];
+  symbol: string;
+  quotes: Record<string, Quote>;
+  pickSymbol: (s: string) => void;
+  overview: string | null;
+  setOverview: (s: string | null) => void;
+  setView: (v: View) => void;
+}) {
+  const openChart = (s: string) => {
+    pickSymbol(s);
+    setOverview(null);
+    setView("chart");
+  };
+  const cycle = (dir: -1 | 1) => {
+    const i = watchlist.findIndex((w) => w.symbol === symbol);
+    const next = watchlist[(i + dir + watchlist.length) % watchlist.length];
+    if (next) {
+      pickSymbol(next.symbol);
+    }
+  };
+  let overviewItem: WatchItem | null = null;
+  if (overview !== null) {
+    overviewItem = watchlist.find((w) => w.symbol === overview) ?? {
+      symbol: overview,
+      label: labelOf(overview),
+      name: quotes[overview]?.name ?? overview,
+    };
+  }
+  return { openChart, cycle, overviewItem };
+}
+
+/** Fixed precision from the settings, or automatic for the instrument. */
+function chartDigits(
+  precision: number,
+  symbol: string,
+  price: number | undefined,
+  hint: number | undefined
+) {
+  return precision >= 0 ? precision : autoDigits(symbol, price ?? 1, hint);
+}
+
+/** Tablet: the watchlist in a bottom sheet. */
+function WatchlistSheet({
+  open,
+  onClose,
+  ...props
+}: React.ComponentProps<typeof Watchlist> & {
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet onOpenChange={(o) => (o ? null : onClose())} open={open}>
+      <SheetContent
+        className="h-[80dvh] gap-0 rounded-t-3xl p-0 pb-[env(safe-area-inset-bottom)] md:mx-auto md:max-w-lg"
+        side="bottom"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Lista de ativos</SheetTitle>
+        </SheetHeader>
+        <div className="mt5 flex min-h-0 flex-1 flex-col pt-3">
+          <Watchlist {...props} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Phone: the full-screen watchlist (TradingView's first tab). */
+function MobileWatchlist({
+  onChart,
+  ...props
+}: React.ComponentProps<typeof Watchlist> & { onChart: () => void }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col md:hidden">
+      <Watchlist {...props} />
+      <ViewBar onChart={onChart} onSearch={props.onSearch} />
+    </div>
+  );
+}
+
 /** Charting platform (MT5 / TradingView style), mobile first. */
 export function TradingPage() {
   const data = useTrading();
@@ -158,6 +278,9 @@ export function TradingPage() {
   }, [watchlist, symbol]);
   const { quotes, locked, reload: reloadQuotes } = useQuotes(symbols);
   const [panel, setPanel] = useState<Panel>(null);
+  const { view, setView } = useMobileView();
+  const [overview, setOverview] = useState<string | null>(null);
+  const [rail, setRail] = useState(false);
   const [drawSettings, setDrawSettings] = useState(false);
   const [goTo, setGoTo] = useState<Date | null>(null);
   const candles = feed.candles ?? [];
@@ -170,10 +293,12 @@ export function TradingPage() {
   const label = item?.label ?? labelOf(symbol);
   const quote = quotes[symbol];
   const price = candles.at(-1)?.close ?? quote?.price;
-  const digits =
-    settings.precision >= 0
-      ? settings.precision
-      : autoDigits(symbol, price ?? 1, feed.digits ?? quote?.digits);
+  const digits = chartDigits(
+    settings.precision,
+    symbol,
+    price,
+    feed.digits ?? quote?.digits
+  );
 
   const pickSymbol = (s: string) => {
     replay.stop();
@@ -181,6 +306,15 @@ export function TradingPage() {
     setSymbol(s);
     setPanel(null);
   };
+  const nav = useSymbolNav({
+    watchlist,
+    symbol,
+    quotes,
+    pickSymbol,
+    overview,
+    setOverview,
+    setView,
+  });
   const toggleReplay = () =>
     replay.active
       ? replay.stop()
@@ -199,20 +333,36 @@ export function TradingPage() {
 
   const toolActions = draw.actions;
 
-  const shown = draw.hidden
-    ? drawings.map((d) => ({ ...d, visible: false }))
-    : drawings;
+  const shown = visibleDrawings(drawings, draw.hidden);
   const chartData = replay.active ? replay.replayData : candles;
 
   return (
     <div className="mt5 -m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
+      {view === "list" ? (
+        <MobileWatchlist
+          active={symbol}
+          items={watchlist}
+          onChart={() => setView("chart")}
+          onPick={setOverview}
+          onSearch={() => setPanel("search")}
+          quotes={quotes}
+          sections={data.sections}
+        />
+      ) : null}
       <ToolRail {...toolActions} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col",
+          view === "list" && "max-md:hidden"
+        )}
+      >
         <TopBar
           change={quote}
           digits={digits}
           label={label}
           name={item?.name ?? quote?.name ?? symbol}
+          onCycle={nav.cycle}
+          onOverview={() => setOverview(symbol)}
           onPanel={setPanel}
           onReplay={toggleReplay}
           price={price}
@@ -259,12 +409,16 @@ export function TradingPage() {
             draw={draw}
             label={label}
             onSettings={() => setDrawSettings(true)}
+            rail={rail}
             settingsOpen={drawSettings || panel !== null}
           />
         </div>
         <MobileBar
+          onDraw={() => setRail((r) => !r)}
+          onList={() => setView("list")}
           onPanel={setPanel}
           onReplay={toggleReplay}
+          rail={rail}
           replayActive={replay.active}
           tool={tool}
         />
@@ -272,46 +426,38 @@ export function TradingPage() {
       <aside className="hidden w-72 shrink-0 flex-col border-l lg:flex">
         <Watchlist
           active={symbol}
+          compact
           items={watchlist}
           onPick={pickSymbol}
           onSearch={() => setPanel("search")}
           quotes={quotes}
+          sections={data.sections}
         />
       </aside>
 
-      <Sheet
-        onOpenChange={(o) => (o ? null : setPanel(null))}
-        open={panel === "watchlist"}
-      >
-        <SheetContent
-          className="h-[80dvh] gap-0 rounded-t-3xl p-0 pb-[env(safe-area-inset-bottom)] md:mx-auto md:max-w-lg"
-          side="bottom"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Lista de ativos</SheetTitle>
-          </SheetHeader>
-          <div className="flex min-h-0 flex-1 flex-col pt-3">
-            <Watchlist
-              active={symbol}
-              inSheet
-              items={watchlist}
-              onPick={pickSymbol}
-              onSearch={() => setPanel("search")}
-              quotes={quotes}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
-      <SymbolSearch
+      <WatchlistSheet
+        active={symbol}
+        compact
+        inSheet
+        items={watchlist}
         onClose={() => setPanel(null)}
         onPick={pickSymbol}
+        onSearch={() => setPanel("search")}
+        open={panel === "watchlist"}
+        quotes={quotes}
+        sections={data.sections}
+      />
+      <SymbolSearch
+        onClose={() => setPanel(null)}
+        onPick={(s) => (view === "list" ? setOverview(s) : pickSymbol(s))}
         open={panel === "search"}
         watchlist={watchlist}
       />
-      <ToolsSheet
-        onClose={() => setPanel(null)}
-        open={panel === "tools"}
-        {...toolActions}
+      <SymbolOverview
+        item={nav.overviewItem}
+        onClose={() => setOverview(null)}
+        onOpenChart={nav.openChart}
+        quote={overview ? quotes[overview] : undefined}
       />
       <ChartSettingsDialog
         onClose={() => setPanel(null)}
@@ -348,7 +494,11 @@ function TopBar({
   replayActive,
   onPanel,
   onReplay,
+  onCycle,
+  onOverview,
 }: {
+  onCycle: (dir: -1 | 1) => void;
+  onOverview: () => void;
   label: string;
   name: string;
   price: number | undefined;
@@ -364,7 +514,15 @@ function TopBar({
   const diffPct = change?.prevClose ? (diff / change.prevClose) * 100 : 0;
   return (
     <div className="flex shrink-0 flex-col border-b md:flex-row md:items-center">
-      <div className="flex min-w-0 items-center gap-2 px-3 py-2 md:py-1.5">
+      <div className="flex min-w-0 items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-1.5">
+        <button
+          aria-label="Ativo anterior"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          onClick={() => onCycle(-1)}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+        </button>
         <button
           className="flex min-w-0 items-center gap-1.5 rounded-md py-0.5 pr-1.5 text-left hover:bg-muted"
           onClick={() => onPanel("search")}
@@ -382,6 +540,14 @@ function TopBar({
               {name}
             </span>
           </span>
+        </button>
+        <button
+          aria-label="Próximo ativo"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          onClick={() => onCycle(1)}
+          type="button"
+        >
+          <Icon className="size-4 rotate-180" name="IconChevronLeft" />
         </button>
         <span className="ml-auto text-right md:ml-2">
           <span className="block font-mono font-semibold text-[15px] tabular-nums leading-tight">
@@ -415,7 +581,19 @@ function TopBar({
             {t.label}
           </button>
         ))}
+        <button
+          className="ml-auto h-7 shrink-0 rounded-md px-2.5 font-medium text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+          onClick={onOverview}
+          type="button"
+        >
+          Visão geral
+        </button>
         <div className="ml-auto hidden items-center gap-0.5 md:flex">
+          <BarButton
+            icon="IconChart1"
+            label="Visão geral do ativo"
+            onClick={onOverview}
+          />
           <BarButton
             active={replayActive}
             icon="IconReplay"
@@ -441,6 +619,40 @@ function TopBar({
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Phone, watchlist view: back to the chart or search a symbol. */
+function ViewBar({
+  onChart,
+  onSearch,
+}: {
+  onChart: () => void;
+  onSearch: () => void;
+}) {
+  return (
+    <div className="grid shrink-0 grid-cols-3 border-t pb-[env(safe-area-inset-bottom)]">
+      <span className="flex flex-col items-center gap-0.5 py-1.5 font-medium text-[10px] text-foreground">
+        <Icon className="size-5" name="IconListBullets" />
+        Watchlist
+      </span>
+      <button
+        className="flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted"
+        onClick={onChart}
+        type="button"
+      >
+        <Icon className="size-5" name="IconTradingViewCandles" />
+        Gráfico
+      </button>
+      <button
+        className="flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted"
+        onClick={onSearch}
+        type="button"
+      >
+        <Icon className="size-5" name="IconMagnifyingGlass" />
+        Buscar
+      </button>
     </div>
   );
 }
@@ -476,11 +688,17 @@ function BarButton({
 function MobileBar({
   onPanel,
   onReplay,
+  onList,
+  onDraw,
+  rail,
   replayActive,
   tool,
 }: {
   onPanel: (p: Panel) => void;
   onReplay: () => void;
+  onList: () => void;
+  onDraw: () => void;
+  rail: boolean;
   replayActive: boolean;
   tool: DrawToolType | null;
 }) {
@@ -492,14 +710,14 @@ function MobileBar({
   }[] = [
     {
       icon: "IconListBullets",
-      label: "Lista",
-      onClick: () => onPanel("watchlist"),
+      label: "Watchlist",
+      onClick: onList,
     },
     {
       icon: "IconPencil",
       label: "Desenhar",
-      onClick: () => onPanel("tools"),
-      active: tool !== null,
+      onClick: onDraw,
+      active: rail || tool !== null,
     },
     {
       icon: "IconReplay",
@@ -538,13 +756,18 @@ function MobileBar({
   );
 }
 
+const visibleDrawings = (drawings: Drawing[], hidden: boolean) =>
+  hidden ? drawings.map((d) => ({ ...d, visible: false })) : drawings;
+
 function DrawOverlays({
   draw,
+  rail,
   label,
   settingsOpen,
   onSettings,
 }: {
   draw: ReturnType<typeof useDrawingState>;
+  rail: boolean;
   label: string;
   settingsOpen: boolean;
   onSettings: () => void;
@@ -552,6 +775,7 @@ function DrawOverlays({
   const { tool, selected } = draw;
   return (
     <>
+      {rail ? <ToolRail floating {...draw.actions} /> : null}
       {tool ? (
         <DrawHint onCancel={() => draw.setTool(null)} tool={tool} />
       ) : null}

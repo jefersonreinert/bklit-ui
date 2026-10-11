@@ -45,7 +45,10 @@ interface ToolActions {
   count: number;
 }
 
-/** Desktop: vertical toolbar on the chart's left edge. */
+/**
+ * Vertical drawing toolbar: on the chart's left edge on desktop, or
+ * floating on the right over the chart on phones (like TradingView).
+ */
 export function ToolRail({
   active,
   onPick,
@@ -53,9 +56,17 @@ export function ToolRail({
   onToggleHidden,
   onClear,
   count,
-}: ToolActions) {
+  floating = false,
+}: ToolActions & { floating?: boolean }) {
   return (
-    <div className="no-scrollbar hidden w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto border-r py-1.5 md:flex">
+    <div
+      className={cn(
+        "no-scrollbar w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto py-1.5",
+        floating
+          ? "absolute top-2 right-2 bottom-2 z-30 flex rounded-xl border bg-card/95 shadow-lg backdrop-blur md:hidden"
+          : "hidden border-r md:flex"
+      )}
+    >
       <RailButton
         active={active === null}
         label="Cursor"

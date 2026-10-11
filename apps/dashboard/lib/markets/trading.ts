@@ -12,6 +12,13 @@ import type {
   ChartSettings,
 } from "@/components/pages/trading/mt5/engine/ChartEngine";
 import type { Drawing } from "@/components/pages/trading/mt5/tv/drawing-engine";
+import {
+  DEFAULT_ITEMS,
+  DEFAULT_SECTIONS,
+  guessSection,
+  normalizeSections,
+  SECTION_OTHER,
+} from "./sections";
 
 /**
  * Charting platform: watchlist, chart settings and drawings (saved on the
@@ -24,10 +31,16 @@ export interface WatchItem {
   /** Short ticker shown in lists ("EURUSD", "XAUUSD"…). */
   label: string;
   name: string;
+  /** Watchlist section ("Índices", "Forex"…). */
+  section?: string;
+  /** Flagged (red flag, like TradingView). */
+  flag?: boolean;
 }
 
 export interface TradingData {
   watchlist: WatchItem[];
+  /** Section order of the watchlist. */
+  sections: string[];
   symbol: string;
   tf: Timeframe;
   settings: ChartSettings;
@@ -59,29 +72,7 @@ export const TIMEFRAMES: { id: Timeframe; label: string; name: string }[] = [
 
 export const TRADING_KEY = "cb:trading:v1";
 
-const item = (symbol: string, label: string, name: string): WatchItem => ({
-  symbol,
-  label,
-  name,
-});
-
-const DEFAULT_WATCHLIST: WatchItem[] = [
-  item("EURUSD=X", "EURUSD", "Euro / Dólar"),
-  item("GBPUSD=X", "GBPUSD", "Libra / Dólar"),
-  item("USDJPY=X", "USDJPY", "Dólar / Iene"),
-  item("BRL=X", "USDBRL", "Dólar / Real"),
-  item("GC=F", "XAUUSD", "Ouro"),
-  item("CL=F", "USOIL", "Petróleo WTI"),
-  item("^GSPC", "SPX500", "S&P 500"),
-  item("^NDX", "NAS100", "Nasdaq 100"),
-  item("^DJI", "US30", "Dow Jones"),
-  item("^BVSP", "IBOV", "Ibovespa"),
-  item("BTC-USD", "BTCUSD", "Bitcoin"),
-  item("ETH-USD", "ETHUSD", "Ethereum"),
-  item("AAPL", "AAPL", "Apple"),
-  item("NVDA", "NVDA", "NVIDIA"),
-  item("TSLA", "TSLA", "Tesla"),
-];
+const DEFAULT_WATCHLIST: WatchItem[] = DEFAULT_ITEMS;
 
 export const DEFAULT_CHART: ChartSettings = {
   bodyUp: "#26a69a",
@@ -100,6 +91,7 @@ export const DEFAULT_CHART: ChartSettings = {
 
 const DEFAULT_DATA: TradingData = {
   watchlist: DEFAULT_WATCHLIST,
+  sections: DEFAULT_SECTIONS,
   symbol: "EURUSD=X",
   tf: "15m",
   settings: DEFAULT_CHART,
@@ -118,9 +110,15 @@ function read(): TradingData {
   try {
     const raw = localStorage.getItem(TRADING_KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<TradingData>) : {};
+    const { items, sections } = normalizeSections(
+      saved.watchlist ?? DEFAULT_WATCHLIST,
+      saved.sections
+    );
     cache = {
       ...DEFAULT_DATA,
       ...saved,
+      watchlist: items,
+      sections,
       settings: { ...DEFAULT_CHART, ...saved.settings },
     };
   } catch {
@@ -191,12 +189,106 @@ export function setDrawings(symbol: string, drawings: Drawing[]) {
   }));
 }
 
-export function addToWatchlist(w: WatchItem) {
+export function addToWatchlist(w: WatchItem, type?: string) {
+  updateTrading((d) => {
+    if (d.watchlist.some((x) => x.symbol === w.symbol)) {
+      return d;
+    }
+    const section = w.section ?? guessSection(w.symbol, type);
+    return {
+      ...d,
+      watchlist: [...d.watchlist, { ...w, section }],
+      sections: d.sections.includes(section)
+        ? d.sections
+        : [...d.sections, section],
+    };
+  });
+}
+
+export function setItemSection(symbol: string, section: string) {
+  updateTrading((d) => ({
+    ...d,
+    watchlist: d.watchlist.map((x) =>
+      x.symbol === symbol ? { ...x, section } : x
+    ),
+  }));
+}
+
+export function toggleFlag(symbol: string) {
+  updateTrading((d) => ({
+    ...d,
+    watchlist: d.watchlist.map((x) =>
+      x.symbol === symbol ? { ...x, flag: !x.flag } : x
+    ),
+  }));
+}
+
+export function addSection(name: string) {
+  const clean = name.trim().slice(0, 40);
   updateTrading((d) =>
-    d.watchlist.some((x) => x.symbol === w.symbol)
+    !clean || d.sections.includes(clean)
       ? d
-      : { ...d, watchlist: [...d.watchlist, w] }
+      : { ...d, sections: [...d.sections, clean] }
   );
+}
+
+export function renameSection(from: string, to: string) {
+  const clean = to.trim().slice(0, 40);
+  updateTrading((d) => {
+    if (!clean || d.sections.includes(clean)) {
+      return d;
+    }
+    return {
+      ...d,
+      sections: d.sections.map((s) => (s === from ? clean : s)),
+      watchlist: d.watchlist.map((x) =>
+        x.section === from ? { ...x, section: clean } : x
+      ),
+    };
+  });
+}
+
+/** Deletes a section; its symbols go to "Outros". */
+export function removeSection(name: string) {
+  updateTrading((d) => {
+    const moved = d.watchlist.some((x) => x.section === name);
+    const sections = d.sections.filter((s) => s !== name);
+    return {
+      ...d,
+      sections:
+        moved && !sections.includes(SECTION_OTHER)
+          ? [...sections, SECTION_OTHER]
+          : sections,
+      watchlist: d.watchlist.map((x) =>
+        x.section === name ? { ...x, section: SECTION_OTHER } : x
+      ),
+    };
+  });
+}
+
+export function moveSection(name: string, dir: -1 | 1) {
+  updateTrading((d) => {
+    const list = [...d.sections];
+    const i = list.indexOf(name);
+    const j = i + dir;
+    const a = list[i];
+    const b = list[j];
+    if (!(a && b)) {
+      return d;
+    }
+    list[i] = b;
+    list[j] = a;
+    return { ...d, sections: list };
+  });
+}
+
+/** Back to the default TradingView-like list (keeps chart settings). */
+export function resetWatchlist() {
+  updateTrading((d) => ({
+    ...d,
+    watchlist: DEFAULT_WATCHLIST,
+    sections: DEFAULT_SECTIONS,
+  }));
 }
 
 export function removeFromWatchlist(symbol: string) {
@@ -206,11 +298,16 @@ export function removeFromWatchlist(symbol: string) {
   }));
 }
 
+/** Moves a symbol up/down among the symbols of its own section. */
 export function moveInWatchlist(symbol: string, dir: -1 | 1) {
   updateTrading((d) => {
     const list = [...d.watchlist];
     const i = list.findIndex((x) => x.symbol === symbol);
-    const j = i + dir;
+    const section = list[i]?.section;
+    let j = i + dir;
+    while (list[j] && list[j]?.section !== section) {
+      j += dir;
+    }
     const a = list[i];
     const b = list[j];
     if (!(a && b)) {
@@ -224,6 +321,10 @@ export function moveInWatchlist(symbol: string, dir: -1 | 1) {
 
 /** Short ticker from a Yahoo symbol ("EURUSD=X" → "EURUSD", "BTC-USD" → "BTCUSD"). */
 export function labelOf(symbol: string) {
+  const known = DEFAULT_ITEMS.find((i) => i.symbol === symbol);
+  if (known) {
+    return known.label;
+  }
   return symbol
     .replace("=X", "")
     .replace("=F", "")
