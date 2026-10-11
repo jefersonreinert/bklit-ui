@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
 import { JournalBreakdown } from "./journal-breakdown";
 import { JournalConnector } from "./journal-connector";
+import { JournalData, JournalDemoToggle } from "./journal-data";
 import { JournalDistribution } from "./journal-distribution";
 import { Segmented } from "./journal-kit";
 import { JournalPerformance } from "./journal-performance";
@@ -333,6 +334,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
             {(stats.winRate * 100).toFixed(0)}% acerto
           </p>
         </div>
+        <JournalDemoToggle />
       </div>
       <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
         <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
@@ -370,6 +372,9 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       {deals === undefined && tab !== "connector" ? (
         <p className="text-muted-foreground text-sm">A carregar operações…</p>
       ) : null}
+      {deals && allTrades.length === 0 && FILTERED.has(tab) ? (
+        <JournalData />
+      ) : null}
       {deals ? (
         <Analysis
           modelOf={modelOf}
@@ -390,6 +395,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       ) : null}
       {tab === "signals" ? <Signals signals={signals ?? []} /> : null}
       {tab === "connector" ? <JournalConnector settings={settings} /> : null}
+      {tab === "connector" ? <JournalData /> : null}
     </div>
   );
 }

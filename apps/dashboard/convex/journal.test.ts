@@ -83,3 +83,45 @@ describe("journal webhooks", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("journal demo data and reset", () => {
+  it("loads fictitious trades, removes only them, then clears everything", async () => {
+    const { t, token } = await setup();
+    const p = t.withIdentity(panel);
+    // A real deal that must survive removing the demo
+    await t.fetch(`/journal/mt5?token=${token}`, {
+      method: "POST",
+      body: JSON.stringify({ account: 5001, ...DEAL }),
+    });
+    const n = await p.mutation(api.journal.seedDemo, {});
+    expect(n).toBeGreaterThan(400);
+    expect(await p.query(api.journal.hasDemo, {})).toBe(true);
+    expect((await p.query(api.journal.deals, {}))?.length).toBe(n + 1);
+    expect((await p.query(api.journal.notes, {}))?.length).toBeGreaterThan(0);
+    // Seeding twice replaces the demo instead of duplicating it
+    await p.mutation(api.journal.seedDemo, {});
+    expect((await p.query(api.journal.deals, {}))?.length).toBe(n + 1);
+
+    expect(
+      await p.mutation(api.journal.clearJournal, { scope: "demo" })
+    ).toEqual({ done: true });
+    expect(await p.query(api.journal.hasDemo, {})).toBe(false);
+    const left = await p.query(api.journal.deals, {});
+    expect(left?.map((d) => d.account)).toEqual(["5001"]);
+    expect(await p.query(api.journal.signals, {})).toEqual([]);
+
+    await p.mutation(api.journal.clearJournal, { scope: "all" });
+    expect(await p.query(api.journal.deals, {})).toEqual([]);
+    const settings = await p.query(api.journal.settings, {});
+    expect(settings?.token).toBe(token);
+    expect(settings?.accounts).toEqual([]);
+  });
+
+  it("requires the panel", async () => {
+    const { t } = await setup();
+    await expect(t.mutation(api.journal.seedDemo, {})).rejects.toThrow();
+    await expect(
+      t.mutation(api.journal.clearJournal, { scope: "all" })
+    ).rejects.toThrow();
+  });
+});

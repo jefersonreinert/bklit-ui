@@ -1,4 +1,11 @@
 import { v } from "convex/values";
+import {
+  DEMO_ACCOUNT,
+  DEMO_STRATEGY,
+  demoDeals,
+  demoNotes,
+  demoSignals,
+} from "../lib/journal/demo";
 import type { Doc } from "./_generated/dataModel";
 import {
   internalMutation,
@@ -206,6 +213,125 @@ export const deleteAccount = mutation({
         accounts: s.accounts.filter((x) => x.login !== a.account),
       });
     }
+  },
+});
+
+/* ------------------------------ demo / reset ----------------------------- */
+
+/** Docs removed per call, so a big journal never hits the mutation limits. */
+const BATCH = 1500;
+
+const DEMO_INFO = {
+  login: DEMO_ACCOUNT,
+  server: "Dados fictícios",
+  name: "Demonstração",
+};
+
+/** Removes up to BATCH demo docs; true when nothing demo is left. */
+async function clearDemoBatch(ctx: MutationCtx) {
+  let budget = BATCH;
+  const deals = await ctx.db
+    .query("jrnDeals")
+    .withIndex("by_ticket", (q) => q.eq("account", DEMO_ACCOUNT))
+    .take(budget);
+  for (const d of deals) {
+    await ctx.db.delete(d._id);
+  }
+  budget -= deals.length;
+  const notes = (await ctx.db.query("jrnNotes").collect()).filter((n) =>
+    n.key.startsWith(`${DEMO_ACCOUNT}:`)
+  );
+  for (const n of notes.slice(0, Math.max(0, budget))) {
+    await ctx.db.delete(n._id);
+  }
+  budget -= notes.length;
+  const signals = (await ctx.db.query("jrnSignals").collect()).filter(
+    (x) => x.strategy === DEMO_STRATEGY
+  );
+  for (const x of signals.slice(0, Math.max(0, budget))) {
+    await ctx.db.delete(x._id);
+  }
+  budget -= signals.length;
+  return budget >= 0;
+}
+
+/** Fills the journal with fictitious trades, notes and alerts (DEMO account). */
+export const seedDemo = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requirePanel(ctx);
+    await clearDemoBatch(ctx);
+    const now = Date.now();
+    const deals = demoDeals(now);
+    for (const d of deals) {
+      await ctx.db.insert("jrnDeals", d);
+    }
+    for (const n of demoNotes(now)) {
+      await ctx.db.insert("jrnNotes", n);
+    }
+    for (const x of demoSignals(now)) {
+      await ctx.db.insert("jrnSignals", x);
+    }
+    const s = await ensureState(ctx);
+    const accounts = (s.accounts ?? []).filter((a) => a.login !== DEMO_ACCOUNT);
+    await ctx.db.patch(s._id, { accounts: [...accounts, DEMO_INFO] });
+    return deals.length;
+  },
+});
+
+/**
+ * Clears the journal: "demo" removes only the fictitious data, "all" every
+ * deal, note and alert (the webhook token is kept). Works in batches: call
+ * again while it returns `done: false`.
+ */
+export const clearJournal = mutation({
+  args: { scope: v.union(v.literal("demo"), v.literal("all")) },
+  handler: async (ctx, a) => {
+    await requirePanel(ctx);
+    const s = await getState(ctx);
+    if (a.scope === "demo") {
+      const done = await clearDemoBatch(ctx);
+      if (done && s?.accounts) {
+        await ctx.db.patch(s._id, {
+          accounts: s.accounts.filter((x) => x.login !== DEMO_ACCOUNT),
+        });
+      }
+      return { done };
+    }
+    let removed = 0;
+    for (const table of ["jrnDeals", "jrnNotes", "jrnSignals"] as const) {
+      const rows = await ctx.db.query(table).take(BATCH - removed);
+      for (const r of rows) {
+        await ctx.db.delete(r._id);
+      }
+      removed += rows.length;
+      if (removed >= BATCH) {
+        return { done: false };
+      }
+    }
+    if (s) {
+      await ctx.db.patch(s._id, {
+        accounts: [],
+        lastMt5At: undefined,
+        lastTvAt: undefined,
+      });
+    }
+    return { done: true };
+  },
+});
+
+/** Whether the journal currently holds the fictitious data. */
+export const hasDemo = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await isPanel(ctx))) {
+      return false;
+    }
+    const one = await ctx.db
+      .query("jrnDeals")
+      .withIndex("by_ticket", (q) => q.eq("account", DEMO_ACCOUNT))
+      .first();
+    return one !== null;
   },
 });
 
