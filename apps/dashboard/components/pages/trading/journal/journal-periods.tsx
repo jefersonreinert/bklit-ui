@@ -218,7 +218,7 @@ export function JournalPeriods({
       <PeriodStats g={g} rows={rows} />
       <div className="grid gap-3 xl:grid-cols-2">
         <Panel
-          description={`Resultado líquido por ${SINGULAR[g]}: verde no lucro, vermelho no prejuízo.`}
+          description={`Resultado líquido por ${SINGULAR[g]}: kraft no lucro, manilla no prejuízo.`}
           title="P&L por período"
         >
           <PnlCurve data={curve} label="Líquido" />

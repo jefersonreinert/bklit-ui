@@ -9,7 +9,6 @@ import {
   Line,
   LineChart,
   ProfitLossLine,
-  profitLossColor,
   XAxis,
   YAxis,
 } from "@bklitui/ui/charts";
@@ -26,10 +25,12 @@ import { money, tone } from "./journal-summary";
 export const UP = "var(--up)";
 export const DOWN = "var(--down)";
 /** Literal colors for SVG attributes, where CSS variables do not resolve. */
-export const UP_HEX = "#26a69a";
-export const DOWN_HEX = "#ef5350";
-/** Kraft, the brand accent of the charts. */
+/** Kraft (positive, the stronger tone) and Manilla (negative, the softer one). */
 export const KRAFT = "#D4A27F";
+export const MANILLA = "#EBDBBC";
+export const UP_HEX = KRAFT;
+export const DOWN_HEX = MANILLA;
+const pnlColor = (v: number) => (v >= 0 ? UP : DOWN);
 export const PALETTE = [1, 4, 3, 5, 2].map(
   (n) => `var(--ai-chart-${n}, var(--chart-${n}))`
 );
@@ -174,14 +175,14 @@ export function PnlCurve({
         stroke="transparent"
         strokeWidth={0}
       />
-      <ProfitLossLine dataKey="pnl" />
+      <ProfitLossLine dataKey="pnl" negativeColor={DOWN} positiveColor={UP} />
       <YAxis formatValue={axisMoney} />
       <XAxis />
       <ChartTooltip
-        indicatorColor={(p) => profitLossColor((p.pnl as number) ?? 0)}
+        indicatorColor={(p) => pnlColor((p.pnl as number) ?? 0)}
         rows={(p) => {
           const v = (p.pnl as number) ?? 0;
-          return [{ color: profitLossColor(v), label, value: money(v, true) }];
+          return [{ color: pnlColor(v), label, value: money(v, true) }];
         }}
       />
     </LineChart>
