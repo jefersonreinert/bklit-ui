@@ -236,6 +236,26 @@ async function run<T>(
   }
 }
 
+const SCAN_SCHEMA = obj({ title: str, language: str, text: str });
+
+const SCAN_PROMPT = `You receive photos (or a PDF) of document pages the user just scanned with a phone: letters, receipts, forms, contracts, IDs, notes, whiteboards, book pages, handwriting.
+Transcribe ALL readable text into "text" as GitHub-flavored Markdown, in reading order, page after page:
+- Keep the original language, spelling, accents, numbers, dates and line breaks that matter. Never translate, summarize or invent text; mark unreadable bits as [ilegível].
+- Headings as #/##, lists as - or 1., tables as Markdown tables, checkboxes as - [ ] / - [x], bold for printed emphasis.
+- Separate pages with a line containing only ---.
+- Ignore the background, fingers and the page edges.
+title: a short descriptive file name in the document's language (e.g. "Recibo Farmácia 12-03-2026"), no extension.
+language: ISO 639-1 code of the main language.`;
+
+export interface ScannedText {
+  title: string;
+  language: string;
+  text: string;
+}
+
+export const extractScan = (files: ExtractFile[], hint?: string) =>
+  run<ScannedText>(files, SCAN_PROMPT, SCAN_SCHEMA, hint);
+
 export const extractMenu = (files: ExtractFile[], hint?: string) =>
   run<ExtractedMenu>(files, MENU_PROMPT, MENU_SCHEMA, hint);
 

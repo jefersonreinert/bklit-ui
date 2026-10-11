@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as crons from "../crons.js";
+import type * as files from "../files.js";
 import type * as ict from "../ict.js";
 import type * as lib from "../lib.js";
 import type * as metatrader from "../metatrader.js";
@@ -31,6 +32,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   crons: typeof crons;
+  files: typeof files;
   ict: typeof ict;
   lib: typeof lib;
   metatrader: typeof metatrader;
