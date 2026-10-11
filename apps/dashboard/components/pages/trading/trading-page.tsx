@@ -29,6 +29,13 @@ import {
 } from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
+import { ExploreView } from "./explore-view";
+import {
+  ChartToolbar,
+  type MobileView,
+  type MoreAction,
+  TabBar,
+} from "./mobile-chrome";
 import type { Candle } from "./mt5/engine/ChartEngine";
 import { SVGChart } from "./mt5/SVGChart";
 import { ChartSettingsDialog } from "./mt5/tv/chart-settings-dialog";
@@ -47,13 +54,16 @@ import { ToolRail, toolLabel } from "./trading-tools";
 import { changeClass, pct, SymbolSearch, Watchlist } from "./trading-watchlist";
 
 type Panel = "watchlist" | "search" | "settings" | "goto" | null;
-type View = "list" | "chart";
+type View = MobileView;
 
 const VIEW_KEY = "cb:trading:view";
 
+const VIEWS = new Set<string>(["list", "chart", "explore"]);
+
 function initialView(): View {
   try {
-    return localStorage.getItem(VIEW_KEY) === "chart" ? "chart" : "list";
+    const saved = localStorage.getItem(VIEW_KEY) ?? "";
+    return VIEWS.has(saved) ? (saved as View) : "list";
   } catch {
     return "list";
   }
@@ -256,13 +266,43 @@ function WatchlistSheet({
 
 /** Phone: the full-screen watchlist (TradingView's first tab). */
 function MobileWatchlist({
-  onChart,
+  onView,
   ...props
-}: React.ComponentProps<typeof Watchlist> & { onChart: () => void }) {
+}: React.ComponentProps<typeof Watchlist> & {
+  onView: (v: View) => void;
+}) {
   return (
     <div className="flex min-w-0 flex-1 flex-col md:hidden">
       <Watchlist {...props} />
-      <ViewBar onChart={onChart} onSearch={props.onSearch} />
+      <TabBar onView={onView} view="list" />
+    </div>
+  );
+}
+
+/** Explore (all sizes): market cards, shortcuts and top stories. */
+function ExplorePanel({
+  onView,
+  onPick,
+  onSearch,
+}: {
+  onView: (v: View) => void;
+  onPick: (s: string) => void;
+  onSearch: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden border-b px-3 py-2 md:block">
+        <button
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => onView("chart")}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar ao gráfico
+        </button>
+      </div>
+      <ExploreView onPick={onPick} onSearch={onSearch} />
+      <TabBar onView={onView} view="explore" />
     </div>
   );
 }
@@ -287,7 +327,7 @@ export function TradingPage() {
   const replay = useReplay({ fullData: candles, activeTF: tf });
   const drawings = data.drawings[symbol] ?? [];
   const draw = useDrawingState(symbol, drawings);
-  const { tool, selected, selectedId } = draw;
+  const { tool, selected } = draw;
 
   const item = watchlist.find((w) => w.symbol === symbol);
   const label = item?.label ?? labelOf(symbol);
@@ -334,7 +374,6 @@ export function TradingPage() {
   const toolActions = draw.actions;
 
   const shown = visibleDrawings(drawings, draw.hidden);
-  const chartData = replay.active ? replay.replayData : candles;
 
   return (
     <div className="mt5 -m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
@@ -342,88 +381,85 @@ export function TradingPage() {
         <MobileWatchlist
           active={symbol}
           items={watchlist}
-          onChart={() => setView("chart")}
           onPick={setOverview}
           onSearch={() => setPanel("search")}
+          onView={setView}
           quotes={quotes}
           sections={data.sections}
         />
       ) : null}
-      <ToolRail {...toolActions} />
+      {view === "explore" ? (
+        <ExplorePanel
+          onPick={setOverview}
+          onSearch={() => setPanel("search")}
+          onView={setView}
+        />
+      ) : null}
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col",
-          view === "list" && "max-md:hidden"
+          "flex min-w-0 flex-1",
+          view === "list" && "max-md:hidden",
+          view === "explore" && "hidden"
         )}
       >
-        <TopBar
-          change={quote}
-          digits={digits}
-          label={label}
-          name={item?.name ?? quote?.name ?? symbol}
-          onCycle={nav.cycle}
-          onOverview={() => setOverview(symbol)}
-          onPanel={setPanel}
-          onReplay={toggleReplay}
-          price={price}
-          replayActive={replay.active}
-          tf={tf}
-        />
-        <div
-          className={cn(
-            "relative min-h-0 flex-1 overflow-hidden",
-            replay.active && "pt-9"
-          )}
-        >
-          {candles.length > 0 ? (
-            <SVGChart
-              data={chartData}
-              drawingProps={{
-                drawings: shown,
-                selectedId,
-                activeTool: tool,
-                onDrawingsChange: draw.change,
-                onSelectedChange: draw.setSelectedId,
-                onToolDone: () => draw.setTool(null),
-              }}
-              followLast={replay.active && replay.playing}
-              goToDate={replay.active ? undefined : goTo}
-              key={`${symbol}-${tf}`}
-              settings={{ ...settings, precision: digits }}
-            />
-          ) : null}
-          <ChartStatus
-            candles={candles}
-            error={feed.error}
-            loading={feed.candles === null}
-            onRetry={feed.reload}
-            source={feed.source}
-          />
-          <ReplayControls
-            precision={digits}
-            replay={replay}
-            symbol={symbol}
-            timezone={settings.timezone}
-          />
-          <DrawOverlays
-            draw={draw}
+        <ToolRail {...toolActions} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar
+            change={quote}
+            digits={digits}
             label={label}
-            onSettings={() => setDrawSettings(true)}
-            rail={rail}
-            settingsOpen={drawSettings || panel !== null}
+            name={item?.name ?? quote?.name ?? symbol}
+            onCycle={nav.cycle}
+            onExplore={() => setView("explore")}
+            onOverview={() => setOverview(symbol)}
+            onPanel={setPanel}
+            onReplay={toggleReplay}
+            price={price}
+            replayActive={replay.active}
+            tf={tf}
           />
+          <ChartViewport
+            candles={candles}
+            digits={digits}
+            draw={draw}
+            drawings={shown}
+            feed={feed}
+            goTo={goTo}
+            label={label}
+            onDrawSettings={() => setDrawSettings(true)}
+            rail={rail}
+            replay={replay}
+            settings={settings}
+            settingsOpen={drawSettings || panel !== null}
+            symbol={symbol}
+            tf={tf}
+          />
+          <ChartToolbar
+            canUndo={drawings.length > 0}
+            drawing={rail || tool !== null}
+            labelOf={(s) =>
+              watchlist.find((w) => w.symbol === s)?.label ?? labelOf(s)
+            }
+            more={moreActions({ setPanel, setOverview, symbol })}
+            onDraw={() => setRail((r) => !r)}
+            onReplay={toggleReplay}
+            onSymbol={pickSymbol}
+            onTf={setTimeframe}
+            onUndo={() => draw.change(drawings.slice(0, -1))}
+            replay={replay.active}
+            symbol={symbol}
+            symbols={watchlist.map((w) => w.symbol)}
+            tf={tf}
+          />
+          <TabBar onView={setView} view="chart" />
         </div>
-        <MobileBar
-          onDraw={() => setRail((r) => !r)}
-          onList={() => setView("list")}
-          onPanel={setPanel}
-          onReplay={toggleReplay}
-          rail={rail}
-          replayActive={replay.active}
-          tool={tool}
-        />
       </div>
-      <aside className="hidden w-72 shrink-0 flex-col border-l lg:flex">
+      <aside
+        className={cn(
+          "hidden w-72 shrink-0 flex-col border-l lg:flex",
+          view === "explore" && "lg:hidden"
+        )}
+      >
         <Watchlist
           active={symbol}
           compact
@@ -496,7 +532,9 @@ function TopBar({
   onReplay,
   onCycle,
   onOverview,
+  onExplore,
 }: {
+  onExplore: () => void;
   onCycle: (dir: -1 | 1) => void;
   onOverview: () => void;
   label: string;
@@ -595,6 +633,11 @@ function TopBar({
             onClick={onOverview}
           />
           <BarButton
+            icon="IconCompassRound"
+            label="Explorar mercados"
+            onClick={onExplore}
+          />
+          <BarButton
             active={replayActive}
             icon="IconReplay"
             label="Replay"
@@ -619,40 +662,6 @@ function TopBar({
           </span>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Phone, watchlist view: back to the chart or search a symbol. */
-function ViewBar({
-  onChart,
-  onSearch,
-}: {
-  onChart: () => void;
-  onSearch: () => void;
-}) {
-  return (
-    <div className="grid shrink-0 grid-cols-3 border-t pb-[env(safe-area-inset-bottom)]">
-      <span className="flex flex-col items-center gap-0.5 py-1.5 font-medium text-[10px] text-foreground">
-        <Icon className="size-5" name="IconListBullets" />
-        Watchlist
-      </span>
-      <button
-        className="flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted"
-        onClick={onChart}
-        type="button"
-      >
-        <Icon className="size-5" name="IconTradingViewCandles" />
-        Gráfico
-      </button>
-      <button
-        className="flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted"
-        onClick={onSearch}
-        type="button"
-      >
-        <Icon className="size-5" name="IconMagnifyingGlass" />
-        Buscar
-      </button>
     </div>
   );
 }
@@ -684,74 +693,116 @@ function BarButton({
   );
 }
 
-/** Phone: thumb-reach actions under the chart. */
-function MobileBar({
-  onPanel,
-  onReplay,
-  onList,
-  onDraw,
-  rail,
-  replayActive,
-  tool,
+function moreActions({
+  setPanel,
+  setOverview,
+  symbol,
 }: {
-  onPanel: (p: Panel) => void;
-  onReplay: () => void;
-  onList: () => void;
-  onDraw: () => void;
-  rail: boolean;
-  replayActive: boolean;
-  tool: DrawToolType | null;
-}) {
-  const items: {
-    icon: IconName;
-    label: string;
-    onClick: () => void;
-    active?: boolean;
-  }[] = [
+  setPanel: (p: Panel) => void;
+  setOverview: (s: string) => void;
+  symbol: string;
+}): MoreAction[] {
+  return [
     {
-      icon: "IconListBullets",
-      label: "Watchlist",
-      onClick: onList,
+      label: "Visão geral do ativo",
+      icon: "IconChart1",
+      onClick: () => setOverview(symbol),
     },
     {
-      icon: "IconPencil",
-      label: "Desenhar",
-      onClick: onDraw,
-      active: rail || tool !== null,
+      label: "Buscar ativo",
+      icon: "IconMagnifyingGlass",
+      onClick: () => setPanel("search"),
     },
     {
-      icon: "IconReplay",
-      label: "Replay",
-      onClick: onReplay,
-      active: replayActive,
-    },
-    {
+      label: "Ir para data",
       icon: "IconCalendarClock",
-      label: "Data",
-      onClick: () => onPanel("goto"),
+      onClick: () => setPanel("goto"),
     },
     {
+      label: "Configurações do gráfico",
       icon: "IconSettingsGear1",
-      label: "Ajustes",
-      onClick: () => onPanel("settings"),
+      onClick: () => setPanel("settings"),
     },
   ];
+}
+
+function ChartViewport({
+  symbol,
+  tf,
+  candles,
+  feed,
+  replay,
+  draw,
+  drawings,
+  settings,
+  digits,
+  goTo,
+  label,
+  rail,
+  settingsOpen,
+  onDrawSettings,
+}: {
+  symbol: string;
+  tf: Timeframe;
+  candles: Candle[];
+  feed: ReturnType<typeof useCandles>;
+  replay: ReturnType<typeof useReplay>;
+  draw: ReturnType<typeof useDrawingState>;
+  drawings: Drawing[];
+  settings: ReturnType<typeof useTrading>["settings"];
+  digits: number;
+  goTo: Date | null;
+  label: string;
+  rail: boolean;
+  settingsOpen: boolean;
+  onDrawSettings: () => void;
+}) {
+  const { tool, selectedId } = draw;
+  const chartData = replay.active ? replay.replayData : candles;
   return (
-    <div className="grid shrink-0 grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] md:hidden">
-      {items.map((i) => (
-        <button
-          className={cn(
-            "flex flex-col items-center gap-0.5 py-1.5 text-[10px] text-muted-foreground active:bg-muted",
-            i.active && "text-[#2962ff]"
-          )}
-          key={i.label}
-          onClick={i.onClick}
-          type="button"
-        >
-          <Icon className="size-5" name={i.icon} />
-          {i.label}
-        </button>
-      ))}
+    <div
+      className={cn(
+        "relative min-h-0 flex-1 overflow-hidden",
+        replay.active && "pt-9"
+      )}
+    >
+      {candles.length > 0 ? (
+        <SVGChart
+          data={chartData}
+          drawingProps={{
+            drawings,
+            selectedId,
+            activeTool: tool,
+            onDrawingsChange: draw.change,
+            onSelectedChange: draw.setSelectedId,
+            onToolDone: () => draw.setTool(null),
+          }}
+          followLast={replay.active && replay.playing}
+          goToDate={replay.active ? undefined : goTo}
+          key={`${symbol}-${tf}`}
+          settings={{ ...settings, precision: digits }}
+        />
+      ) : null}
+      <ChartStatus
+        candles={candles}
+        error={feed.error}
+        loading={feed.candles === null}
+        onRetry={feed.reload}
+        source={feed.source}
+      />
+      <ReplayControls
+        precision={digits}
+        replay={replay}
+        symbol={symbol}
+        timezone={settings.timezone}
+      />
+      <DrawOverlays
+        draw={draw}
+        label={label}
+        onSettings={onDrawSettings}
+        rail={rail}
+        settingsOpen={settingsOpen}
+      />
     </div>
   );
 }

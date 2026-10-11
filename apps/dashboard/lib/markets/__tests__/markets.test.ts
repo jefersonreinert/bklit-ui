@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { EXPLORE, parseSpark, sparkChange } from "../explore";
 import { parseYahooChart, periodChange } from "../history";
 import {
   DEFAULT_ITEMS,
@@ -151,5 +152,54 @@ describe("history", () => {
     assert.ok(day && Math.abs(day.abs - 0.118) < 1e-9);
     const range = periodChange(h, "5Y");
     assert.ok(range && Math.abs(range.abs - 0.132) < 1e-9);
+  });
+});
+
+describe("explore sparks", () => {
+  it("parses Yahoo spark results and skips gaps", () => {
+    const sparks = parseSpark({
+      spark: {
+        result: [
+          {
+            symbol: "^GSPC",
+            response: [
+              {
+                meta: {
+                  regularMarketPrice: 102,
+                  chartPreviousClose: 100,
+                  currency: "USD",
+                },
+                indicators: { quote: [{ close: [100, null, 101, 102] }] },
+              },
+            ],
+          },
+          { symbol: "BAD", response: [] },
+        ],
+      },
+    });
+    assert.equal(sparks.length, 1);
+    assert.deepEqual(sparks[0]?.closes, [100, 101, 102]);
+    assert.equal(sparks[0] && sparkChange(sparks[0]), 2);
+  });
+
+  it("returns no change without a previous close", () => {
+    assert.equal(
+      sparkChange({
+        symbol: "X",
+        closes: [],
+        price: 1,
+        prevClose: null,
+        currency: "",
+      }),
+      null
+    );
+    assert.deepEqual(parseSpark(null), []);
+  });
+
+  it("has unique symbols per category", () => {
+    for (const c of EXPLORE) {
+      const syms = c.items.map((i) => i.symbol);
+      assert.equal(new Set(syms).size, syms.length, c.id);
+    }
   });
 });

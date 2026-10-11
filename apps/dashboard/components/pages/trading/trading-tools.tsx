@@ -47,7 +47,7 @@ interface ToolActions {
 
 /**
  * Vertical drawing toolbar: on the chart's left edge on desktop, or
- * floating on the right over the chart on phones (like TradingView).
+ * floating on the left over the chart on phones (like TradingView).
  */
 export function ToolRail({
   active,
@@ -63,7 +63,7 @@ export function ToolRail({
       className={cn(
         "no-scrollbar w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto py-1.5",
         floating
-          ? "absolute top-2 right-2 bottom-2 z-30 flex rounded-xl border bg-card/95 shadow-lg backdrop-blur md:hidden"
+          ? "absolute top-2 bottom-2 left-2 z-30 flex rounded-xl border bg-card/95 shadow-lg backdrop-blur md:hidden"
           : "hidden border-r md:flex"
       )}
     >
