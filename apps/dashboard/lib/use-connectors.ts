@@ -37,6 +37,13 @@ export interface ConnectorsStatus {
     connected: boolean;
     name?: string;
   };
+  /** MetaTrader server configured in Convex; usable with the access code. */
+  metatrader?: {
+    available: boolean;
+    unlocked: boolean;
+    connected: boolean;
+    name?: string;
+  };
 }
 
 const OFFLINE: ConnectorsStatus = {
@@ -49,6 +56,7 @@ const OFFLINE: ConnectorsStatus = {
   youtube: { available: false, transcripts: false },
   whatsapp: { available: false, unlocked: false },
   telegram: { available: false, unlocked: false, connected: false },
+  metatrader: { available: false, unlocked: false, connected: false },
 };
 
 export function notionStartUrl(returnTo?: string) {
@@ -170,6 +178,9 @@ export function connectedKeys(status: ConnectorsStatus | null) {
   }
   if (status.telegram?.connected && status.telegram.unlocked) {
     keys.push("telegram");
+  }
+  if (status.metatrader?.connected && status.metatrader.unlocked) {
+    keys.push("metatrader");
   }
   return keys;
 }

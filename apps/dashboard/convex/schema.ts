@@ -465,4 +465,40 @@ export default defineSchema({
     error: v.optional(v.string()),
     at: v.number(),
   }).index("by_at", ["at"]),
+
+  /** MetaTrader connector (metatrader-mcp-server on the person's MT5 PC/VPS). */
+  mtState: defineTable({
+    key: v.literal("main"),
+    /** MCP endpoint, e.g. https://mt5.example.com/mcp or …/sse. */
+    url: v.optional(v.string()),
+    transport: v.optional(
+      v.union(v.literal("streamable-http"), v.literal("sse"))
+    ),
+    /** Secret: auth headers for the proxy in front of the server. */
+    headers: v.optional(v.record(v.string(), v.string())),
+    /** Optional metatrader-http-server base URL (candles by date, symbol info). */
+    restUrl: v.optional(v.string()),
+    /** Optional metatrader-quote-server WebSocket URL (live ticks). */
+    quoteUrl: v.optional(v.string()),
+    /** Orders and closes from the panel. */
+    allowTrading: v.boolean(),
+    /** Orders and closes from the AI assistant. */
+    assistantTrading: v.boolean(),
+    /** Tool names the server reported on the last test. */
+    serverTools: v.optional(v.array(v.string())),
+    lastOkAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    lastErrorAt: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
+  mtCalls: defineTable({
+    tool: v.string(),
+    source: v.union(v.literal("panel"), v.literal("assistant")),
+    ok: v.boolean(),
+    ms: v.number(),
+    /** Short, secret-free summary of the arguments. */
+    args: v.optional(v.string()),
+    error: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_at", ["at"]),
 });

@@ -12,6 +12,7 @@ import type * as access from "../access.js";
 import type * as crons from "../crons.js";
 import type * as ict from "../ict.js";
 import type * as lib from "../lib.js";
+import type * as metatrader from "../metatrader.js";
 import type * as notes from "../notes.js";
 import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   ict: typeof ict;
   lib: typeof lib;
+  metatrader: typeof metatrader;
   notes: typeof notes;
   pos: typeof pos;
   staff: typeof staff;

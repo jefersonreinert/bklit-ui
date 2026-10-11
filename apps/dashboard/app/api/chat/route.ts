@@ -27,6 +27,12 @@ import {
 } from "@/lib/server/google-tools";
 import { groqKey, runGroqConversation } from "@/lib/server/groq-chat";
 import {
+  isMetatraderTool,
+  METATRADER_INSTRUCTIONS,
+  METATRADER_TOOLS,
+  runMetatraderTool,
+} from "@/lib/server/metatrader-tools";
+import {
   CONNECTION_COOKIE,
   cookieOptions,
   ensureFreshToken,
@@ -136,6 +142,8 @@ interface Connectors {
   whatsapp: boolean;
   /** Telegram account (Convex session); needs the access code too. */
   telegram: boolean;
+  /** MetaTrader server (Convex config); needs the access code too. */
+  metatrader: boolean;
   notices: string[];
   cookies: string[];
 }
@@ -336,6 +344,11 @@ async function resolveConnectors(
         panelToolsAvailable() &&
         (await hasAccess(request))
     ),
+    metatrader: Boolean(
+      requested?.includes("metatrader") &&
+        panelToolsAvailable() &&
+        (await hasAccess(request))
+    ),
     notices: [],
     cookies: [],
   };
@@ -371,6 +384,7 @@ function connectorInstructions(c: Connectors, google: string) {
     c.youtube ? YOUTUBE_INSTRUCTIONS : "",
     c.whatsapp ? WHATSAPP_INSTRUCTIONS : "",
     c.telegram ? TELEGRAM_INSTRUCTIONS : "",
+    c.metatrader ? METATRADER_INSTRUCTIONS : "",
     c.panel ? PANEL_INSTRUCTIONS : "",
   ].filter(Boolean);
 }
@@ -404,6 +418,7 @@ function buildParams(
     ...(c.youtube ? youtubeTools(Boolean(c.google?.youtube)) : []),
     ...(c.whatsapp ? WHATSAPP_TOOLS : []),
     ...(c.telegram ? TELEGRAM_TOOLS : []),
+    ...(c.metatrader ? METATRADER_TOOLS : []),
     ...(c.panel ? PANEL_TOOLS : []),
   ];
   return {
@@ -505,6 +520,9 @@ function runClientTool(c: Connectors, name: string, input: unknown) {
   }
   if (c.telegram && isTelegramTool(name)) {
     return runTelegramTool(name, input);
+  }
+  if (c.metatrader && isMetatraderTool(name)) {
+    return runMetatraderTool(name, input);
   }
   if (c.youtube && isYoutubeTool(name)) {
     return runYoutubeTool(
@@ -700,6 +718,7 @@ export async function POST(request: NextRequest) {
     connectors.youtube ? "youtube" : null,
     connectors.whatsapp ? "whatsapp" : null,
     connectors.telegram ? "telegram" : null,
+    connectors.metatrader ? "metatrader" : null,
   ].filter(Boolean);
   const response = new Response(readable, {
     headers: {

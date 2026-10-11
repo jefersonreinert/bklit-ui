@@ -468,7 +468,8 @@ type ConnectorKey =
   | "drive"
   | "youtube"
   | "whatsapp"
-  | "telegram";
+  | "telegram"
+  | "metatrader";
 type ConnectorPrefs = Record<ConnectorKey, boolean>;
 
 const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
@@ -479,6 +480,7 @@ const CONNECTOR_ROWS: { key: ConnectorKey; label: string }[] = [
   { key: "youtube", label: "YouTube" },
   { key: "whatsapp", label: "WhatsApp" },
   { key: "telegram", label: "Telegram" },
+  { key: "metatrader", label: "MetaTrader 5" },
 ];
 
 const SERVICE_KEYS = new Set<string>([
@@ -489,6 +491,7 @@ const SERVICE_KEYS = new Set<string>([
   "youtube",
   "whatsapp",
   "telegram",
+  "metatrader",
 ]);
 const isService = (server: string): server is ServiceBrand =>
   SERVICE_KEYS.has(server);
@@ -505,6 +508,9 @@ function isConnected(status: ConnectorsStatus | null, key: ConnectorKey) {
   }
   if (key === "telegram") {
     return Boolean(status.telegram?.connected && status.telegram.unlocked);
+  }
+  if (key === "metatrader") {
+    return Boolean(status.metatrader?.connected && status.metatrader.unlocked);
   }
   if (key === "github") {
     return Boolean(status.github?.connected);
@@ -527,6 +533,9 @@ function connectorSubtitle(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "telegram") {
     return status?.telegram.name ?? "Conectado";
   }
+  if (key === "metatrader") {
+    return status?.metatrader?.name ?? "Conectado";
+  }
   if (key === "github") {
     return status?.github.login ? `@${status.github.login}` : "Conectado";
   }
@@ -541,7 +550,12 @@ function connectHref(status: ConnectorsStatus | null, key: ConnectorKey) {
   if (key === "notion") {
     return notionStartUrl(back);
   }
-  if (key === "youtube" || key === "github" || key === "telegram") {
+  if (
+    key === "youtube" ||
+    key === "github" ||
+    key === "telegram" ||
+    key === "metatrader"
+  ) {
     return `${BASE_PATH}/conectores/`;
   }
   if (key === "whatsapp") {
@@ -680,6 +694,7 @@ const SERVICE_NAMES: Record<string, string> = {
   youtube: "YouTube",
   whatsapp: "WhatsApp",
   telegram: "Telegram",
+  metatrader: "MetaTrader 5",
 };
 
 /** "Usou Gmail e Notion · 3 ações ›", expandable (like Claude's tool line). */
@@ -951,6 +966,7 @@ export function AiPage() {
     youtube: true,
     whatsapp: true,
     telegram: true,
+    metatrader: true,
   });
   const { status: connectors } = useConnectors();
   const profile = usePreferences();

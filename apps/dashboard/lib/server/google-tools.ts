@@ -162,6 +162,9 @@ export function toolServer(name: string) {
   if (name.startsWith("telegram_")) {
     return "telegram";
   }
+  if (name.startsWith("metatrader_")) {
+    return "metatrader";
+  }
   return name.startsWith("drive_") ? "drive" : "gmail";
 }
 

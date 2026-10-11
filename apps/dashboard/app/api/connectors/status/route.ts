@@ -7,6 +7,7 @@ import {
   readGoogleConnection,
   YOUTUBE_MANAGE_SCOPE,
 } from "@/lib/server/google-connector";
+import { metatraderSummary } from "@/lib/server/metatrader-tools";
 import { readConnection } from "@/lib/server/notion-connector";
 import { panelAuthConfigured } from "@/lib/server/panel-jwt";
 import { connectorsSecret } from "@/lib/server/sealed-cookie";
@@ -26,6 +27,8 @@ export async function GET(request: NextRequest) {
   const unlocked = await hasAccess(request);
   const telegram =
     unlocked && panelAuthConfigured() ? await telegramSummary() : null;
+  const metatrader =
+    unlocked && panelAuthConfigured() ? await metatraderSummary() : null;
   return NextResponse.json(
     {
       configured,
@@ -62,6 +65,12 @@ export async function GET(request: NextRequest) {
         unlocked,
         connected: Boolean(telegram?.connected),
         ...(telegram?.name ? { name: telegram.name } : {}),
+      },
+      metatrader: {
+        available: panelAuthConfigured(),
+        unlocked,
+        connected: Boolean(metatrader?.connected),
+        ...(metatrader?.name ? { name: metatrader.name } : {}),
       },
     },
     { headers: { "Cache-Control": "no-store" } }
