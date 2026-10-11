@@ -23,7 +23,9 @@ describe("demo journal data", () => {
     const trades = buildTrades(demoDeals(NOW));
     assert.ok(groupBy(trades, (t) => t.comment || `EA ${t.magic}`).length >= 5);
     assert.ok(groupBy(trades, (t) => sessionOf(t.openTime)).length >= 4);
-    const months = new Set(trades.map((t) => new Date(t.openTime).getUTCMonth()));
+    const months = new Set(
+      trades.map((t) => new Date(t.openTime).getUTCMonth())
+    );
     assert.equal(months.size, 12);
   });
 

@@ -102,9 +102,9 @@ describe("journal demo data and reset", () => {
     await p.mutation(api.journal.seedDemo, {});
     expect((await p.query(api.journal.deals, {}))?.length).toBe(n + 1);
 
-    expect(await p.mutation(api.journal.clearJournal, { scope: "demo" })).toEqual(
-      { done: true }
-    );
+    expect(
+      await p.mutation(api.journal.clearJournal, { scope: "demo" })
+    ).toEqual({ done: true });
     expect(await p.query(api.journal.hasDemo, {})).toBe(false);
     const left = await p.query(api.journal.deals, {});
     expect(left?.map((d) => d.account)).toEqual(["5001"]);
