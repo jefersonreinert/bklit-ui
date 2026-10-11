@@ -10,12 +10,13 @@ import { cn } from "@/lib/utils";
  * Chart, Explore) and the chart toolbar with symbol and timeframe wheels.
  */
 
-export type MobileView = "list" | "chart" | "explore";
+export type MobileView = "list" | "chart" | "explore" | "journal";
 
 const TABS: { view: MobileView; label: string; icon: IconName }[] = [
   { view: "list", label: "Watchlist", icon: "IconListBullets" },
   { view: "chart", label: "Gráfico", icon: "IconTradingViewCandles" },
   { view: "explore", label: "Explorar", icon: "IconCompassRound" },
+  { view: "journal", label: "Diário", icon: "IconNotebook" },
 ];
 
 export function TabBar({
@@ -26,7 +27,7 @@ export function TabBar({
   onView: (v: MobileView) => void;
 }) {
   return (
-    <nav className="grid shrink-0 grid-cols-3 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="grid shrink-0 grid-cols-4 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
       {TABS.map((t) => (
         <button
           aria-current={t.view === view ? "page" : undefined}
