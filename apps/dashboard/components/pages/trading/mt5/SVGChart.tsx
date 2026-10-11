@@ -10,6 +10,7 @@ import {
   LivePriceLine,
   Crosshair,
   useChart,
+  useLastCandle,
 } from "./charts";
 import type { Candle, ChartSettings } from "./engine/ChartEngine";
 import { DrawingLayer, type DrawingLayerProps } from "./tv/drawing-layer";
@@ -27,8 +28,9 @@ interface SVGChartProps {
 
 /** Phones: one line of OHLC at the top instead of the floating tooltip. */
 function OhlcLegend({ precision }: { precision: number }) {
-  const { tooltipData, data } = useChart();
-  const point = (tooltipData?.point ?? data[data.length - 1]) as
+  const { tooltipData } = useChart();
+  const last = useLastCandle();
+  const point = (tooltipData?.point ?? last) as
     | { open: number; high: number; low: number; close: number }
     | undefined;
   if (!point) return null;
@@ -40,7 +42,7 @@ function OhlcLegend({ precision }: { precision: number }) {
     </tspan>
   );
   return (
-    <text x={4} y={-6} fontSize={10} className="select-none font-mono" style={{ whiteSpace: "pre" }}>
+    <text x={2} y={-5} fontSize={10} className="select-none font-mono" style={{ whiteSpace: "pre" }}>
       {item("O", point.open)}
       {item("H", point.high)}
       {item("L", point.low)}
@@ -147,6 +149,7 @@ export function SVGChart({ data, settings, drawingProps, goToDate, followLast }:
 
         <YAxis
           position="right"
+          avoidPriceLabel
           numTicks={Math.max(4, Math.floor((bounds.height || 600) / 70))}
           formatValue={(v) => v.toFixed(precision)}
         />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useChart } from "./chart-context";
+import { usePriceLabelY } from "./live-price-line";
 
 export interface YAxisProps {
   /** Number of ticks to show. Default: 5 */
@@ -11,6 +12,8 @@ export interface YAxisProps {
   formatValue?: (value: number) => string;
   /** Position of the axis. Default: "left" */
   position?: "left" | "right";
+  /** Hide ticks that would sit under the live price tag. */
+  avoidPriceLabel?: boolean;
 }
 
 function formatLabel(
@@ -32,8 +35,11 @@ export function YAxis({
   formatLargeNumbers = true,
   formatValue,
   position = "left",
+  avoidPriceLabel = false,
 }: YAxisProps) {
   const { yScale, margin, containerRef } = useChart();
+  const labelY = usePriceLabelY();
+  const hiddenNear = avoidPriceLabel ? labelY : null;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -42,12 +48,24 @@ export function YAxis({
 
   const ticks = useMemo(() => {
     const tickValues = yScale.ticks(numTicks);
-    return tickValues.map((value) => ({
-      value,
-      y: (yScale(value) ?? 0) + margin.top,
-      label: formatLabel(value, formatLargeNumbers, formatValue),
-    }));
-  }, [yScale, margin.top, numTicks, formatLargeNumbers, formatValue]);
+    return tickValues
+      .map((value) => ({
+        value,
+        y: (yScale(value) ?? 0) + margin.top,
+        label: formatLabel(value, formatLargeNumbers, formatValue),
+      }))
+      .filter(
+        (t) =>
+          hiddenNear === null || Math.abs(t.y - margin.top - hiddenNear) > 14
+      );
+  }, [
+    yScale,
+    margin.top,
+    numTicks,
+    formatLargeNumbers,
+    formatValue,
+    hiddenNear,
+  ]);
 
   const container = containerRef.current;
   if (!(mounted && container)) {
