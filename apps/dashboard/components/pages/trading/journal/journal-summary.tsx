@@ -1,6 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  ChartTooltip,
+  Grid,
+  LinearGradient,
+  XAxis,
+  YAxis,
+} from "@bklitui/ui/charts";
+import { curveMonotoneX } from "@visx/curve";
+import { useId, useMemo, useState } from "react";
+import { ChartCard } from "@/components/dashboard/chart-card";
 import {
   type Bucket,
   dayKey,
@@ -57,51 +68,98 @@ function Kpi({
   );
 }
 
-const W = 600;
-const H = 160;
+const compact = new Intl.NumberFormat("pt-BR", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const axisMoney = (n: number) => compact.format(n);
 
+const shortDate = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+});
+
+/** Cumulative net after each closed trade, with the running drawdown. */
 function EquityCurve({ points }: { points: Stats["equity"] }) {
-  if (points.length < 2) {
+  const gid = useId().replace(/:/g, "");
+  const data = useMemo(() => {
+    let peak = 0;
+    return points.map((p) => {
+      peak = Math.max(peak, p.value);
+      return { date: new Date(p.time), pnl: p.value, dd: p.value - peak };
+    });
+  }, [points]);
+  if (data.length < 2) {
     return (
       <p className="flex h-40 items-center justify-center rounded-xl border text-muted-foreground text-sm">
         A curva aparece a partir de duas operações fechadas.
       </p>
     );
   }
-  const values = [0, ...points.map((p) => p.value)];
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
-  const y = (v: number) => H - ((v - lo) / (hi - lo || 1)) * H;
-  const x = (i: number) => (i / (values.length - 1)) * W;
-  const line = values.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join("");
-  const last = values.at(-1) ?? 0;
-  const color = last >= 0 ? "var(--up)" : "var(--down)";
+  const last = data.at(-1)?.pnl ?? 0;
+  const high = Math.max(...data.map((d) => d.pnl));
+  const deepest = Math.min(...data.map((d) => d.dd));
   return (
-    <svg
-      aria-label="Curva de capital"
-      className="h-40 w-full rounded-xl border"
-      preserveAspectRatio="none"
-      role="img"
-      viewBox={`0 0 ${W} ${H}`}
+    <ChartCard
+      action={
+        <span className={cn("font-semibold text-sm tabular-nums", tone(last))}>
+          {money(last, true)}
+        </span>
+      }
+      className="gap-3 py-4"
+      contentClassName="px-4"
+      description={`Topo ${money(high, true)} · maior queda ${money(deepest, true)} · ${data.length} operações fechadas`}
+      title="Curva de capital"
     >
-      <line
-        stroke="currentColor"
-        strokeDasharray="3 4"
-        strokeOpacity={0.25}
-        x1={0}
-        x2={W}
-        y1={y(0)}
-        y2={y(0)}
-      />
-      <path d={`${line}L${W},${H}L0,${H}Z`} fill={color} opacity={0.12} />
-      <path
-        d={line}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+      <AreaChart
+        aspectRatio="2 / 1"
+        data={data}
+        margin={{ top: 12, right: 12, bottom: 32, left: 52 }}
+      >
+        <LinearGradient
+          from="var(--up)"
+          fromOpacity={0.35}
+          id={gid}
+          to="var(--up)"
+          toOpacity={0}
+        />
+        <Grid
+          highlightRowStroke="var(--foreground)"
+          highlightRowStrokeOpacity={0.3}
+          highlightRowValues={[0]}
+          horizontal
+        />
+        <Area
+          curve={curveMonotoneX}
+          dataKey="pnl"
+          fill={`url(#${gid})`}
+          fillOpacity={1}
+          stroke="var(--up)"
+          strokeWidth={2}
+        />
+        <YAxis formatValue={axisMoney} />
+        <XAxis />
+        <ChartTooltip
+          rows={(p) => [
+            {
+              color: "var(--up)",
+              label: "Acumulado",
+              value: money(Number(p.pnl), true),
+            },
+            {
+              color: "var(--down)",
+              label: "Abaixo do topo",
+              value: money(Number(p.dd), true),
+            },
+            {
+              color: "var(--muted-foreground)",
+              label: "Data",
+              value: shortDate.format(p.date as Date),
+            },
+          ]}
+        />
+      </AreaChart>
+    </ChartCard>
   );
 }
 
@@ -120,11 +178,11 @@ function Calendar({ daily }: { daily: Stats["daily"] }) {
     .filter(([k]) => k.startsWith(dayKey(month.getTime()).slice(0, 7)))
     .reduce((a, [, d]) => a + d.net, 0);
   return (
-    <div className="flex flex-col gap-2 rounded-xl border p-3">
+    <div className="flex flex-col gap-2 border p-3">
       <div className="flex items-center justify-between">
         <button
           aria-label="Mês anterior"
-          className="rounded-md px-2 hover:bg-muted"
+          className="px-2 hover:bg-muted"
           onClick={() => setOffset((o) => o - 1)}
           type="button"
         >
@@ -141,7 +199,7 @@ function Calendar({ daily }: { daily: Stats["daily"] }) {
         </p>
         <button
           aria-label="Mês seguinte"
-          className="rounded-md px-2 hover:bg-muted"
+          className="px-2 hover:bg-muted"
           disabled={offset >= 0}
           onClick={() => setOffset((o) => Math.min(0, o + 1))}
           type="button"
@@ -166,7 +224,7 @@ function Calendar({ daily }: { daily: Stats["daily"] }) {
           return (
             <span
               className={cn(
-                "flex aspect-square flex-col items-center justify-center rounded-md border tabular-nums",
+                "flex aspect-square flex-col items-center justify-center rounded-none border tabular-nums",
                 d && d.net > 0 && "border-[var(--up)]/40 bg-[var(--up)]/15",
                 d && d.net < 0 && "border-[var(--down)]/40 bg-[var(--down)]/15"
               )}
@@ -206,9 +264,9 @@ function Bars({ title, rows }: { title: string; rows: Bucket[] }) {
           key={r.key}
         >
           <span className="truncate">{r.key}</span>
-          <span className="h-2 overflow-hidden rounded-full bg-muted">
+          <span className="h-2 overflow-hidden rounded-none bg-muted">
             <span
-              className="block h-full rounded-full"
+              className="block h-full rounded-none"
               style={{
                 width: `${(Math.abs(r.net) / max) * 100}%`,
                 background: r.net >= 0 ? "var(--up)" : "var(--down)",
