@@ -113,7 +113,11 @@ export function SVGChart({ data, settings, drawingProps, goToDate, followLast }:
           negativeBorder={settings.borderDown}
         />
 
-        <LivePriceLine precision={precision} />
+        <LivePriceLine
+          color={settings.bodyDown}
+          precision={precision}
+          textColor="#000000"
+        />
 
         <Crosshair />
 

@@ -19,7 +19,6 @@ import {
   setDrawings,
   setSymbol,
   setTimeframe,
-  TIMEFRAMES,
   type Timeframe,
   updateSettings,
   useCandles,
@@ -30,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
 import { ExploreView } from "./explore-view";
+import { FloatingTimeframes } from "./floating-timeframes";
 import {
   ChartToolbar,
   type MobileView,
@@ -49,6 +49,7 @@ import { DrawingSettingsDialog } from "./mt5/tv/drawing-settings-dialog";
 import { GoToDateDialog } from "./mt5/tv/go-to-date-dialog";
 import { ReplayControls } from "./mt5/tv/replay-controls";
 import { useReplay } from "./mt5/tv/use-replay";
+import { SymbolIcon } from "./symbol-icon";
 import { SymbolOverview } from "./symbol-overview";
 import { ToolRail, toolLabel } from "./trading-tools";
 import { changeClass, pct, SymbolSearch, Watchlist } from "./trading-watchlist";
@@ -416,7 +417,7 @@ export function TradingPage() {
             onReplay={toggleReplay}
             price={price}
             replayActive={replay.active}
-            tf={tf}
+            symbol={symbol}
           />
           <ChartViewport
             candles={candles}
@@ -526,7 +527,7 @@ function TopBar({
   price,
   change,
   digits,
-  tf,
+  symbol,
   replayActive,
   onPanel,
   onReplay,
@@ -542,7 +543,7 @@ function TopBar({
   price: number | undefined;
   change: Quote | undefined;
   digits: number;
-  tf: Timeframe;
+  symbol: string;
   replayActive: boolean;
   onPanel: (p: Panel) => void;
   onReplay: () => void;
@@ -566,10 +567,7 @@ function TopBar({
           onClick={() => onPanel("search")}
           type="button"
         >
-          <Icon
-            className="size-4 shrink-0 text-muted-foreground"
-            name="IconMagnifyingGlass"
-          />
+          <SymbolIcon className="size-7" label={label} symbol={symbol} />
           <span className="min-w-0">
             <span className="block truncate font-semibold text-[15px] leading-tight">
               {label}
@@ -603,21 +601,7 @@ function TopBar({
           </span>
         </span>
       </div>
-      <div className="no-scrollbar flex items-center overflow-x-auto px-1.5 md:flex-1 md:gap-0.5 md:px-2">
-        {TIMEFRAMES.map((t) => (
-          <button
-            className={cn(
-              "h-8 shrink-0 px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground md:h-7 md:text-[13px]",
-              t.id === tf && "font-semibold text-foreground"
-            )}
-            key={t.id}
-            onClick={() => setTimeframe(t.id)}
-            title={t.name}
-            type="button"
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="hidden items-center px-2 md:flex md:flex-1">
         <div className="ml-auto hidden items-center gap-0.5 md:flex">
           <BarButton
             icon="IconChart1"
@@ -775,6 +759,7 @@ function ChartViewport({
           settings={{ ...settings, precision: digits }}
         />
       ) : null}
+      <FloatingTimeframes onTf={setTimeframe} tf={tf} />
       <ChartStatus
         candles={candles}
         error={feed.error}

@@ -20,7 +20,16 @@ export function usePriceLabelY() {
   return Math.min(Math.max(y, LABEL_H / 2), innerHeight - LABEL_H / 2);
 }
 
-export function LivePriceLine({ precision = 5 }: { precision?: number }) {
+export function LivePriceLine({
+  precision = 5,
+  color: tagColor,
+  textColor = "#ffffff",
+}: {
+  precision?: number;
+  /** Fixed tag color; by default green/red by the last candle. */
+  color?: string;
+  textColor?: string;
+}) {
   const { innerWidth, innerHeight, yScale, margin } = useChart();
   const last = useLastCandle();
   const labelY = usePriceLabelY();
@@ -28,7 +37,8 @@ export function LivePriceLine({ precision = 5 }: { precision?: number }) {
 
   const y = yScale(last.close) ?? 0;
   const inView = y >= 0 && y <= innerHeight;
-  const color = last.close >= last.open ? "var(--up)" : "var(--down)";
+  const color =
+    tagColor ?? (last.close >= last.open ? "var(--up)" : "var(--down)");
 
   return (
     <g className="live-price-line">
@@ -54,7 +64,7 @@ export function LivePriceLine({ precision = 5 }: { precision?: number }) {
       >
         <div
           className="flex h-full w-full items-center whitespace-nowrap pl-2 font-medium font-mono text-[11px] tabular-nums"
-          style={{ backgroundColor: color, color: "#ffffff", borderRadius: 0 }}
+          style={{ backgroundColor: color, color: textColor, borderRadius: 0 }}
         >
           {last.close.toFixed(precision)}
         </div>
