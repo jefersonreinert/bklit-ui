@@ -114,14 +114,9 @@ export async function thumbnail(
   return draw(img, maxSide, type);
 }
 
-export async function callExtract<T>(
-  kind: "menu" | "invoice" | "design" | "elements",
-  files: UploadFile[],
-  hint?: string
-): Promise<T> {
-  let res: Response;
+async function postExtract(kind: string, files: UploadFile[], hint?: string) {
   try {
-    res = await fetch(
+    return await fetch(
       `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/extract/${kind}/`,
       {
         method: "POST",
@@ -135,9 +130,38 @@ export async function callExtract<T>(
   } catch {
     throw new Error("Sem conexão com o servidor.");
   }
-  const body = (await res.json().catch(() => null)) as
-    | (T & { error?: string })
+}
+
+/** PDFs become page images (the Groq fallback can't read PDFs). */
+async function pdfsAsImages(files: UploadFile[]): Promise<UploadFile[]> {
+  const { pdfToJpegs } = await import("@/lib/pdfjs-client");
+  const out: UploadFile[] = [];
+  for (const f of files) {
+    if (f.mimeType === "application/pdf") {
+      for (const data of await pdfToJpegs(f.data)) {
+        out.push({ data, mimeType: "image/jpeg" });
+      }
+    } else {
+      out.push(f);
+    }
+  }
+  return out;
+}
+
+export async function callExtract<T>(
+  kind: "menu" | "invoice" | "scan" | "design" | "elements",
+  files: UploadFile[],
+  hint?: string
+): Promise<T> {
+  let res = await postExtract(kind, files, hint);
+  let body = (await res.json().catch(() => null)) as
+    | (T & { error?: string; code?: string })
     | null;
+  // Anthropic without credits → Groq, which needs images instead of PDFs
+  if (body?.code === "needs_images") {
+    res = await postExtract(kind, await pdfsAsImages(files), hint);
+    body = (await res.json().catch(() => null)) as typeof body;
+  }
   if (res.status === 404 && !body) {
     throw new Error(
       "A leitura com IA precisa do servidor (Cloudflare/Vercel); esta versão estática não tem."

@@ -68,7 +68,10 @@ export async function POST(
   } catch (error) {
     const status = error instanceof ExtractError ? error.status : 500;
     return Response.json(
-      { error: error instanceof Error ? error.message : "Falha na leitura." },
+      {
+        code: error instanceof ExtractError ? error.code : "",
+        error: error instanceof Error ? error.message : "Falha na leitura.",
+      },
       { status }
     );
   }

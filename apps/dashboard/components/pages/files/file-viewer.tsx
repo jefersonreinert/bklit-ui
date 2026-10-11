@@ -16,8 +16,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { baseName, formatBytes } from "@/lib/files/kinds";
 import { blobToBase64 } from "@/lib/files/scan";
 import { Icon } from "@/lib/icons";
+import { callExtract } from "@/lib/upload";
 import { Markdown } from "../ai/markdown";
-import { BASE_PATH } from "../telegram/telegram-shared";
 import { downloadText, downloadUrl, KIND_LABEL } from "./files-shared";
 
 /** Opens a file: photo, video, audio, PDF, or the sheet editor. */
@@ -39,19 +39,10 @@ function useDocFile(id: Id<"docFiles">) {
 
 /** Text of a stored photo/PDF via /api/extract/scan, saved as a sheet. */
 export async function scanToText(files: { data: string; mimeType: string }[]) {
-  const res = await fetch(`${BASE_PATH}/api/extract/scan/`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ files }),
-  });
-  const body = (await res.json().catch(() => null)) as {
-    title?: string;
-    text?: string;
-    error?: string;
-  } | null;
-  if (!(res.ok && body?.text !== undefined)) {
-    throw new Error(body?.error ?? `Falha na leitura (${res.status}).`);
-  }
+  const body = await callExtract<{ title?: string; text?: string }>(
+    "scan",
+    files
+  );
   return { title: body.title ?? "", text: body.text ?? "" };
 }
 
