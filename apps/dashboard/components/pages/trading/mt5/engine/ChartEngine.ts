@@ -21,8 +21,8 @@ export interface ChartSettings {
 }
 
 export const DEFAULT_SETTINGS: ChartSettings = {
-  bodyUp: '#e0d8c8',
-  bodyDown: '#000000',
+  bodyUp: '#EBDBBC',
+  bodyDown: '#D4A27F',
   wickUp: '#000000',
   wickDown: '#000000',
   borderUp: '#000000',

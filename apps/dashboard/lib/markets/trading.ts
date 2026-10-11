@@ -45,6 +45,8 @@ export interface TradingData {
   tf: Timeframe;
   settings: ChartSettings;
   drawings: Record<string, Drawing[]>;
+  /** Candle palette the saved colors belong to (see CANDLE_PALETTE). */
+  palette?: number;
 }
 
 export type Timeframe =
@@ -74,13 +76,21 @@ export const TRADING_KEY = "cb:trading:v1";
 
 const DEFAULT_WATCHLIST: WatchItem[] = DEFAULT_ITEMS;
 
+/** Candles: Manilla up, Kraft down, black borders and wicks. */
+export const CANDLE_COLORS = {
+  bodyUp: "#EBDBBC",
+  bodyDown: "#D4A27F",
+  wickUp: "#000000",
+  wickDown: "#000000",
+  borderUp: "#000000",
+  borderDown: "#000000",
+} as const;
+
+/** Bump to replace saved candle colors with CANDLE_COLORS once. */
+const CANDLE_PALETTE = 1;
+
 export const DEFAULT_CHART: ChartSettings = {
-  bodyUp: "#26a69a",
-  bodyDown: "#ef5350",
-  wickUp: "#26a69a",
-  wickDown: "#ef5350",
-  borderUp: "#26a69a",
-  borderDown: "#ef5350",
+  ...CANDLE_COLORS,
   gridEnabled: true,
   gridColor: "#888888",
   background: "transparent",
@@ -96,6 +106,7 @@ const DEFAULT_DATA: TradingData = {
   tf: "15m",
   settings: DEFAULT_CHART,
   drawings: {},
+  palette: CANDLE_PALETTE,
 };
 
 /* --------------------------------- Store --------------------------------- */
@@ -119,7 +130,12 @@ function read(): TradingData {
       ...saved,
       watchlist: items,
       sections,
-      settings: { ...DEFAULT_CHART, ...saved.settings },
+      settings: {
+        ...DEFAULT_CHART,
+        ...saved.settings,
+        ...(saved.palette === CANDLE_PALETTE ? {} : CANDLE_COLORS),
+      },
+      palette: CANDLE_PALETTE,
     };
   } catch {
     cache = DEFAULT_DATA;
