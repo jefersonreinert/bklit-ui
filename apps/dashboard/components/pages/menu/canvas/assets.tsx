@@ -50,33 +50,54 @@ export async function compressImage(source: Blob | string, maxSide = MAX_SIDE) {
 
 const toBlob = async (dataUrl: string) => (await fetch(dataUrl)).blob();
 
+/** Gives up on Convex after this long (offline, locked panel). */
+const UPLOAD_TIMEOUT = 20_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
 function ConvexAssets({ children }: { children: ReactNode }) {
   const uploadUrl = useMutation(api.designs.uploadUrl);
   const assetUrl = useMutation(api.designs.assetUrl);
-  const upload = useMemo<Upload>(
-    () => async (source) => {
-      const data = await compressImage(source);
-      try {
-        const blob = await toBlob(data);
-        const res = await fetch(await uploadUrl({}), {
-          method: "POST",
-          headers: { "Content-Type": blob.type },
-          body: blob,
-        });
-        if (!res.ok) {
-          return data;
-        }
-        const { storageId } = (await res.json()) as {
-          storageId: Id<"_storage">;
-        };
-        return (await assetUrl({ storageId })) ?? data;
-      } catch {
-        // Locked panel or offline: keep the image inside the design
+  const upload = useMemo<Upload>(() => {
+    const store = async (data: string) => {
+      const blob = await toBlob(data);
+      const res = await fetch(await uploadUrl({}), {
+        method: "POST",
+        headers: { "Content-Type": blob.type },
+        body: blob,
+      });
+      if (!res.ok) {
         return data;
       }
-    },
-    [uploadUrl, assetUrl]
-  );
+      const { storageId } = (await res.json()) as {
+        storageId: Id<"_storage">;
+      };
+      return (await assetUrl({ storageId })) ?? data;
+    };
+    return async (source) => {
+      const data = await compressImage(source);
+      try {
+        return await withTimeout(store(data), UPLOAD_TIMEOUT);
+      } catch {
+        // Locked panel, offline or slow: keep the image inside the design
+        return data;
+      }
+    };
+  }, [uploadUrl, assetUrl]);
   return (
     <AssetsContext.Provider value={upload}>{children}</AssetsContext.Provider>
   );

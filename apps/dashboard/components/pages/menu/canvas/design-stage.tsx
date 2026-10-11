@@ -19,6 +19,7 @@ import type {
   Design,
   DesignElement,
   DesignPage,
+  ImageElement,
   TextElement,
 } from "@/lib/menu-canvas/types";
 import { cn } from "@/lib/utils";
@@ -316,6 +317,50 @@ function rotateStep(
   };
 }
 
+function ImageView({ el }: { el: ImageElement }) {
+  if (!el.src) {
+    return (
+      <div className="flex size-full items-center justify-center bg-black/10 text-xs">
+        Imagem
+      </div>
+    );
+  }
+  if (el.tint) {
+    // One-color drawing recolored: the picture becomes a mask
+    const mask = `url("${el.src}") center / ${el.fit === "cover" ? "cover" : "contain"} no-repeat`;
+    return (
+      <div
+        className="pointer-events-none size-full"
+        style={{
+          background: el.tint,
+          WebkitMask: mask,
+          mask,
+          transform: el.flipX ? "scaleX(-1)" : undefined,
+        }}
+      />
+    );
+  }
+  return (
+    // biome-ignore lint/performance/noImgElement: user images on a free canvas
+    <img
+      alt=""
+      className="pointer-events-none size-full select-none"
+      draggable={false}
+      height={el.h}
+      src={el.src}
+      style={{
+        objectFit: el.fit,
+        borderRadius: el.radius,
+        border: el.borderWidth
+          ? `${el.borderWidth}px solid ${el.borderColor || "#000"}`
+          : undefined,
+        transform: el.flipX ? "scaleX(-1)" : undefined,
+      }}
+      width={el.w}
+    />
+  );
+}
+
 const ElementView = memo(function ElementView({
   el,
   editing,
@@ -365,29 +410,7 @@ const ElementView = memo(function ElementView({
         <div style={textStyle(el) as CSSProperties}>{el.text || " "}</div>
       );
     case "image":
-      return el.src ? (
-        // biome-ignore lint/performance/noImgElement: user images on a free canvas
-        <img
-          alt=""
-          className="pointer-events-none size-full select-none"
-          draggable={false}
-          height={el.h}
-          src={el.src}
-          style={{
-            objectFit: el.fit,
-            borderRadius: el.radius,
-            border: el.borderWidth
-              ? `${el.borderWidth}px solid ${el.borderColor || "#000"}`
-              : undefined,
-            transform: el.flipX ? "scaleX(-1)" : undefined,
-          }}
-          width={el.w}
-        />
-      ) : (
-        <div className="flex size-full items-center justify-center bg-black/10 text-xs">
-          Imagem
-        </div>
-      );
+      return <ImageView el={el} />;
     case "shape":
       return (
         <div

@@ -3,6 +3,7 @@ import {
   ExtractError,
   type ExtractFile,
   extractDesign,
+  extractElements,
   extractInvoice,
   extractMenu,
   extractScan,
@@ -29,7 +30,8 @@ export async function POST(
     kind !== "menu" &&
     kind !== "invoice" &&
     kind !== "scan" &&
-    kind !== "design"
+    kind !== "design" &&
+    kind !== "elements"
   ) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
@@ -59,6 +61,7 @@ export async function POST(
       invoice: extractInvoice,
       scan: extractScan,
       design: extractDesign,
+      elements: extractElements,
     }[kind];
     const result = await run(files, hint);
     return Response.json(result);

@@ -30,6 +30,7 @@ import type {
 } from "@/lib/menu-canvas/types";
 import { cn } from "@/lib/utils";
 import { useUploadImage } from "./assets";
+import { LibrarySection } from "./extract-sheet";
 
 /** Left (insert) and right (properties, layers) panels of the editor. */
 
@@ -162,6 +163,10 @@ export function InsertPanel({
             </button>
           ))}
         </div>
+      </Section>
+
+      <Section title="Meus elementos">
+        <LibrarySection center={center} onAdd={onAdd} />
       </Section>
 
       <Section title="Imagens e logotipo">
@@ -744,6 +749,13 @@ function ImageProps({
           value={el.borderColor}
         />
       ) : null}
+      <ColorField
+        allowNone
+        label="Recolorir (desenhos de uma cor: ícones, ornamentos, logos)"
+        onChange={(tint) => set({ tint })}
+        swatches={swatches}
+        value={el.tint ?? ""}
+      />
     </>
   );
 }
