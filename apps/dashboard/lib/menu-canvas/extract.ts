@@ -1,6 +1,7 @@
 "use client";
 
 import type * as PdfJs from "pdfjs-dist";
+import { loadPdfJs } from "@/lib/pdfjs-client";
 import { loadImage } from "@/lib/upload";
 import {
   type Box,
@@ -16,26 +17,10 @@ import {
  * comes out clean; photos get their paper made transparent.
  */
 
-const PDFJS_CDN =
-  "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/legacy/build";
 /** Display render width (also used for detection). */
 const VIEW_WIDTH = 1100;
 /** Max pixels of the high-resolution render used for the crops. */
 const HIRES_PIXELS = 12_000_000;
-
-let pdfjsPromise: Promise<typeof PdfJs> | null = null;
-
-function pdfjs() {
-  pdfjsPromise ??= (
-    import(
-      /* webpackIgnore: true */ /* turbopackIgnore: true */ `${PDFJS_CDN}/pdf.min.mjs`
-    ) as Promise<typeof PdfJs>
-  ).then((lib) => {
-    lib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
-    return lib;
-  });
-  return pdfjsPromise;
-}
 
 export interface SourcePage {
   /** Full page as shown to the user (JPEG data URL). */
@@ -134,7 +119,7 @@ async function openPdf(
   file: File,
   onProgress?: (n: number, of: number) => void
 ) {
-  const lib = await pdfjs();
+  const lib = await loadPdfJs();
   const doc = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
   const pages: SourcePage[] = [];
   for (let n = 1; n <= doc.numPages; n++) {

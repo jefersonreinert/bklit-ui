@@ -4,6 +4,8 @@ import { DESIGN_FONTS } from "@/lib/menu-canvas/fonts";
 import { MENU_ICONS } from "@/lib/menu-canvas/model";
 import type { AiEdit, ExtractedDesign } from "@/lib/menu-canvas/types";
 import type { ExtractedMenu } from "@/lib/menu-studio/types";
+import { groqKey } from "./groq-chat";
+import { GroqError, groqJson } from "./groq-json";
 
 /**
  * Reads photos and PDFs with Claude and returns structured JSON: a menu
@@ -16,9 +18,31 @@ export const EXTRACT_MODEL = "claude-opus-5-5";
 
 export class ExtractError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** Machine-readable reason, e.g. "needs_images" (Groq can't read PDFs). */
+  code: string;
+  constructor(message: string, status: number, code = "") {
     super(message);
     this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Without Anthropic credits (or key), the same job runs on Groq when
+ * GROQ_API_KEY is set.
+ */
+async function viaGroq<T>(
+  files: ExtractFile[],
+  prompt: string,
+  schema: Schema
+): Promise<T> {
+  try {
+    return await groqJson<T>(files, prompt, schema);
+  } catch (error) {
+    if (error instanceof GroqError) {
+      throw new ExtractError(error.message, error.status, error.code);
+    }
+    throw error;
   }
 }
 
@@ -167,75 +191,100 @@ function contentFor(files: ExtractFile[]): Anthropic.ContentBlockParam[] {
   });
 }
 
+async function askClaude<T>(
+  files: ExtractFile[],
+  prompt: string,
+  schema: Schema
+): Promise<T> {
+  const client = new Anthropic();
+  const content = contentFor(files);
+  content.push({ type: "text", text: prompt });
+  const stream = client.messages.stream({
+    model: EXTRACT_MODEL,
+    max_tokens: 64_000,
+    output_config: {
+      effort: "medium",
+      format: { type: "json_schema", schema },
+    },
+    messages: [{ role: "user", content }],
+  });
+  const message = await stream.finalMessage();
+  if (message.stop_reason === "refusal") {
+    throw new ExtractError("A IA recusou ler este arquivo.", 422);
+  }
+  if (message.stop_reason === "max_tokens") {
+    throw new ExtractError(
+      "Documento grande demais para uma leitura. Envie menos páginas por vez.",
+      413
+    );
+  }
+  const text = message.content
+    .map((b) => (b.type === "text" ? b.text : ""))
+    .join("");
+  return JSON.parse(text) as T;
+}
+
+const noCredits = (error: unknown) =>
+  error instanceof Anthropic.APIError && NO_CREDITS.test(error.message);
+
+/** A Claude/SDK failure as a message for the panel. */
+function claudeError(error: unknown): unknown {
+  if (error instanceof ExtractError) {
+    return error;
+  }
+  if (error instanceof Anthropic.AuthenticationError) {
+    return new ExtractError("Chave da API da Anthropic inválida.", 401);
+  }
+  if (error instanceof Anthropic.RateLimitError) {
+    return new ExtractError("Limite da API atingido; tente de novo.", 429);
+  }
+  if (noCredits(error)) {
+    return new ExtractError(
+      "Sem créditos na API da Anthropic. Adicione créditos em console.anthropic.com → Billing, ou configure GROQ_API_KEY para usar o Groq automaticamente.",
+      402
+    );
+  }
+  if (error instanceof Anthropic.BadRequestError) {
+    return new ExtractError(`Arquivo recusado: ${error.message}`, 400);
+  }
+  if (error instanceof Anthropic.APIError) {
+    return new ExtractError(error.message, 502);
+  }
+  if (error instanceof SyntaxError) {
+    return new ExtractError("Resposta da IA incompleta; tente de novo.", 502);
+  }
+  return error;
+}
+
+/**
+ * Claude first; without an Anthropic key or credits, Groq (when
+ * GROQ_API_KEY is set) runs the same prompt and schema.
+ */
 async function run<T>(
   files: ExtractFile[],
   prompt: string,
   schema: Schema,
   hint?: string
 ): Promise<T> {
+  const fullPrompt = hint
+    ? `${prompt}\n\nNotes from the user: ${hint}`
+    : prompt;
   if (!process.env.ANTHROPIC_API_KEY) {
+    if (groqKey()) {
+      return viaGroq<T>(files, fullPrompt, schema);
+    }
     throw new ExtractError(
       "ANTHROPIC_API_KEY não configurada no servidor.",
       503
     );
   }
-  const client = new Anthropic();
-  const content = contentFor(files);
-  content.push({
-    type: "text",
-    text: hint ? `${prompt}\n\nNotes from the user: ${hint}` : prompt,
-  });
-
   try {
-    const stream = client.messages.stream({
-      model: EXTRACT_MODEL,
-      max_tokens: 64_000,
-      output_config: {
-        effort: "medium",
-        format: { type: "json_schema", schema },
-      },
-      messages: [{ role: "user", content }],
-    });
-    const message = await stream.finalMessage();
-    if (message.stop_reason === "refusal") {
-      throw new ExtractError("A IA recusou ler este arquivo.", 422);
-    }
-    if (message.stop_reason === "max_tokens") {
-      throw new ExtractError(
-        "Documento grande demais para uma leitura. Envie menos páginas por vez.",
-        413
-      );
-    }
-    const text = message.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("");
-    return JSON.parse(text) as T;
+    return await askClaude<T>(files, fullPrompt, schema);
   } catch (error) {
-    if (error instanceof ExtractError) {
-      throw error;
+    if (noCredits(error) && groqKey()) {
+      return viaGroq<T>(files, fullPrompt, schema);
     }
-    if (error instanceof Anthropic.AuthenticationError) {
-      throw new ExtractError("Chave da API da Anthropic inválida.", 401);
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      throw new ExtractError("Limite da API atingido; tente de novo.", 429);
-    }
-    if (error instanceof Anthropic.APIError && NO_CREDITS.test(error.message)) {
-      throw new ExtractError(
-        "Sem créditos na API da Anthropic. Adicione créditos em console.anthropic.com → Billing para ler fotos e PDFs.",
-        402
-      );
-    }
-    if (error instanceof Anthropic.BadRequestError) {
-      throw new ExtractError(`Arquivo recusado: ${error.message}`, 400);
-    }
-    if (error instanceof Anthropic.APIError) {
-      throw new ExtractError(error.message, 502);
-    }
-    if (error instanceof SyntaxError) {
-      throw new ExtractError("Resposta da IA incompleta; tente de novo.", 502);
-    }
-    throw error;
+    throw claudeError(error);
   }
 }
 

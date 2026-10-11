@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const status = error instanceof ExtractError ? error.status : 500;
     return Response.json(
-      { error: error instanceof Error ? error.message : "Falha na edição." },
+      {
+        code: error instanceof ExtractError ? error.code : "",
+        error: error instanceof Error ? error.message : "Falha na edição.",
+      },
       { status }
     );
   }
