@@ -53,9 +53,9 @@ import { money, tone } from "./journal-summary";
 
 const LEVELS = [
   "color-mix(in oklab, var(--muted) 70%, transparent)",
-  "rgba(38, 166, 154, 0.3)",
-  "rgba(38, 166, 154, 0.5)",
-  "rgba(38, 166, 154, 0.75)",
+  "rgba(212, 162, 127, 0.3)",
+  "rgba(212, 162, 127, 0.5)",
+  "rgba(212, 162, 127, 0.75)",
   UP_HEX,
 ] as const;
 
@@ -172,7 +172,7 @@ function RiskGrid({ trades, tz }: { trades: Trade[]; tz: TimeZoneId }) {
           value={money(-a.currentDrawdown, true)}
         />
         <Stat
-          hint={`${a.greenDays} verdes · ${a.redDays} vermelhos`}
+          hint={`${a.greenDays} positivos · ${a.redDays} negativos`}
           label="Dias positivos"
           value={pct(a.greenDays / days)}
         />
@@ -189,8 +189,8 @@ function RiskGrid({ trades, tz }: { trades: Trade[]; tz: TimeZoneId }) {
           value={a.worstDay ? money(a.worstDay.net, true) : "—"}
         />
         <Stat
-          hint={`${a.maxRedDayStreak} vermelhos seguidos`}
-          label="Dias verdes seguidos"
+          hint={`${a.maxRedDayStreak} negativos seguidos`}
+          label="Dias positivos seguidos"
           value={String(a.maxGreenDayStreak)}
         />
         <Stat
@@ -340,7 +340,7 @@ export function JournalPerformance({
               {money(last, true)}
             </span>
           }
-          description="Resultado acumulado após cada operação, verde acima de zero."
+          description="Resultado acumulado após cada operação: kraft no lucro, manilla no prejuízo."
           title="Curva de capital"
         >
           <div className="flex flex-col gap-2">
@@ -349,7 +349,7 @@ export function JournalPerformance({
           </div>
         </Panel>
         <Panel
-          description="Cada ponto é uma operação: altura = resultado, cor do vermelho ao verde."
+          description="Cada ponto é uma operação: altura = resultado, do manilla (perda) ao kraft (ganho)."
           title="Mapa de operações"
         >
           <TradeMap trades={trades} />

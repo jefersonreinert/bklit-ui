@@ -460,6 +460,20 @@
   }
 }
 
+/*
+ * Trading journal: brand palette for results. Positive = Kraft (stronger),
+ * negative = Manilla (softer). Light themes use deeper shades of the same
+ * hues so the numbers stay readable on white and beige.
+ */
+.journal-palette {
+  --up: #b5835a;
+  --down: #a8987a;
+}
+.dark .journal-palette {
+  --up: #d4a27f;
+  --down: #ebdbbc;
+}
+
 /* Charting platform (vendored mt5-chart-platform) — scoped tokens */
 .mt5 {
   --up: #26a69a;

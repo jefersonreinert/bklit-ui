@@ -324,7 +324,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   }
   const open = trades.filter((t) => t.closeTime === null).length;
   return (
-    <div className="flex flex-col gap-4 p-3 md:p-4">
+    <div className="journal-palette flex flex-col gap-4 p-3 md:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-semibold text-lg">Diário de trading</h2>
