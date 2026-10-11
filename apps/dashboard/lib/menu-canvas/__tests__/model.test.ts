@@ -52,10 +52,31 @@ describe("menu designs", () => {
           pageIndex: 0,
           background: "#f5efe6",
           elements: [
-            ai({ x: 0.1, y: 0.05, w: 0.8, h: 0.06, text: "TASCA", fontFamily: "Playfair Display", fontSize: 0.05, align: "center" }),
-            ai({ type: "line", x: 0.3, y: 0.12, w: 0.4, h: 0.002, stroke: "#aa7744", strokeWidth: 2 }),
+            ai({
+              x: 0.1,
+              y: 0.05,
+              w: 0.8,
+              h: 0.06,
+              text: "TASCA",
+              fontFamily: "Playfair Display",
+              fontSize: 0.05,
+              align: "center",
+            }),
+            ai({
+              type: "line",
+              x: 0.3,
+              y: 0.12,
+              w: 0.4,
+              h: 0.002,
+              stroke: "#aa7744",
+              strokeWidth: 2,
+            }),
             ai({ type: "image", x: 0.4, y: 0.8, w: 0.2, h: 0.1 }),
-            ai({ text: "Prato", fontFamily: "Totally Unknown!!", fontCategory: "script" }),
+            ai({
+              text: "Prato",
+              fontFamily: "Totally Unknown!!",
+              fontCategory: "script",
+            }),
             ai({ text: "  " }),
           ],
         },
@@ -75,7 +96,10 @@ describe("menu designs", () => {
       assert.equal(title.align, "center");
     }
     const fallback = page?.elements[2];
-    assert.equal(fallback?.type === "text" && fallback.fontFamily, "Great Vibes");
+    assert.equal(
+      fallback?.type === "text" && fallback.fontFamily,
+      "Great Vibes"
+    );
     assert.equal(images[0]?.regions.length, 1);
     assert.equal(images[0]?.regions[0]?.target.w, 0.2 * 794);
   });
@@ -122,7 +146,9 @@ describe("menu designs", () => {
 
   it("exports safe standalone HTML with the fonts", () => {
     const d = blankDesign();
-    d.pages[0]?.elements.push(textElement({ text: "<script>x</script>", fontFamily: "Lora" }));
+    d.pages[0]?.elements.push(
+      textElement({ text: "<script>x</script>", fontFamily: "Lora" })
+    );
     const html = renderDesignHtml(d, {});
     assert.ok(!html.includes("<script>x"));
     assert.ok(html.includes("&lt;script&gt;"));
