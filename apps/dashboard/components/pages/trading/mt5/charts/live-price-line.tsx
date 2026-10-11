@@ -1,48 +1,62 @@
 import { useChart } from "./chart-context";
 
+const LABEL_H = 18;
+
+/** Last close of the whole series (not the visible window). */
+export function useLastCandle() {
+  const { data, fullData } = useChart();
+  const series = fullData && fullData.length > 0 ? fullData : data;
+  return series[series.length - 1] as
+    | { open: number; high: number; low: number; close: number }
+    | undefined;
+}
+
+/** Y of the price label, kept inside the plot when the price is off-screen. */
+export function usePriceLabelY() {
+  const { yScale, innerHeight } = useChart();
+  const last = useLastCandle();
+  if (!last) return null;
+  const y = yScale(last.close) ?? 0;
+  return Math.min(Math.max(y, LABEL_H / 2), innerHeight - LABEL_H / 2);
+}
+
 export function LivePriceLine({ precision = 5 }: { precision?: number }) {
-  const { data, innerWidth, yScale, margin } = useChart();
+  const { innerWidth, innerHeight, yScale, margin } = useChart();
+  const last = useLastCandle();
+  const labelY = usePriceLabelY();
+  if (!last || labelY === null) return null;
 
-  if (data.length === 0) return null;
-
-  const lastCandle = data[data.length - 1];
-  if (!lastCandle) return null;
-  const close = lastCandle.close as number;
-  const y = yScale(close) ?? 0;
-  const PRICE_LINE_COLOR =
-    close >= (lastCandle.open as number) ? "var(--up)" : "var(--down)";
+  const y = yScale(last.close) ?? 0;
+  const inView = y >= 0 && y <= innerHeight;
+  const color = last.close >= last.open ? "var(--up)" : "var(--down)";
 
   return (
     <g className="live-price-line">
-      {/* Dashed line across the chart */}
-      <line
-        x1={0}
-        y1={y}
-        x2={innerWidth}
-        y2={y}
-        stroke={PRICE_LINE_COLOR}
-        strokeWidth={1}
-        strokeDasharray="4 4"
-        className="opacity-70"
-      />
-
-      {/* Price label in the right margin */}
+      {inView ? (
+        <line
+          className="opacity-70"
+          stroke={color}
+          strokeDasharray="4 4"
+          strokeWidth={1}
+          x1={0}
+          x2={innerWidth}
+          y1={y}
+          y2={y}
+        />
+      ) : null}
+      {/* Flat price tag flush with the axis, like TradingView */}
       <foreignObject
-        x={innerWidth}
-        y={y - 10}
-        width={margin.right}
-        height={20}
         className="overflow-visible"
+        height={LABEL_H}
+        width={margin.right}
+        x={innerWidth}
+        y={labelY - LABEL_H / 2}
       >
         <div
-          className="flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-sm whitespace-nowrap"
-          style={{
-            backgroundColor: PRICE_LINE_COLOR,
-            color: "#ffffff",
-            marginLeft: "4px"
-          }}
+          className="flex h-full w-full items-center whitespace-nowrap pl-2 font-medium font-mono text-[11px] tabular-nums"
+          style={{ backgroundColor: color, color: "#ffffff", borderRadius: 0 }}
         >
-          {close.toFixed(precision)}
+          {last.close.toFixed(precision)}
         </div>
       </foreignObject>
     </g>

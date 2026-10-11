@@ -552,10 +552,10 @@ function TopBar({
   const diffPct = change?.prevClose ? (diff / change.prevClose) * 100 : 0;
   return (
     <div className="flex shrink-0 flex-col border-b md:flex-row md:items-center">
-      <div className="flex min-w-0 items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-1.5">
+      <div className="flex min-w-0 items-center gap-0.5 px-1.5 pt-1 md:gap-2 md:px-3 md:py-1.5">
         <button
           aria-label="Ativo anterior"
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          className="flex size-7 shrink-0 items-center justify-center text-muted-foreground md:hidden"
           onClick={() => onCycle(-1)}
           type="button"
         >
@@ -581,19 +581,19 @@ function TopBar({
         </button>
         <button
           aria-label="Próximo ativo"
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
+          className="flex size-7 shrink-0 items-center justify-center text-muted-foreground md:hidden"
           onClick={() => onCycle(1)}
           type="button"
         >
           <Icon className="size-4 rotate-180" name="IconChevronLeft" />
         </button>
         <span className="ml-auto text-right md:ml-2">
-          <span className="block font-mono font-semibold text-[15px] tabular-nums leading-tight">
+          <span className="block font-semibold text-[15px] tabular-nums leading-tight">
             {price === undefined ? "—" : formatPx(price, digits)}
           </span>
           <span
             className={cn(
-              "block font-mono text-[11px] tabular-nums leading-tight",
+              "block text-[11px] tabular-nums leading-tight",
               changeClass(diff)
             )}
           >
@@ -603,13 +603,12 @@ function TopBar({
           </span>
         </span>
       </div>
-      <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-2 pb-1.5 md:flex-1 md:pb-0">
+      <div className="no-scrollbar flex items-center overflow-x-auto px-1.5 md:flex-1 md:gap-0.5 md:px-2">
         {TIMEFRAMES.map((t) => (
           <button
             className={cn(
-              "h-7 shrink-0 rounded-md px-2.5 font-medium text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-              t.id === tf &&
-                "bg-[#2962ff]/12 text-[#2962ff] hover:bg-[#2962ff]/18 hover:text-[#2962ff]"
+              "h-8 shrink-0 px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground md:h-7 md:text-[13px]",
+              t.id === tf && "font-semibold text-foreground"
             )}
             key={t.id}
             onClick={() => setTimeframe(t.id)}
@@ -619,13 +618,6 @@ function TopBar({
             {t.label}
           </button>
         ))}
-        <button
-          className="ml-auto h-7 shrink-0 rounded-md px-2.5 font-medium text-[13px] text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
-          onClick={onOverview}
-          type="button"
-        >
-          Visão geral
-        </button>
         <div className="ml-auto hidden items-center gap-0.5 md:flex">
           <BarButton
             icon="IconChart1"
