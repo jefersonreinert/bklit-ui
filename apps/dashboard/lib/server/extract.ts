@@ -1,5 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ExtractedInvoice } from "@/lib/invoices/types";
+import { DESIGN_FONTS } from "@/lib/menu-canvas/fonts";
+import { MENU_ICONS } from "@/lib/menu-canvas/model";
+import type { AiEdit, ExtractedDesign } from "@/lib/menu-canvas/types";
 import type { ExtractedMenu } from "@/lib/menu-studio/types";
 
 /**
@@ -261,3 +264,98 @@ export const extractMenu = (files: ExtractFile[], hint?: string) =>
 
 export const extractInvoice = (files: ExtractFile[], hint?: string) =>
   run<ExtractedInvoice>(files, INVOICE_PROMPT, INVOICE_SCHEMA, hint);
+
+/* ------------------------- free-form menu designs ------------------------ */
+
+const AI_ELEMENT = obj({
+  id: str,
+  type: { type: "string", enum: ["text", "shape", "image", "icon", "line"] },
+  x: num,
+  y: num,
+  w: num,
+  h: num,
+  rotation: num,
+  text: str,
+  fontFamily: str,
+  fontCategory: str,
+  fontSize: num,
+  fontWeight: num,
+  italic: { type: "boolean" },
+  color: str,
+  align: str,
+  letterSpacing: num,
+  lineHeight: num,
+  uppercase: { type: "boolean" },
+  fill: str,
+  stroke: str,
+  strokeWidth: num,
+  radius: num,
+  shape: str,
+  icon: str,
+  opacity: num,
+});
+
+const DESIGN_SCHEMA = obj({
+  name: str,
+  aspect: num,
+  pages: arr(
+    obj({ pageIndex: num, background: str, elements: arr(AI_ELEMENT) })
+  ),
+});
+
+const EDIT_SCHEMA = obj({
+  message: str,
+  background: str,
+  elements: arr(AI_ELEMENT),
+});
+
+const FONT_LIST = DESIGN_FONTS.map((f) => `${f.family} (${f.category})`).join(
+  ", "
+);
+
+const ELEMENT_RULES = `Element fields (fill every field; use "" / 0 / false when not relevant):
+- type "text": text (keep line breaks with \n), fontFamily = the Google Font that looks MOST like the lettering (prefer this list: ${FONT_LIST}; any other real Google Font name is allowed when clearly closer), fontCategory (serif, sans, display, script, mono), fontWeight 100-900, italic, color #rrggbb, align left|center|right, letterSpacing in px, lineHeight as a multiplier (e.g. 1.2), uppercase when the letters are all caps.
+- type "shape": shape rect|ellipse, fill #rrggbb or "", stroke #rrggbb or "", strokeWidth, radius (corner radius).
+- type "line": a straight rule/divider; stroke color and strokeWidth; h is its thickness.
+- type "icon": icon = one of ${MENU_ICONS.join(", ")}; color #rrggbb.
+- rotation in degrees, opacity 0-1 (1 when opaque).`;
+
+const DESIGN_PROMPT = `You receive photos (or a PDF) of a printed restaurant menu, flyer or board. Rebuild each page as an editable design, like Canva would, so it looks as close as possible to the original.
+- One entry in pages per photographed page (pageIndex = 0-based photo/page index). background = dominant page color #rrggbb.
+- aspect = page width / height as photographed (e.g. A4 portrait 0.707).
+- elements in back-to-front order. x, y, w, h are FRACTIONS (0-1) of the page width/height for the element's box. For text, fontSize is a FRACTION of the page height (cap height + descender, e.g. 0.02 for body text on A4).
+- Make one text element per visual block: the title, each section heading, each dish line (name and price may share a line using spaces or dots, or be separate elements aligned left/right as on the original), each description. Transcribe faithfully in the original language, never translate or invent.
+- Recreate decorative rules, boxes, frames, colored bands and circles as shape/line elements with the sampled colors.
+- type "image": logos, photos, illustrations or ornaments that cannot be drawn with text/shapes — give only the box (they are cropped from the photo); leave other fields empty.
+- Prefer icons for small pictograms (wine glass, chili, leaf, star...).
+${ELEMENT_RULES}
+- name: short name for the design (restaurant name + menu type).`;
+
+const EDIT_PROMPT = `You edit a restaurant menu design (Canva-like) on a page of {W} x {H} px. The user gives an instruction in natural language (often Portuguese, maybe dictated by voice). Apply it and return the COMPLETE new list of elements for the page, back-to-front.
+- Keep the id of every element you keep or change; elements you omit are deleted; new elements get id "" .
+- Coordinates and sizes are page pixels; fontSize in px.
+- Change only what the instruction asks, but do it fully (e.g. "mude todas as fontes dos preços para…" means every price). Keep the layout tidy: aligned, inside the page, no overlaps unless intended.
+- Images ("image" elements) cannot be created, only moved, resized, rotated or deleted.
+- background: the page background #rrggbb (keep it unless asked).
+- message: one short sentence in the user's language telling what you did.
+${ELEMENT_RULES}`;
+
+export const extractDesign = (files: ExtractFile[], hint?: string) =>
+  run<ExtractedDesign>(files, DESIGN_PROMPT, DESIGN_SCHEMA, hint);
+
+export function editDesign(input: {
+  width: number;
+  height: number;
+  background: string;
+  elements: unknown[];
+  instruction: string;
+}) {
+  const prompt = `${EDIT_PROMPT.replace("{W}", String(input.width)).replace("{H}", String(input.height))}
+
+Current page background: ${input.background}
+Current elements (JSON):
+${JSON.stringify(input.elements)}
+
+Instruction: ${input.instruction}`;
+  return run<AiEdit>([], prompt, EDIT_SCHEMA);
+}

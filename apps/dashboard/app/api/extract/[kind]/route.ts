@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import {
   ExtractError,
   type ExtractFile,
+  extractDesign,
   extractInvoice,
   extractMenu,
   extractScan,
@@ -15,7 +16,7 @@ export const maxDuration = 300;
 const MAX_BASE64 = 24_000_000;
 const MAX_FILES = 12;
 
-/** POST /api/extract/menu|invoice|scan { files: [{ data, mimeType }], hint? } */
+/** POST /api/extract/menu|invoice|scan|design { files: [{ data, mimeType }], hint? } */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ kind: string }> }
@@ -24,7 +25,12 @@ export async function POST(
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
   const { kind } = await params;
-  if (kind !== "menu" && kind !== "invoice" && kind !== "scan") {
+  if (
+    kind !== "menu" &&
+    kind !== "invoice" &&
+    kind !== "scan" &&
+    kind !== "design"
+  ) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
   const body = (await request.json().catch(() => null)) as {
@@ -52,6 +58,7 @@ export async function POST(
       menu: extractMenu,
       invoice: extractInvoice,
       scan: extractScan,
+      design: extractDesign,
     }[kind];
     const result = await run(files, hint);
     return Response.json(result);
