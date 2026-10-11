@@ -4,11 +4,23 @@ import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
-import { buildTrades, computeStats } from "@/lib/journal/metrics";
+import { modelResolver, type TimeZoneId } from "@/lib/journal/analytics";
+import {
+  buildTrades,
+  computeStats,
+  type Stats,
+  type Trade,
+} from "@/lib/journal/metrics";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
+import { JournalBreakdown } from "./journal-breakdown";
 import { JournalConnector } from "./journal-connector";
+import { JournalDistribution } from "./journal-distribution";
+import { Segmented } from "./journal-kit";
+import { JournalPerformance } from "./journal-performance";
+import { JournalPeriods } from "./journal-periods";
 import { JournalSummary, money, tone } from "./journal-summary";
+import { JournalTime } from "./journal-time";
 import { JournalTrades, type SignalRow } from "./journal-trades";
 
 /**
@@ -16,7 +28,16 @@ import { JournalTrades, type SignalRow } from "./journal-trades";
  * TradingView alerts, metrics, notes, and the connector setup.
  */
 
-export type JournalTab = "summary" | "trades" | "signals" | "connector";
+export type JournalTab =
+  | "summary"
+  | "performance"
+  | "periods"
+  | "breakdown"
+  | "time"
+  | "distribution"
+  | "trades"
+  | "signals"
+  | "connector";
 type Tab = JournalTab;
 type Period = "7" | "30" | "90" | "ytd" | "all";
 
@@ -27,6 +48,38 @@ const PERIODS: { id: Period; label: string }[] = [
   { id: "90", label: "90 d" },
   { id: "ytd", label: "Ano" },
   { id: "all", label: "Tudo" },
+];
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "summary", label: "Resumo" },
+  { id: "performance", label: "Desempenho" },
+  { id: "periods", label: "Períodos" },
+  { id: "breakdown", label: "Ativos e modelos" },
+  { id: "time", label: "Horários" },
+  { id: "distribution", label: "Distribuição" },
+  { id: "trades", label: "Operações" },
+  { id: "signals", label: "Sinais TV" },
+  { id: "connector", label: "Conector" },
+];
+
+/** Tabs that read the filtered trades. */
+const FILTERED = new Set<Tab>([
+  "summary",
+  "performance",
+  "periods",
+  "breakdown",
+  "time",
+  "distribution",
+  "trades",
+]);
+
+/** Tabs whose buckets depend on the clock. */
+const ZONED = new Set<Tab>(["performance", "periods", "time"]);
+
+const ZONES: { id: TimeZoneId; label: string }[] = [
+  { id: "local", label: "Local" },
+  { id: "America/New_York", label: "Nova York" },
+  { id: "UTC", label: "UTC" },
 ];
 
 function since(p: Period) {
@@ -164,6 +217,41 @@ function Filters({
   );
 }
 
+function Analysis({
+  tab,
+  trades,
+  stats,
+  open,
+  tz,
+  modelOf,
+  tags,
+}: {
+  tab: Tab;
+  trades: Trade[];
+  stats: Stats;
+  open: number;
+  tz: TimeZoneId;
+  modelOf: (t: Trade) => string;
+  tags: Map<string, string[]>;
+}) {
+  switch (tab) {
+    case "summary":
+      return <JournalSummary currency="" open={open} stats={stats} />;
+    case "performance":
+      return <JournalPerformance trades={trades} tz={tz} />;
+    case "periods":
+      return <JournalPeriods trades={trades} tz={tz} />;
+    case "breakdown":
+      return <JournalBreakdown modelOf={modelOf} tags={tags} trades={trades} />;
+    case "time":
+      return <JournalTime modelOf={modelOf} trades={trades} tz={tz} />;
+    case "distribution":
+      return <JournalDistribution stats={stats} trades={trades} />;
+    default:
+      return null;
+  }
+}
+
 export function JournalContent({ initialTab }: { initialTab: Tab }) {
   const settings = useQuery(api.journal.settings, {});
   const ensureToken = useMutation(api.journal.ensureToken);
@@ -172,6 +260,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   const [period, setPeriod] = useState<Period>("90");
   const [account, setAccount] = useState("");
   const [symbol, setSymbol] = useState("");
+  const [tz, setTz] = useState<TimeZoneId>("local");
   const from = useMemo(() => since(period), [period]);
   // Deals from 30 days before the window, so positions opened earlier close
   const deals = useQuery(api.journal.deals, {
@@ -206,6 +295,19 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
     [allTrades, from, account, symbol]
   );
   const stats = useMemo(() => computeStats(trades), [trades]);
+  const { modelOf, tags } = useMemo(() => {
+    const setups = new Map<string, string>();
+    const tagMap = new Map<string, string[]>();
+    for (const n of notes ?? []) {
+      if (n.setup) {
+        setups.set(n.key, n.setup);
+      }
+      if (n.tags?.length) {
+        tagMap.set(n.key, n.tags);
+      }
+    }
+    return { modelOf: modelResolver(setups), tags: tagMap };
+  }, [notes]);
 
   if (settings === undefined) {
     return <p className="p-4 text-muted-foreground text-sm">Carregando…</p>;
@@ -231,32 +333,53 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
             {(stats.winRate * 100).toFixed(0)}% acerto
           </p>
         </div>
-        <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
-          <TabsList>
-            <TabsTrigger value="summary">Resumo</TabsTrigger>
-            <TabsTrigger value="trades">Operações</TabsTrigger>
-            <TabsTrigger value="signals">Sinais TV</TabsTrigger>
-            <TabsTrigger value="connector">Conector</TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
-      {tab === "summary" || tab === "trades" ? (
-        <Filters
-          account={account}
-          accounts={accounts}
-          onAccount={setAccount}
-          onPeriod={setPeriod}
-          onSymbol={setSymbol}
-          period={period}
-          symbol={symbol}
-          symbols={symbols}
-        />
+      <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
+        <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
+          <TabsList>
+            {TABS.map((t) => (
+              <TabsTrigger key={t.id} value={t.id}>
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </Tabs>
+      {FILTERED.has(tab) ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Filters
+            account={account}
+            accounts={accounts}
+            onAccount={setAccount}
+            onPeriod={setPeriod}
+            onSymbol={setSymbol}
+            period={period}
+            symbol={symbol}
+            symbols={symbols}
+          />
+          {ZONED.has(tab) ? (
+            <Segmented
+              label="Fuso horário"
+              onChange={setTz}
+              options={ZONES}
+              value={tz}
+            />
+          ) : null}
+        </div>
       ) : null}
       {deals === undefined && tab !== "connector" ? (
         <p className="text-muted-foreground text-sm">A carregar operações…</p>
       ) : null}
-      {tab === "summary" && deals ? (
-        <JournalSummary currency="" open={open} stats={stats} />
+      {deals ? (
+        <Analysis
+          modelOf={modelOf}
+          open={open}
+          stats={stats}
+          tab={tab}
+          tags={tags}
+          trades={trades}
+          tz={tz}
+        />
       ) : null}
       {tab === "trades" && deals ? (
         <JournalTrades
