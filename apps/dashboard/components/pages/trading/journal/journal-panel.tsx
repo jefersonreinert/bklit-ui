@@ -11,9 +11,12 @@ import {
   type Stats,
   type Trade,
 } from "@/lib/journal/metrics";
+import { serverOffset } from "@/lib/journal/news";
+import type { NoteOptions } from "@/lib/journal/note-fields";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
-import { JournalBreakdown } from "./journal-breakdown";
+import { JournalAccount } from "./journal-account";
+import { JournalBreakdown, type NoteRow } from "./journal-breakdown";
 import { JournalConnector } from "./journal-connector";
 import { JournalData, JournalDemoToggle } from "./journal-data";
 import { JournalDistribution } from "./journal-distribution";
@@ -226,6 +229,9 @@ function Analysis({
   tz,
   modelOf,
   tags,
+  account,
+  notes,
+  options,
 }: {
   tab: Tab;
   trades: Trade[];
@@ -234,16 +240,32 @@ function Analysis({
   tz: TimeZoneId;
   modelOf: (t: Trade) => string;
   tags: Map<string, string[]>;
+  account: string;
+  notes: NoteRow[];
+  options: NoteOptions;
 }) {
   switch (tab) {
     case "summary":
-      return <JournalSummary currency="" open={open} stats={stats} />;
+      return (
+        <>
+          <JournalAccount account={account} />
+          <JournalSummary currency="" open={open} stats={stats} />
+        </>
+      );
     case "performance":
       return <JournalPerformance trades={trades} tz={tz} />;
     case "periods":
       return <JournalPeriods trades={trades} tz={tz} />;
     case "breakdown":
-      return <JournalBreakdown modelOf={modelOf} tags={tags} trades={trades} />;
+      return (
+        <JournalBreakdown
+          modelOf={modelOf}
+          notes={notes}
+          options={options}
+          tags={tags}
+          trades={trades}
+        />
+      );
     case "time":
       return <JournalTime modelOf={modelOf} trades={trades} tz={tz} />;
     case "distribution":
@@ -269,6 +291,17 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   });
   const signals = useQuery(api.journal.signals, { limit: 500 });
   const notes = useQuery(api.journal.notes, {});
+  const accountStats = useQuery(api.journal.accountStats, {});
+  const offsets = useMemo(
+    () =>
+      new Map(
+        (accountStats ?? []).map((r) => [
+          r.account,
+          serverOffset(r.serverTime, r.receivedAt),
+        ])
+      ),
+    [accountStats]
+  );
 
   useEffect(() => {
     if (settings && !settings.token) {
@@ -377,8 +410,11 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       ) : null}
       {deals ? (
         <Analysis
+          account={account}
           modelOf={modelOf}
+          notes={notes ?? []}
           open={open}
+          options={settings.noteOptions}
           stats={stats}
           tab={tab}
           tags={tags}
@@ -389,6 +425,8 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       {tab === "trades" && deals ? (
         <JournalTrades
           notes={notes ?? []}
+          offsets={offsets}
+          options={settings.noteOptions}
           signals={signals ?? []}
           trades={trades}
         />

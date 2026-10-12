@@ -5,8 +5,43 @@
 
 export type DealEntry = "in" | "out" | "inout" | "out_by";
 export type Side = "buy" | "sell";
+export type Outcome = "win" | "loss" | "breakeven";
 
-export interface Deal {
+/**
+ * Extra fields the TradingJournal Complete EA (Golden Bullet) sends on the
+ * closing deal. All optional: older deals and the simple EA lack them.
+ */
+export interface DealExtras {
+  /** Planned R:R = |TP − entry| / |entry − SL|. */
+  rr?: number;
+  /** Risk as a fraction of the balance (0.01 = 1 %). */
+  riskPct?: number;
+  /** Money at risk up to the stop loss. */
+  riskUsd?: number;
+  profitPoints?: number;
+  durationSec?: number;
+  outcome?: Outcome;
+  /** Account equity and balance when the deal was SENT (not at the trade). */
+  equityAt?: number;
+  balanceAt?: number;
+  accountType?: string;
+  market?: string;
+}
+
+export const DEAL_EXTRAS = [
+  "rr",
+  "riskPct",
+  "riskUsd",
+  "profitPoints",
+  "durationSec",
+  "outcome",
+  "equityAt",
+  "balanceAt",
+  "accountType",
+  "market",
+] as const satisfies readonly (keyof DealExtras)[];
+
+export interface Deal extends DealExtras {
   account: string;
   ticket: string;
   position: string;
@@ -55,6 +90,16 @@ export interface Trade {
   r: number | null;
   magic: number;
   comment: string;
+  /** From the EA's closing deals (null when the EA did not send them). */
+  rrPlanned: number | null;
+  /** Summed over partial closes. */
+  riskPct: number | null;
+  riskUsd: number | null;
+  profitPoints: number | null;
+  outcome: Outcome | null;
+  accountType: string | null;
+  /** The EA's market, else deduced from the symbol. */
+  market: string;
   deals: Deal[];
 }
 
@@ -80,6 +125,50 @@ function rMultiple(
   const risk = Math.abs(openPrice - sl);
   const move = side === "buy" ? closePrice - openPrice : openPrice - closePrice;
   return risk > 0 ? move / risk : null;
+}
+
+const CRYPTO = /BTC|ETH|XRP|LTC/;
+const COMMODITY = /XAU|XAG|OIL|GOLD/;
+const EQUITY = /NAS|NDX|SPX|US5|US30|DJ|DAX|GER|100|500/;
+
+/** Same rule as the EA's DetermineMarketName. */
+export function marketOf(symbol: string) {
+  const s = symbol.toUpperCase();
+  if (CRYPTO.test(s)) {
+    return "Cryptocurrencies";
+  }
+  if (COMMODITY.test(s)) {
+    return "Commodities";
+  }
+  return EQUITY.test(s) ? "Equities" : "Forex";
+}
+
+/** Sum of a field over the deals that carry it; null when none does. */
+function sumOf(deals: Deal[], k: "riskPct" | "riskUsd" | "profitPoints") {
+  const has = deals.filter((d) => typeof d[k] === "number");
+  return has.length ? has.reduce((a, d) => a + (d[k] ?? 0), 0) : null;
+}
+
+/** EA fields of the closing deals (partial closes add up). */
+function extrasOf(outs: Deal[], all: Deal[]) {
+  const last = <K extends keyof DealExtras>(k: K): DealExtras[K] => {
+    for (const list of [outs, all]) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const value = list[i]?.[k];
+        if (value !== undefined) {
+          return value;
+        }
+      }
+    }
+  };
+  return {
+    rrPlanned: last("rr") ?? null,
+    riskPct: sumOf(outs, "riskPct"),
+    riskUsd: sumOf(outs, "riskUsd"),
+    profitPoints: sumOf(outs, "profitPoints"),
+    outcome: last("outcome") ?? null,
+    accountType: last("accountType") ?? null,
+  };
 }
 
 function tradeOf(key: string, list: Deal[]): Trade | null {
@@ -127,6 +216,8 @@ function tradeOf(key: string, list: Deal[]): Trade | null {
     r: closed ? rMultiple(side, openPrice, closePrice, sl) : null,
     magic: first.magic,
     comment: first.comment,
+    ...extrasOf(outs, list),
+    market: list.find((d) => d.market)?.market ?? marketOf(first.symbol),
     deals: list,
   };
 }

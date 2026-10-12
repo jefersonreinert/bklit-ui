@@ -1,4 +1,12 @@
-import type { Deal } from "./metrics";
+import {
+  type AccountStats,
+  eaTotals,
+  HISTORY_KEYS,
+  type HistoryPoint,
+  STAT_KEYS,
+  serverDay,
+} from "./account";
+import { buildTrades, type Deal, marketOf } from "./metrics";
 
 /**
  * Fictitious journal data to preview the analytics: ~14 months of trades on
@@ -9,6 +17,8 @@ import type { Deal } from "./metrics";
 
 export const DEMO_ACCOUNT = "DEMO";
 export const DEMO_STRATEGY = "Demonstração";
+/** Starting balance of the demo account. */
+const DEPOSIT = 10_000;
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -109,6 +119,10 @@ function demoTrade(
   };
   const hold = (win ? 0.2 + next() * 3 : 0.1 + next() * 4) * HOUR;
   const commission = -round(ins.volume * 7, 2);
+  const point = price > 100 ? 0.01 : 0.000_01;
+  const move = r * stopDist;
+  const profit = round(ins.risk * r, 2);
+  const net = profit + commission;
   return {
     model: model.name,
     open: {
@@ -118,6 +132,7 @@ function demoTrade(
       entry: "in",
       price: round(price, digits),
       sl: round(price - dir * stopDist, digits),
+      tp: round(price + dir * model.reward * stopDist, digits),
       profit: 0,
       commission: commission / 2,
       swap: 0,
@@ -129,15 +144,24 @@ function demoTrade(
       ticket: `${position}2`,
       side: side === "buy" ? "sell" : "buy",
       entry: "out",
-      price: round(price + dir * r * stopDist, digits),
+      price: round(price + dir * move, digits),
       sl: 0,
-      profit: round(ins.risk * r, 2),
+      profit,
       commission: commission / 2,
       swap: hold > 20 * HOUR ? -round(next() * 6, 2) : 0,
       comment: win
         ? `[tp ${round(price, digits)}]`
         : `[sl ${round(price, digits)}]`,
       time: time + hold,
+      // Extra fields of the TradingJournal Complete EA
+      rr: model.reward,
+      riskPct: round(ins.risk / DEPOSIT, 4),
+      riskUsd: ins.risk,
+      profitPoints: Math.round(move / point),
+      durationSec: Math.round(hold / 1000),
+      outcome: net > 0.01 ? "win" : "loss",
+      accountType: "Personal",
+      market: marketOf(ins.symbol),
     },
   };
 }
@@ -205,4 +229,123 @@ export function demoSignals(now: number) {
       time: t.open.time - 60_000,
       receivedAt: t.open.time - 60_000,
     }));
+}
+
+/**
+ * EA account statistics for the demo: balance from a 10 000 deposit, one
+ * snapshot per trading day, and the latest totals with weekly/monthly
+ * targets (2.5 % and 10 %).
+ */
+export function demoAccount(now: number) {
+  const deals = demoDeals(now);
+  const trades = buildTrades(deals)
+    .filter((t) => t.closeTime !== null)
+    .sort((a, b) => (a.closeTime ?? 0) - (b.closeTime ?? 0));
+  const history: HistoryPoint[] = [];
+  let balance = DEPOSIT;
+  let gp = 0;
+  let gl = 0;
+  let wins = 0;
+  let count = 0;
+  let day = "";
+  let dayStart = DEPOSIT;
+  for (const t of trades) {
+    const d = serverDay(t.closeTime ?? 0);
+    if (d !== day) {
+      day = d;
+      dayStart = balance;
+    }
+    balance += t.net;
+    count += 1;
+    if (t.net > 0) {
+      gp += t.net;
+      wins += 1;
+    } else {
+      gl += t.net;
+    }
+    const point: HistoryPoint = {
+      time: t.closeTime ?? 0,
+      balance: round(balance, 2),
+      equity: round(balance, 2),
+      netProfit: round(gp + gl, 2),
+      dailyProfit: round(balance - dayStart, 2),
+      winRate: wins / count,
+      profitFactor: gl < 0 ? gp / -gl : 0,
+      initialDeposit: DEPOSIT,
+      withdrawal: 0,
+    };
+    if (history.at(-1) && serverDay(history.at(-1)?.time ?? 0) === d) {
+      history[history.length - 1] = point;
+    } else {
+      history.push(point);
+    }
+  }
+  const sumSince = (from: number) =>
+    trades
+      .filter((t) => (t.closeTime ?? 0) >= from)
+      .reduce((a, t) => a + t.net, 0);
+  const today = new Date(now);
+  const dayFrom = Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate()
+  );
+  const weekFrom = dayFrom - ((today.getUTCDay() + 6) % 7) * DAY;
+  const monthFrom = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1);
+  const weekly = sumSince(weekFrom);
+  const monthly = sumSince(monthFrom);
+  const startW = balance - weekly;
+  const startM = balance - monthly;
+  const equity = round(balance + 42.5, 2);
+  const values: Partial<AccountStats> = {
+    balance: round(balance, 2),
+    equity,
+    freeMargin: round(equity * 0.93, 2),
+    initialDeposit: DEPOSIT,
+    withdrawal: 0,
+    grossProfit: round(gp, 2),
+    grossLoss: round(gl, 2),
+    // The EA counts closing deals only (entry commissions left out)
+    netProfit: eaTotals(deals).net,
+    dailyProfit: round(sumSince(dayFrom), 2),
+    weeklyProfit: round(weekly, 2),
+    monthlyProfit: round(monthly, 2),
+    startingWeeklyEquity: round(startW, 2),
+    startingMonthlyEquity: round(startM, 2),
+    weeklyTarget: round(startW * 0.025, 2),
+    monthlyTarget: round(startM * 0.1, 2),
+    weeklyTargetPct: 0.025,
+    monthlyTargetPct: 0.1,
+    weeklyTargetProgress: Math.max(0, Math.min(1, weekly / (startW * 0.025))),
+    monthlyTargetProgress: Math.max(0, Math.min(1, monthly / (startM * 0.1))),
+    targetPercent: 0.1,
+    winRate: trades.length ? wins / trades.length : 0,
+    profitFactor: gl < 0 ? gp / -gl : 0,
+    dailyDrawdown: dayStart ? sumSince(dayFrom) / dayStart : 0,
+    totalTrades: trades.length,
+    profitTrades: wins,
+    lossTrades: trades.length - wins,
+  };
+  const stats = Object.fromEntries(
+    STAT_KEYS.map((k) => [k, values[k] ?? 0])
+  ) as AccountStats;
+  return {
+    latest: {
+      account: DEMO_ACCOUNT,
+      server: "Dados fictícios",
+      name: "Demonstração",
+      holder: "Trader fictício",
+      currency: "USD",
+      accountType: "Personal",
+      serverTime: now,
+      receivedAt: now,
+      stats,
+    },
+    history: history.map((p) => ({
+      account: DEMO_ACCOUNT,
+      day: serverDay(p.time),
+      time: p.time,
+      ...Object.fromEntries(HISTORY_KEYS.map((k) => [k, p[k]])),
+    })) as (HistoryPoint & { account: string; day: string })[],
+  };
 }

@@ -1,0 +1,53 @@
+{
+  "account": "52784901",
+  "server": "ICMarketsEU-Demo",
+  "name": "Raw Trading Ltd",
+  "holder": "Jeferson Reinert",
+  "currency": "USD",
+  "account_type": "Personal",
+  "time": 1760283000,
+  "stats": {
+    "balance": 10196.5,
+    "equity": 10196.5,
+    "freeMargin": 10196.5,
+    "initialDeposit": 10000.0,
+    "withdrawal": 0.0,
+
+    "grossProfit": 450.0,
+    "grossLoss": -253.5,
+    "netProfit": 196.5,
+    "totalCommission": -21.0,
+    "totalSwap": -1.2,
+    "dailyProfit": 196.5,
+    "weeklyProfit": 196.5,
+    "monthlyProfit": 196.5,
+    "maxProfitTrade": 196.5,
+    "maxLossTrade": -103.5,
+
+    "startingWeeklyEquity": 10000.0,
+    "startingMonthlyEquity": 10000.0,
+    "weeklyTarget": 254.91,
+    "monthlyTarget": 1019.65,
+    "weeklyTargetPct": 0.025,
+    "monthlyTargetPct": 0.1,
+    "weeklyTargetProgress": 0.770856,
+    "monthlyTargetProgress": 0.192714,
+    "targetPercent": 0.1,
+
+    "winRate": 0.6,
+    "profitFactor": 1.7751,
+    "recoveryFactor": 1.8986,
+    "sharpeRatio": 0.412,
+    "expectedPayoff": 39.3,
+    "dailyDrawdown": 0.01965,
+
+    "totalTrades": 5,
+    "profitTrades": 3,
+    "lossTrades": 2,
+    "longTrades": 3,
+    "shortTrades": 2,
+    "maxConWins": 2,
+    "maxConLosses": 1,
+    "maxConProfitTrades": 2
+  }
+}

@@ -339,6 +339,35 @@ function arrow(sort: { key: SortKey; desc: boolean } | null, key: SortKey) {
   return sort.desc ? " ↓" : " ↑";
 }
 
+const dash = (x: number | null, f: (n: number) => string) =>
+  x === null ? "—" : f(x);
+
+function RiskCells({ row: r }: { row: GroupRow }) {
+  return (
+    <>
+      <td className="px-1 py-1.5 text-right">
+        {dash(r.avgRiskPct, (x) => pct(x, 2))}
+        {r.avgRiskUsd === null ? null : (
+          <span className="block text-muted-foreground">
+            {money(r.avgRiskUsd)}
+          </span>
+        )}
+      </td>
+      <td className="px-1 py-1.5 text-right">
+        {dash(r.avgRR, (x) => `1:${x.toFixed(2)}`)}
+      </td>
+      <td className={cn("px-1 py-1.5 text-right", tone(r.points ?? 0))}>
+        {dash(r.points, (x) => x.toLocaleString("pt-BR"))}
+        {r.avgPoints === null ? null : (
+          <span className="block text-muted-foreground">
+            méd. {r.avgPoints.toFixed(0)}
+          </span>
+        )}
+      </td>
+    </>
+  );
+}
+
 /** Sortable table with the full statistics of each bucket. */
 export function GroupTable({
   rows,
@@ -363,6 +392,8 @@ export function GroupTable({
   if (visible.length === 0) {
     return null;
   }
+  // EA columns only when some trade carries them
+  const risk = visible.some((r) => r.avgRiskPct !== null || r.avgRR !== null);
   const maxAbs = Math.max(...visible.map((r) => Math.abs(r.net)), 1);
   return (
     <div className="-mx-1 max-h-[26rem] overflow-auto">
@@ -392,6 +423,17 @@ export function GroupTable({
             <th className="px-1 py-1.5 text-right font-medium">Ganho méd.</th>
             <th className="px-1 py-1.5 text-right font-medium">Perda méd.</th>
             <th className="px-1 py-1.5 text-right font-medium">Tempo méd.</th>
+            {risk ? (
+              <>
+                <th className="px-1 py-1.5 text-right font-medium">
+                  Risco méd.
+                </th>
+                <th className="px-1 py-1.5 text-right font-medium">
+                  R:R plan.
+                </th>
+                <th className="px-1 py-1.5 text-right font-medium">Pontos</th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -442,6 +484,7 @@ export function GroupTable({
               <td className="px-1 py-1.5 text-right text-muted-foreground">
                 {formatDuration(r.avgHoldMs)}
               </td>
+              {risk ? <RiskCells row={r} /> : null}
             </tr>
           ))}
         </tbody>

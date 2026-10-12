@@ -1,12 +1,17 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { Icon } from "@/lib/icons";
 import { TV_ALERT_TEMPLATE } from "@/lib/journal/ingest";
+import {
+  NOTE_FIELD_LABEL,
+  NOTE_FIELDS,
+  type NoteField,
+} from "@/lib/journal/note-fields";
 import { BASE_PATH } from "../../telegram/telegram-shared";
 
 /**
@@ -110,6 +115,95 @@ function RemoveAccount({
   );
 }
 
+/** Editable option lists of the structured note fields (one per line). */
+function NoteOptionsEditor({ settings }: { settings: Settings }) {
+  const save = useMutation(api.journal.saveNoteOptions);
+  const [field, setField] = useState<NoteField>("psychology");
+  const [text, setText] = useState(settings.noteOptions[field].join("\n"));
+  const [saved, setSaved] = useState(false);
+  return (
+    <section className="flex flex-col gap-2 border p-3 text-sm">
+      <p className="font-medium">Campos das notas (como no Notion)</p>
+      <p className="text-muted-foreground text-xs">
+        Opções de Bias, Trade type, Entry timeframe, Entry macro, News impact e
+        Psychology no editor de notas. Uma opção por linha.
+      </p>
+      <select
+        aria-label="Campo"
+        className="h-8 w-fit border bg-background px-2"
+        onChange={(e) => {
+          const f = e.target.value as NoteField;
+          setField(f);
+          setText(settings.noteOptions[f].join("\n"));
+          setSaved(false);
+        }}
+        value={field}
+      >
+        {NOTE_FIELDS.map((f) => (
+          <option key={f} value={f}>
+            {NOTE_FIELD_LABEL[f]}
+          </option>
+        ))}
+      </select>
+      <textarea
+        aria-label={`Opções de ${NOTE_FIELD_LABEL[field]}`}
+        className="min-h-32 border bg-background p-2 font-mono text-xs"
+        onChange={(e) => {
+          setText(e.target.value);
+          setSaved(false);
+        }}
+        value={text}
+      />
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={async () => {
+            await save({ field, options: text.split("\n") });
+            setSaved(true);
+          }}
+          size="sm"
+        >
+          Guardar opções
+        </Button>
+        <Button
+          onClick={async () => {
+            await save({ field, options: [] });
+            setSaved(false);
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          Repor padrão
+        </Button>
+        {saved ? (
+          <span className="text-muted-foreground text-xs">Guardado</span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** Last statistics received from the TradingJournal Complete EA, per account. */
+function StatsStatus() {
+  const rows = useQuery(api.journal.accountStats, {});
+  if (!rows?.length) {
+    return (
+      <p className="text-muted-foreground text-xs">
+        Estatísticas da conta: nenhuma ainda (só o EA TradingJournal Complete as
+        envia).
+      </p>
+    );
+  }
+  return (
+    <>
+      {rows.map((r) => (
+        <p className="text-muted-foreground text-xs" key={r.account}>
+          Estatísticas da conta {r.account}: {when(r.receivedAt)}
+        </p>
+      ))}
+    </>
+  );
+}
+
 export function JournalConnector({ settings }: { settings: Settings }) {
   const rotate = useMutation(api.journal.rotateToken);
   const removeAccount = useMutation(api.journal.deleteAccount);
@@ -124,8 +218,9 @@ export function JournalConnector({ settings }: { settings: Settings }) {
         <div className="rounded-xl border p-3 text-sm">
           <p className="font-medium">MetaTrader 5</p>
           <p className="text-muted-foreground text-xs">
-            Último envio: {when(settings.lastMt5At)}
+            Último negócio ou estatística: {when(settings.lastMt5At)}
           </p>
+          <StatsStatus />
           {settings.accounts.map((a) => (
             <p
               className="mt-1 flex items-center justify-between gap-2 text-xs"
@@ -146,31 +241,75 @@ export function JournalConnector({ settings }: { settings: Settings }) {
       </div>
 
       <ol className="flex flex-col gap-5">
-        <Step n={1} title="MT5 → Diário (todas as operações, automático)">
+        <Step n={1} title="MT5 → Diário (EA TradingJournal Complete)">
           <p className="text-muted-foreground">
-            No VPS com o MT5: baixe o EA, copie-o para{" "}
-            <code>Arquivo → Abrir pasta de dados → MQL5/Experts</code>, compile
-            no MetaEditor (F7) e arraste-o para um gráfico qualquer. Ele envia o
-            histórico dos últimos 90 dias e depois cada negócio em tempo real,
-            inclusive os copiados do TradingView pelo tv2mt5.
+            O EA recomendado (Golden Bullet v4) envia o histórico e cada negócio
+            em tempo real, com R:R planejado, risco, pontos, duração e mercado.
+            A cada 5 min envia também saldo, equity, margem, depósitos, metas
+            semanal e mensal: é o card “Conta MT5” do Resumo.
           </p>
+          <ol className="ml-4 list-decimal text-muted-foreground">
+            <li>
+              Baixe o .zip e copie a pasta <code>MQL5</code> para a pasta de
+              dados do terminal (<b>Arquivo → Abrir pasta de dados</b>),
+              juntando-a à que já existe.
+            </li>
+            <li>
+              No MetaEditor, abra{" "}
+              <code>Experts/Golden Bullet/TradingJournal_Complete.mq5</code> e
+              compile (F7).
+            </li>
+            <li>
+              Em <b>Ferramentas → Opções → Expert Advisors</b>, marque “Permitir
+              WebRequest para os URLs listados” e adicione o URL permitido
+              abaixo.
+            </li>
+            <li>
+              Arraste o EA para um gráfico, cole o webhook MT5 em{" "}
+              <code>InpUrl</code> e escolha o tipo de conta e as metas.
+            </li>
+          </ol>
           <Button
             className="self-start"
             nativeButton={false}
             render={
-              <a download href={`${BASE_PATH}/journal/CasaBrasaJournal.mq5`} />
+              <a
+                download
+                href={`${BASE_PATH}/journal/GoldenBullet-TradingJournal-MT5.zip`}
+              />
             }
             size="sm"
           >
             <Icon className="size-4" name="IconArrowDown" />
-            Baixar CasaBrasaJournal.mq5
+            Baixar TradingJournal Complete (.zip)
           </Button>
-          <p className="text-muted-foreground">
-            Em <b>Ferramentas → Opções → Expert Advisors</b>, marque “Permitir
-            WebRequest para os URLs listados” e adicione:
-          </p>
           <Copy label="URL permitido" value={base} />
           <Copy label="InpUrl do EA (webhook MT5)" value={mt5Url} />
+          <details className="text-muted-foreground">
+            <summary className="cursor-pointer">
+              Versão simples (um ficheiro, só negócios)
+            </summary>
+            <p className="mt-2">
+              O CasaBrasaJournal.mq5 envia só os negócios dos últimos 90 dias e
+              os novos em tempo real, sem estatísticas da conta. Usa o mesmo
+              InpUrl. Não ligue os dois EAs na mesma conta.
+            </p>
+            <Button
+              className="mt-2"
+              nativeButton={false}
+              render={
+                <a
+                  download
+                  href={`${BASE_PATH}/journal/CasaBrasaJournal.mq5`}
+                />
+              }
+              size="sm"
+              variant="outline"
+            >
+              <Icon className="size-4" name="IconArrowDown" />
+              Baixar CasaBrasaJournal.mq5
+            </Button>
+          </details>
         </Step>
         <Step n={2} title="TradingView → Diário (alertas e sinais)">
           <p className="text-muted-foreground">
@@ -226,6 +365,7 @@ export function JournalConnector({ settings }: { settings: Settings }) {
           />
         ))}
       </div>
+      <NoteOptionsEditor settings={settings} />
       <p className="text-muted-foreground text-xs">
         Os URLs contêm o seu token secreto: não os partilhe. Os endpoints ficam
         ativos 24 h no Convex, sem servidor próprio.

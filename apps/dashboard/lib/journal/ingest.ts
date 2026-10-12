@@ -1,4 +1,5 @@
-import type { Deal, DealEntry, Side } from "./metrics";
+import { type AccountStats, STAT_KEYS } from "./account";
+import type { Deal, DealEntry, DealExtras, Outcome, Side } from "./metrics";
 
 /**
  * Validates what the webhooks receive: MT5 deals from the CasaBrasaJournal
@@ -63,6 +64,41 @@ export function parseTime(v: unknown, fallback = Date.now()): number {
   return fallback;
 }
 
+/** A finite number, or undefined when the field is absent or not a number. */
+const optNum = (v: unknown) => {
+  if (v === undefined || v === null || v === "") {
+    return;
+  }
+  const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : undefined;
+};
+
+const OUTCOMES = new Set<Outcome>(["win", "loss", "breakeven"]);
+
+/** The TradingJournal Complete EA's extra fields (closing deal only). */
+function extrasOf(r: Record<string, unknown>): DealExtras {
+  const outcome = str(r.outcome).toLowerCase() as Outcome;
+  const out: DealExtras = {
+    rr: optNum(r.rr),
+    riskPct: optNum(r.risk_pct),
+    riskUsd: optNum(r.risk_usd),
+    profitPoints: optNum(r.profit_points),
+    durationSec: optNum(r.duration_sec),
+    outcome: OUTCOMES.has(outcome) ? outcome : undefined,
+    equityAt: optNum(r.equity),
+    balanceAt: optNum(r.balance),
+    accountType: str(r.account_type, 40) || undefined,
+    market: str(r.market, 40) || undefined,
+  };
+  // Absent fields stay absent, so a re-send never erases stored ones
+  for (const k of Object.keys(out) as (keyof DealExtras)[]) {
+    if (out[k] === undefined) {
+      delete out[k];
+    }
+  }
+  return out;
+}
+
 /**
  * One deal, or null when it is not a trade (balance, credit, etc.) or is
  * missing the essentials.
@@ -97,6 +133,7 @@ export function normalizeDeal(raw: unknown): Deal | null {
     magic: Math.trunc(num(r.magic)),
     comment: str(r.comment),
     time: parseTime(r.time_msc ?? r.time),
+    ...extrasOf(r),
   };
 }
 
@@ -109,6 +146,53 @@ export function dealsFromBody(body: unknown): Deal[] {
     .slice(0, MAX_DEALS)
     .map(normalizeDeal)
     .filter((d): d is Deal => d !== null);
+}
+
+export interface StatsPayload {
+  account: string;
+  server: string;
+  name: string;
+  holder: string;
+  currency: string;
+  accountType: string;
+  /** Broker server time of the snapshot (ms). */
+  serverTime: number;
+  stats: AccountStats;
+}
+
+/**
+ * Body of POST /journal/mt5/stats: only the known fields, numbers made
+ * finite (else 0), strings cut. Null without an account.
+ */
+export function statsFromBody(
+  body: unknown,
+  now = Date.now()
+): StatsPayload | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return null;
+  }
+  const b = body as Record<string, unknown>;
+  const account = str(b.account, 40);
+  if (!account) {
+    return null;
+  }
+  const raw =
+    b.stats && typeof b.stats === "object"
+      ? (b.stats as Record<string, unknown>)
+      : {};
+  const stats = Object.fromEntries(
+    STAT_KEYS.map((k) => [k, num(raw[k])])
+  ) as AccountStats;
+  return {
+    account,
+    server: str(b.server, 80),
+    name: str(b.name, 80),
+    holder: str(b.holder, 80),
+    currency: str(b.currency, 10),
+    accountType: str(b.account_type, 40),
+    serverTime: b.time === undefined ? now : parseTime(b.time, now),
+    stats,
+  };
 }
 
 export interface Signal {
