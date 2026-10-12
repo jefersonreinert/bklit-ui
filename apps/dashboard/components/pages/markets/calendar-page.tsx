@@ -26,6 +26,7 @@ import {
 } from "@/lib/markets/calendar";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
+import { EconGlobe } from "./econ-globe";
 
 type Range = "today" | "tomorrow" | "week" | "next";
 
@@ -359,6 +360,7 @@ export function CalendarPage() {
   const prefs = usePrefs();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<EconEvent | null>(null);
+  const [globe, setGlobe] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30_000);
@@ -431,8 +433,16 @@ export function CalendarPage() {
           horário de {Intl.DateTimeFormat().resolvedOptions().timeZone}
         </span>
         <Button
+          className="ml-auto rounded-full"
+          onClick={() => setGlobe(true)}
+          size="sm"
+          variant="outline"
+        >
+          <Icon className="size-4" name="IconGlobe" />
+          Globo
+        </Button>
+        <Button
           aria-label="Atualizar"
-          className="ml-auto"
           onClick={reload}
           size="icon"
           variant="ghost"
@@ -511,6 +521,29 @@ export function CalendarPage() {
         </section>
       ))}
       <EventSheet e={open} onClose={() => setOpen(null)} />
+      <Sheet onOpenChange={setGlobe} open={globe}>
+        <SheetContent
+          className="w-full! gap-0 overflow-y-auto border-0 bg-[#e9e0cf] p-0 sm:max-w-3xl!"
+          side="right"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Globo do calendário econômico</SheetTitle>
+          </SheetHeader>
+          {globe ? (
+            <EconGlobe
+              events={inRange}
+              onOpenEvent={(e) => {
+                setGlobe(false);
+                setOpen(e);
+              }}
+              onPickCurrency={(c) => {
+                prefs.save({ currencies: [c] });
+                setGlobe(false);
+              }}
+            />
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
