@@ -1,5 +1,53 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { HISTORY_KEYS, STAT_KEYS, type StatKey } from "../lib/journal/account";
+import { NOTE_FIELDS, type NoteField } from "../lib/journal/note-fields";
+
+const numbers = <K extends string>(keys: readonly K[]) =>
+  Object.fromEntries(keys.map((k) => [k, v.number()])) as Record<
+    K,
+    ReturnType<typeof v.number>
+  >;
+
+/** Optional fields of the TradingJournal Complete EA's closing deals. */
+export const dealExtraFields = {
+  rr: v.optional(v.number()),
+  riskPct: v.optional(v.number()),
+  riskUsd: v.optional(v.number()),
+  profitPoints: v.optional(v.number()),
+  durationSec: v.optional(v.number()),
+  outcome: v.optional(
+    v.union(v.literal("win"), v.literal("loss"), v.literal("breakeven"))
+  ),
+  equityAt: v.optional(v.number()),
+  balanceAt: v.optional(v.number()),
+  accountType: v.optional(v.string()),
+  market: v.optional(v.string()),
+};
+
+export const statsValue = v.object(numbers<StatKey>(STAT_KEYS));
+
+export const accountStatsFields = {
+  account: v.string(),
+  server: v.string(),
+  name: v.string(),
+  holder: v.string(),
+  currency: v.string(),
+  accountType: v.string(),
+  /** Broker server time of the snapshot (ms). */
+  serverTime: v.number(),
+  receivedAt: v.number(),
+  stats: statsValue,
+};
+
+const historyFields = numbers(HISTORY_KEYS);
+
+export const noteFields = Object.fromEntries(
+  NOTE_FIELDS.map((f) => [f, v.optional(v.string())])
+) as Record<
+  NoteField,
+  ReturnType<typeof v.optional<ReturnType<typeof v.string>>>
+>;
 
 /**
  * Central database of the panel. Notes are one document each (realtime,
@@ -546,6 +594,10 @@ export default defineSchema({
     token: v.string(),
     lastMt5At: v.optional(v.number()),
     lastTvAt: v.optional(v.number()),
+    /** Last account statistics from the TradingJournal Complete EA. */
+    lastStatsAt: v.optional(v.number()),
+    /** Options of the structured note fields (defaults when absent). */
+    noteOptions: v.optional(v.record(v.string(), v.array(v.string()))),
     /** Accounts seen by the EA (login → server/broker). */
     accounts: v.optional(
       v.array(
@@ -578,9 +630,25 @@ export default defineSchema({
     magic: v.number(),
     comment: v.string(),
     time: v.number(),
+    ...dealExtraFields,
   })
     .index("by_ticket", ["account", "ticket"])
     .index("by_time", ["time"]),
+
+  /** Latest statistics of each account (TradingJournal Complete EA). */
+  jrnAccountStats: defineTable(accountStatsFields).index("by_account", [
+    "account",
+  ]),
+
+  /** One snapshot per account per server day (the last of the day wins). */
+  jrnStatsHistory: defineTable({
+    account: v.string(),
+    /** Server day, YYYY-MM-DD. */
+    day: v.string(),
+    /** Broker server time (ms). */
+    time: v.number(),
+    ...historyFields,
+  }).index("by_account_day", ["account", "day"]),
 
   /** TradingView alert messages received by the webhook. */
   jrnSignals: defineTable({
@@ -603,6 +671,7 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())),
     rating: v.optional(v.number()),
     notes: v.optional(v.string()),
+    ...noteFields,
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 });

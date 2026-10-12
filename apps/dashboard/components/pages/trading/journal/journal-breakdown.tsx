@@ -18,9 +18,23 @@ import {
   Ring,
   RingChart,
 } from "@bklitui/ui/charts";
+import type { FunctionReturnType } from "convex/server";
 import { useMemo, useState } from "react";
-import { type GroupRow, groupBy, groupByTag } from "@/lib/journal/analytics";
+import type { api } from "@/convex/_generated/api";
+import { ACCOUNT_TYPE_LABEL, MARKET_LABEL } from "@/lib/journal/account";
+import {
+  type GroupRow,
+  groupBy,
+  groupByTag,
+  macroOf,
+} from "@/lib/journal/analytics";
 import type { Trade } from "@/lib/journal/metrics";
+import {
+  NOTE_FIELD_LABEL,
+  NOTE_FIELDS,
+  type NoteField,
+  type NoteOptions,
+} from "@/lib/journal/note-fields";
 import {
   colorAt,
   DOWN,
@@ -34,6 +48,76 @@ import {
 import { money } from "./journal-summary";
 
 /** Ativos e modelos: where the money comes from and which setups work. */
+
+export type NoteRow = NonNullable<
+  FunctionReturnType<typeof api.journal.notes>
+>[number];
+
+/** Rows of one structured note field, in the order of its options. */
+function noteGroups(
+  trades: Trade[],
+  notes: Map<string, NoteRow>,
+  field: NoteField,
+  options: string[]
+) {
+  const fieldOf = (t: Trade) => {
+    const v = notes.get(t.key)?.[field]?.trim();
+    if (v) {
+      return v;
+    }
+    // Entry macro is automatic unless the note overrides it
+    return field === "macro" ? macroOf(t.openTime) : null;
+  };
+  const rows = groupBy(trades, fieldOf);
+  const rank = (k: string) => {
+    const i = options.indexOf(k);
+    return i < 0 ? options.length : i;
+  };
+  return rows.sort((a, b) => rank(a.key) - rank(b.key));
+}
+
+function NoteBreakdowns({
+  trades,
+  notes,
+  options,
+}: {
+  trades: Trade[];
+  notes: NoteRow[];
+  options: NoteOptions;
+}) {
+  const groups = useMemo(() => {
+    const byKey = new Map(notes.map((n) => [n.key, n]));
+    return NOTE_FIELDS.map((f) => ({
+      field: f,
+      rows: noteGroups(trades, byKey, f, options[f]),
+    }));
+  }, [trades, notes, options]);
+  const filled = groups.filter((g) => g.rows.length > 0);
+  if (filled.length === 0) {
+    return null;
+  }
+  return (
+    <div className="grid gap-3 xl:grid-cols-2">
+      {filled.map((g) => (
+        <Panel
+          description={
+            g.field === "macro"
+              ? "Pela hora de entrada em Nova York (ou o valor da nota)."
+              : "Preenchido nas notas das operações."
+          }
+          key={g.field}
+          title={`Por ${NOTE_FIELD_LABEL[g.field]}`}
+        >
+          <GroupTable
+            first={NOTE_FIELD_LABEL[g.field]}
+            keepOrder
+            rows={g.rows}
+          />
+        </Panel>
+      ))}
+    </div>
+  );
+}
 
 const MAX_SLICES = 6;
 
@@ -223,11 +307,29 @@ export function JournalBreakdown({
   trades,
   modelOf,
   tags,
+  notes,
+  options,
 }: {
   trades: Trade[];
   modelOf: (t: Trade) => string;
   tags: Map<string, string[]>;
+  notes: NoteRow[];
+  options: NoteOptions;
 }) {
+  const market = useMemo(
+    () =>
+      groupBy(trades, (t) => t.market, {
+        labelOf: (k) => MARKET_LABEL[k] ?? k,
+      }),
+    [trades]
+  );
+  const accountType = useMemo(
+    () =>
+      groupBy(trades, (t) => t.accountType, {
+        labelOf: (k) => ACCOUNT_TYPE_LABEL[k] ?? k,
+      }),
+    [trades]
+  );
   const symbol = useMemo(() => groupBy(trades, (t) => t.symbol), [trades]);
   const model = useMemo(() => groupBy(trades, modelOf), [trades, modelOf]);
   const side = useMemo(
@@ -262,6 +364,21 @@ export function JournalBreakdown({
         <GroupTable first="Ativo" rows={symbol} />
       </Panel>
       <div className="grid gap-3 xl:grid-cols-2">
+        <Panel description="Do EA, ou deduzido do símbolo." title="Por mercado">
+          <GroupTable first="Mercado" rows={market} />
+        </Panel>
+        <Panel
+          description="Tipo de conta escolhido no EA TradingJournal Complete."
+          title="Por tipo de conta"
+        >
+          {accountType.length ? (
+            <GroupTable first="Tipo" rows={accountType} />
+          ) : (
+            <Empty>O EA simples não envia o tipo de conta.</Empty>
+          )}
+        </Panel>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
         <Panel
           description="Perfil dos 4 modelos com mais lucro (o melhor de cada eixo = 100). O modelo vem do setup da nota, do comentário da ordem ou do magic do EA."
           title="Modelos de operação"
@@ -286,6 +403,7 @@ export function JournalBreakdown({
           <GroupTable first="Tag" rows={tag} />
         </Panel>
       ) : null}
+      <NoteBreakdowns notes={notes} options={options} trades={trades} />
       {account.length > 1 ? (
         <Panel title="Por conta">
           <GroupTable first="Conta" rows={account} />

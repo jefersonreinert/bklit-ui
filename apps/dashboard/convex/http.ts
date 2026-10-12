@@ -4,6 +4,7 @@ import {
   MAX_BODY,
   parseSignal,
   sameToken,
+  statsFromBody,
 } from "../lib/journal/ingest";
 import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction } from "./_generated/server";
@@ -11,7 +12,9 @@ import { type ActionCtx, httpAction } from "./_generated/server";
 /**
  * Always-on webhooks of the trading journal (https://<deployment>.convex.site):
  *
- * - POST /journal/mt5?token=…          deals from the CasaBrasaJournal EA
+ * - POST /journal/mt5?token=…          deals from the MT5 EAs
+ * - POST /journal/mt5/stats?token=…    account statistics (TradingJournal
+ *                                       Complete EA, Golden Bullet)
  * - POST /journal/tradingview?token=…  TradingView alert messages
  *
  * TradingView cannot send headers, so the token goes in the URL; the EA
@@ -43,6 +46,23 @@ async function readText(request: Request) {
   return text;
 }
 
+/** Parsed JSON body, or the error response (413 too_large / 400 bad_json). */
+async function readJson(
+  request: Request
+): Promise<{ body: unknown } | { error: Response }> {
+  try {
+    return { body: JSON.parse(await readText(request)) };
+  } catch (err) {
+    const big = err instanceof Error && err.message === "too_large";
+    return {
+      error: json(
+        { ok: false, error: big ? "too_large" : "bad_json" },
+        big ? 413 : 400
+      ),
+    };
+  }
+}
+
 http.route({
   path: "/journal/mt5",
   method: "POST",
@@ -50,16 +70,11 @@ http.route({
     if (!(await authorized(ctx, request))) {
       return json({ ok: false, error: "unauthorized" }, 401);
     }
-    let body: unknown;
-    try {
-      body = JSON.parse(await readText(request));
-    } catch (err) {
-      const big = err instanceof Error && err.message === "too_large";
-      return json(
-        { ok: false, error: big ? "too_large" : "bad_json" },
-        big ? 413 : 400
-      );
+    const read = await readJson(request);
+    if ("error" in read) {
+      return read.error;
     }
+    const { body } = read;
     const deals = dealsFromBody(body);
     const b = (body ?? {}) as Record<string, unknown>;
     const login =
@@ -77,6 +92,26 @@ http.route({
         : undefined,
     });
     return json({ ok: true, received: deals.length, added });
+  }),
+});
+
+http.route({
+  path: "/journal/mt5/stats",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!(await authorized(ctx, request))) {
+      return json({ ok: false, error: "unauthorized" }, 401);
+    }
+    const read = await readJson(request);
+    if ("error" in read) {
+      return read.error;
+    }
+    const payload = statsFromBody(read.body);
+    if (!payload) {
+      return json({ ok: false, error: "missing_account" }, 400);
+    }
+    await ctx.runMutation(internal.journal.ingestStats, payload);
+    return json({ ok: true });
   }),
 });
 

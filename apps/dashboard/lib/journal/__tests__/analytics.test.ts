@@ -42,6 +42,13 @@ function trade(p: Partial<Trade>): Trade {
     r: null,
     magic: 0,
     comment: "",
+    rrPlanned: null,
+    riskPct: null,
+    riskUsd: null,
+    profitPoints: null,
+    outcome: null,
+    accountType: null,
+    market: "Forex",
     deals: [],
     ...p,
   };

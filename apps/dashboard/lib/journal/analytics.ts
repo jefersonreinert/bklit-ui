@@ -1,4 +1,6 @@
+import { ACCOUNT_TYPE_LABEL, MARKET_LABEL } from "./account";
 import { dayKey, type Trade } from "./metrics";
+import { MACROS } from "./note-fields";
 
 /**
  * Deeper journal analytics: any grouping (period, asset, model, session,
@@ -27,7 +29,19 @@ export interface GroupRow {
   avgR: number | null;
   avgHoldMs: number;
   volume: number;
+  /** EA risk per trade (null when no trade of the group has it). */
+  avgRiskPct: number | null;
+  avgRiskUsd: number | null;
+  /** Planned R:R (EA) vs the realized R above. */
+  avgRR: number | null;
+  points: number | null;
+  avgPoints: number | null;
 }
+
+const avgOf = (values: (number | null)[]) => {
+  const list = values.filter((x): x is number => x !== null);
+  return list.length ? list.reduce((a, x) => a + x, 0) / list.length : null;
+};
 
 const closedOnly = (trades: Trade[]) =>
   trades
@@ -64,6 +78,21 @@ export function summarize(key: string, label: string, list: Trade[]): GroupRow {
       ? list.reduce((a, t) => a + (endOf(t) - t.openTime), 0) / n
       : 0,
     volume: list.reduce((a, t) => a + t.volume, 0),
+    ...riskOf(list),
+  };
+}
+
+/** Average EA risk, planned R:R and points of a group. */
+export function riskOf(list: Trade[]) {
+  const pts = list
+    .map((t) => t.profitPoints)
+    .filter((x): x is number => x !== null);
+  return {
+    avgRiskPct: avgOf(list.map((t) => t.riskPct)),
+    avgRiskUsd: avgOf(list.map((t) => t.riskUsd)),
+    avgRR: avgOf(list.map((t) => t.rrPlanned)),
+    points: pts.length ? pts.reduce((a, x) => a + x, 0) : null,
+    avgPoints: avgOf(pts),
   };
 }
 
@@ -216,6 +245,24 @@ export function killZoneOf(ms: number): string {
   return "Fora de kill zone";
 }
 
+/** Entry macro: the ICT macro windows, New York time (end exclusive). */
+const MACRO_WINDOWS = MACROS.slice(0, -1).map((label) => {
+  const [a = "", b = ""] = label.split("–");
+  const min = (hm: string) => {
+    const [h = 0, m = 0] = hm.split(":").map(Number);
+    return h * 60 + m;
+  };
+  return { label, from: min(a), to: min(b) };
+});
+
+export function macroOf(ms: number): string {
+  const { hour, minute } = partsIn(ms, "America/New_York");
+  const m = hour * 60 + minute;
+  return (
+    MACRO_WINDOWS.find((w) => m >= w.from && m < w.to)?.label ?? "Fora de macro"
+  );
+}
+
 export const KILL_ZONES = [
   "Asian KZ (20-00)",
   "London KZ (02-05)",
@@ -297,6 +344,13 @@ export function groupings(
       order: DURATIONS.map((d) => d.key),
     }),
     account: groupBy(trades, (t) => t.account),
+    market: groupBy(trades, (t) => t.market, {
+      labelOf: (k) => MARKET_LABEL[k] ?? k,
+    }),
+    accountType: groupBy(trades, (t) => t.accountType, {
+      labelOf: (k) => ACCOUNT_TYPE_LABEL[k] ?? k,
+    }),
+    macro: groupBy(trades, (t) => macroOf(t.openTime), { order: MACROS }),
   };
 }
 

@@ -8,7 +8,8 @@ Os webhooks são HTTP actions do Convex (`convex/http.ts`), sempre ativos em `ht
 
 | Rota | Quem chama | O quê |
 |------|-----------|-------|
-| `POST /journal/mt5?token=…` | Expert Advisor `CasaBrasaJournal.mq5` | negócios do MT5: um, `{deals:[…]}` (lotes) ou uma lista |
+| `POST /journal/mt5?token=…` | EAs `TradingJournal_Complete.mq5` e `CasaBrasaJournal.mq5` | negócios do MT5: um, `{deals:[…]}` (lotes) ou uma lista |
+| `POST /journal/mt5/stats?token=…` | EA `TradingJournal_Complete.mq5` | estatísticas da conta (saldo, equity, metas…) |
 | `POST /journal/tradingview?token=…` | alertas do TradingView (webhook) | mensagem JSON do modelo ou texto livre |
 | `GET /journal/ping?token=…` | testes e monitores | saúde |
 
@@ -16,7 +17,63 @@ Os webhooks são HTTP actions do Convex (`convex/http.ts`), sempre ativos em `ht
 - Os negócios são gravados uma vez por `(conta, ticket)` (tabela `jrnDeals`). Por isso o EA pode reenviar o histórico sempre que reinicia.
 - Os alertas do TradingView ficam guardados (os 2000 mais recentes) em `jrnSignals`. Cada operação mostra os alertas do mesmo ativo recebidos até 10 minutos antes ou depois da entrada.
 
-## MT5: `public/journal/CasaBrasaJournal.mq5`
+## MT5: TradingJournal Complete (Golden Bullet v4, recomendado)
+
+Código-fonte em [`jefersonreinert/golden-bullet-mt5-convex`](https://github.com/jefersonreinert/golden-bullet-mt5-convex). O painel serve a pasta `MQL5` em `public/journal/GoldenBullet-TradingJournal-MT5.zip` (Conector → Baixar). Para atualizar o .zip, rode `zip -rX9` na pasta `MQL5` do repositório do EA.
+
+Instalação:
+1. Copie a pasta `MQL5` do .zip para a pasta de dados do terminal (Arquivo → Abrir pasta de dados) e compile `Experts/Golden Bullet/TradingJournal_Complete.mq5` (F7).
+2. Em Ferramentas → Opções → Expert Advisors, permita o WebRequest para `https://<deployment>.convex.site`.
+3. Arraste o EA para um gráfico e cole o URL do webhook MT5 (Conector) em `InpUrl`. Ele troca só o caminho para `/journal/mt5/stats`.
+
+### `POST /journal/mt5`: campos extra do negócio de saída
+
+Todos opcionais (`lib/journal/ingest.ts`, `normalizeDeal`). Ficam em `jrnDeals` com os nomes da direita:
+
+| EA | Painel | Significado |
+|----|--------|-------------|
+| `rr` | `rr` | R:R planejado, \|TP − entrada\| / \|entrada − SL\| |
+| `risk_pct` | `riskPct` | risco em fração do saldo (0.01 = 1 %) |
+| `risk_usd` | `riskUsd` | risco em dinheiro até ao SL |
+| `profit_points` | `profitPoints` | resultado em pontos |
+| `duration_sec` | `durationSec` | duração entrada → saída |
+| `outcome` | `outcome` | `win` / `loss` / `breakeven` |
+| `equity`, `balance` | `equityAt`, `balanceAt` | snapshot **no momento do envio** (no histórico não é o da hora do trade) |
+| `account_type` | `accountType` | Personal, Back-Testing, Prop-Valuation, Prop-Funding |
+| `market` | `market` | Forex, Commodities, Equities, Cryptocurrencies |
+
+Reenviar um negócio que já existe atualiza-o e preenche os extras que faltavam. Um extra ausente na nova cópia não apaga o que está guardado. Em fechos parciais, a operação soma o risco e os pontos das saídas e usa o último `outcome`. Sem `market`, o painel deduz o mercado do símbolo com a mesma regra do EA.
+
+### `POST /journal/mt5/stats`: estatísticas da conta
+
+Corpo: `{ account, server, name, holder, currency, account_type, time, stats }`, com `stats` igual ao `SAccountStats` do EA (`STAT_KEYS` em `lib/journal/account.ts`). Respostas: `200 {ok:true}`, `400 bad_json` ou `missing_account`, `401 unauthorized`, `413 too_large`.
+
+- `jrnAccountStats`: o último snapshot de cada conta (upsert por `account`).
+- `jrnStatsHistory`: um snapshot por conta e por dia do servidor (o último do dia substitui o anterior), com saldo, equity, lucro líquido, resultado do dia, acerto, PF, depósito inicial e levantamentos. Alimenta o gráfico saldo × equity e os marcadores de depósito e levantamento.
+- Queries: `accountStats({account?})`, `statsHistory({account, from?})` e `accountCheck({account})`, que compara as saídas e o lucro líquido do EA com os negócios guardados.
+
+As métricas derivadas dos trades (acerto, PF, Sharpe, drawdown…) continuam calculadas no painel a partir dos negócios, que são a fonte de verdade. As do EA servem para o que só o terminal sabe.
+
+### Interface
+
+- **Resumo → Conta MT5**:
+  - saldo, equity, margem livre, depósito inicial, levantamentos e crescimento;
+  - hoje, semana e mês na hora do servidor (o `dailyDrawdown` é mostrado como resultado do dia sobre o saldo inicial do dia);
+  - metas semanal e mensal;
+  - "EA offline" após 15 min sem dados com o mercado aberto;
+  - verificação EA × painel e gráfico saldo × equity.
+- **Operações**:
+  - colunas que se podem ocultar: R:R planejado, R realizado, risco %, risco $, pontos, duração, mercado e outcome;
+  - campos das notas como no Notion: Bias, Trade type, Entry timeframe, Entry macro, News impact e Psychology (opções editáveis no Conector).
+- **Ativos e modelos**: breakdowns por mercado, tipo de conta e por cada campo das notas, com risco médio, R:R planejado e pontos.
+- **Entry macro**: automática pela hora de entrada em Nova York (`macroOf` em `analytics.ts`), salvo se a nota a definir.
+- **News impact**: o editor sugere High ou Medium a partir dos eventos do calendário económico da moeda do ativo até 15 min antes ou depois da entrada.
+
+### Fuso horário
+
+`time_msc` vem na hora do servidor da corretora (IC Markets ≈ UTC+2/+3), não em UTC, e o painel mantém esse relógio nos gráficos. Para comparar com o calendário económico (em UTC), o painel estima o desvio a partir do snapshot de estatísticas: hora do servidor menos hora de receção, arredondado a 30 min.
+
+## MT5 (versão simples): `public/journal/CasaBrasaJournal.mq5`
 
 - No arranque envia o histórico (`InpHistoryDays`, 90 por defeito), em lotes de 100.
 - Depois envia cada negócio em `OnTradeTransaction` (`TRADE_TRANSACTION_DEAL_ADD`), com conta, ticket, posição, símbolo, tipo, entrada, volume, preço, SL, TP, lucro, comissão, swap, taxa, magic, comentário e `time_msc`.
