@@ -5,20 +5,14 @@ import {
   HISTORY_KEYS,
   serverDay,
 } from "../lib/journal/account";
-import {
-  DEMO_ACCOUNT,
-  DEMO_STRATEGY,
-  demoAccount,
-  demoDeals,
-  demoNotes,
-  demoSignals,
-} from "../lib/journal/demo";
 import type { Deal } from "../lib/journal/metrics";
+import { serverOffset } from "../lib/journal/news";
 import {
   cleanOptions,
   NOTE_FIELDS,
   noteOptionsOf,
 } from "../lib/journal/note-fields";
+import { toUtc } from "../lib/journal/time";
 import type { Doc } from "./_generated/dataModel";
 import {
   internalMutation,
@@ -45,6 +39,16 @@ import {
 const KEY = "main" as const;
 const MAX_SIGNALS = 2000;
 const MAX_TEXT = 4000;
+const HOUR = 3_600_000;
+/** Largest broker clock offset: wider windows on the server-time index. */
+const MAX_OFFSET = 14 * HOUR;
+
+/**
+ * Fictitious trades that older versions of the panel could load. They are
+ * no longer created; these ids only let the panel find and remove them.
+ */
+const DEMO_ACCOUNT = "DEMO";
+const DEMO_STRATEGY = "Demonstração";
 
 const side = v.union(v.literal("buy"), v.literal("sell"));
 const entry = v.union(
@@ -75,32 +79,74 @@ const dealValue = v.object({
   ...dealExtraFields,
 });
 
+const cashValue = v.object({
+  account: v.string(),
+  ticket: v.string(),
+  kind: v.string(),
+  amount: v.number(),
+  comment: v.string(),
+  time: v.number(),
+});
+
+const accountInfo = v.object({
+  login: v.string(),
+  server: v.string(),
+  name: v.string(),
+  offsetMs: v.optional(v.number()),
+});
+
 interface AccountInfo {
   login: string;
   server: string;
   name: string;
+  offsetMs?: number;
 }
 
-/** Marks the EA as seen and remembers a new account. */
+/**
+ * Marks the EA as seen: remembers the account, when it last sent data and
+ * its broker clock offset.
+ */
 async function touchState(
   ctx: MutationCtx,
   acc: AccountInfo | undefined,
   extra: Partial<Doc<"jrnState">> = {}
 ) {
   const s = await ensureState(ctx);
+  const now = Date.now();
   const accounts = s.accounts ?? [];
-  const known = acc && accounts.find((x) => x.login === acc.login);
   let next = accounts;
-  if (acc && !known) {
-    next = [...accounts, acc];
-  } else if (acc && known && acc.server && !known.server) {
-    next = accounts.map((x) => (x.login === acc.login ? acc : x));
+  if (acc) {
+    const known = accounts.find((x) => x.login === acc.login);
+    const merged = {
+      ...known,
+      login: acc.login,
+      server: acc.server || known?.server || "",
+      name: acc.name || known?.name || "",
+      ...(acc.offsetMs === undefined ? {} : { offsetMs: acc.offsetMs }),
+      lastSeen: now,
+    };
+    next = known
+      ? accounts.map((x) => (x.login === acc.login ? merged : x))
+      : [...accounts, merged];
   }
-  await ctx.db.patch(s._id, {
-    lastMt5At: Date.now(),
-    ...(next === accounts ? {} : { accounts: next }),
-    ...extra,
-  });
+  await ctx.db.patch(s._id, { lastMt5At: now, accounts: next, ...extra });
+}
+
+/**
+ * Broker clock − UTC of each account: what the EA reports, else estimated
+ * from its last statistics snapshot (server time vs reception).
+ */
+async function accountOffsets(ctx: QueryCtx) {
+  const map = new Map<string, number>();
+  for (const r of await ctx.db.query("jrnAccountStats").collect()) {
+    map.set(r.account, r.offsetMs ?? serverOffset(r.serverTime, r.receivedAt));
+  }
+  for (const a of (await getState(ctx))?.accounts ?? []) {
+    if (a.offsetMs !== undefined) {
+      map.set(a.login, a.offsetMs);
+    }
+  }
+  return map;
 }
 
 function newToken() {
@@ -165,19 +211,90 @@ export const rotateToken = mutation({
   },
 });
 
-/** Deals since `from` (ms), newest first. */
+/**
+ * Deals since `from` (UTC ms), newest first, with their times converted
+ * from the broker clock to UTC: every chart of the panel works in UTC.
+ */
 export const deals = query({
   args: { from: v.optional(v.number()) },
   handler: async (ctx, a) => {
     if (!(await isPanel(ctx))) {
       return null;
     }
+    const from = a.from ?? 0;
+    const offsets = await accountOffsets(ctx);
+    const now = Date.now();
     const rows = await ctx.db
       .query("jrnDeals")
-      .withIndex("by_time", (q) => q.gte("time", a.from ?? 0))
+      .withIndex("by_time", (q) =>
+        q.gte("time", from > 0 ? from - MAX_OFFSET : 0)
+      )
       .order("desc")
       .take(20_000);
-    return rows.map(({ _id, _creationTime, ...d }) => d);
+    return rows
+      .map(({ _id, _creationTime, ...d }) => ({
+        ...d,
+        time: toUtc(d.time, offsets.get(d.account), now),
+      }))
+      .filter((d) => d.time >= from);
+  },
+});
+
+/** Deposits, withdrawals and other balance operations (UTC), oldest first. */
+export const cash = query({
+  args: { account: v.string() },
+  handler: async (ctx, a) => {
+    if (!(await isPanel(ctx))) {
+      return null;
+    }
+    const offset = (await accountOffsets(ctx)).get(a.account);
+    const now = Date.now();
+    const rows = await ctx.db
+      .query("jrnCash")
+      .withIndex("by_account_time", (q) => q.eq("account", a.account))
+      .take(5000);
+    return rows.map((c) => ({
+      ticket: c.ticket,
+      kind: c.kind,
+      amount: c.amount,
+      comment: c.comment,
+      time: toUtc(c.time, offset, now),
+    }));
+  },
+});
+
+/**
+ * Accounts that sent data, the most recently active first. Fictitious data
+ * of older versions is flagged so the panel never picks it by default.
+ */
+export const accounts = query({
+  args: {},
+  handler: async (ctx) => {
+    if (!(await isPanel(ctx))) {
+      return null;
+    }
+    const s = await getState(ctx);
+    const stats = await ctx.db.query("jrnAccountStats").collect();
+    const seenAt = new Map(stats.map((r) => [r.account, r.receivedAt]));
+    const list = (s?.accounts ?? []).map((x) => ({
+      login: x.login,
+      server: x.server,
+      name: x.name,
+      lastSeen: Math.max(x.lastSeen ?? 0, seenAt.get(x.login) ?? 0),
+      demo: x.login === DEMO_ACCOUNT,
+    }));
+    for (const r of stats) {
+      if (!list.some((x) => x.login === r.account)) {
+        list.push({
+          login: r.account,
+          server: r.server,
+          name: r.name,
+          lastSeen: r.receivedAt,
+          demo: r.account === DEMO_ACCOUNT,
+        });
+      }
+    }
+    return list.sort((x, y) => y.lastSeen - x.lastSeen);
   },
 });
 
@@ -290,13 +407,18 @@ export const statsHistory = query({
       return null;
     }
     const day = serverDay(a.from ?? 0);
+    const offset = (await accountOffsets(ctx)).get(a.account);
+    const now = Date.now();
     const rows = await ctx.db
       .query("jrnStatsHistory")
       .withIndex("by_account_day", (q) =>
         q.eq("account", a.account).gte("day", day)
       )
       .take(5000);
-    return rows.map(({ _id, _creationTime, account: _a, day: _d, ...r }) => r);
+    return rows.map(({ _id, _creationTime, account: _a, day: _d, ...r }) => ({
+      ...r,
+      time: toUtc(r.time, offset, now),
+    }));
   },
 });
 
@@ -339,8 +461,15 @@ export const deleteAccount = mutation({
   args: { account: v.string() },
   handler: async (ctx, a) => {
     await requirePanel(ctx);
-    const rows = await ctx.db.query("jrnDeals").collect();
-    for (const d of rows.filter((r) => r.account === a.account)) {
+    const rows = await ctx.db
+      .query("jrnDeals")
+      .withIndex("by_ticket", (q) => q.eq("account", a.account))
+      .collect();
+    const cash = await ctx.db
+      .query("jrnCash")
+      .withIndex("by_ticket", (q) => q.eq("account", a.account))
+      .collect();
+    for (const d of [...rows, ...cash]) {
       await ctx.db.delete(d._id);
     }
     await clearStats(ctx, a.account);
@@ -368,16 +497,10 @@ async function clearStats(ctx: MutationCtx, account: string) {
   }
 }
 
-/* ------------------------------ demo / reset ----------------------------- */
+/* -------------------------- old demo data / reset ------------------------ */
 
 /** Docs removed per call, so a big journal never hits the mutation limits. */
 const BATCH = 1500;
-
-const DEMO_INFO = {
-  login: DEMO_ACCOUNT,
-  server: "Dados fictícios",
-  name: "Demonstração",
-};
 
 /** Removes up to BATCH demo docs; true when nothing demo is left. */
 async function clearDemoBatch(ctx: MutationCtx) {
@@ -410,36 +533,6 @@ async function clearDemoBatch(ctx: MutationCtx) {
   return budget >= 0;
 }
 
-/** Fills the journal with fictitious trades, notes and alerts (DEMO account). */
-export const seedDemo = mutation({
-  args: {},
-  handler: async (ctx) => {
-    await requirePanel(ctx);
-    await clearDemoBatch(ctx);
-    const now = Date.now();
-    const deals = demoDeals(now);
-    for (const d of deals) {
-      await ctx.db.insert("jrnDeals", d);
-    }
-    for (const n of demoNotes(now)) {
-      await ctx.db.insert("jrnNotes", n);
-    }
-    for (const x of demoSignals(now)) {
-      await ctx.db.insert("jrnSignals", x);
-    }
-    const account = demoAccount(now);
-    await clearStats(ctx, DEMO_ACCOUNT);
-    await ctx.db.insert("jrnAccountStats", account.latest);
-    for (const p of account.history) {
-      await ctx.db.insert("jrnStatsHistory", p);
-    }
-    const s = await ensureState(ctx);
-    const accounts = (s.accounts ?? []).filter((a) => a.login !== DEMO_ACCOUNT);
-    await ctx.db.patch(s._id, { accounts: [...accounts, DEMO_INFO] });
-    return deals.length;
-  },
-});
-
 /**
  * Clears the journal: "demo" removes only the fictitious data, "all" every
  * deal, note and alert (the webhook token is kept). Works in batches: call
@@ -462,6 +555,7 @@ export const clearJournal = mutation({
     let removed = 0;
     for (const table of [
       "jrnDeals",
+      "jrnCash",
       "jrnNotes",
       "jrnSignals",
       "jrnAccountStats",
@@ -488,7 +582,7 @@ export const clearJournal = mutation({
   },
 });
 
-/** Whether the journal currently holds the fictitious data. */
+/** Whether the journal still holds fictitious data of older versions. */
 export const hasDemo = query({
   args: {},
   handler: async (ctx) => {
@@ -518,11 +612,23 @@ export const tokenFor = internalQuery({
 export const ingestDeals = internalMutation({
   args: {
     deals: v.array(dealValue),
-    account: v.optional(
-      v.object({ login: v.string(), server: v.string(), name: v.string() })
-    ),
+    cash: v.optional(v.array(cashValue)),
+    account: v.optional(accountInfo),
   },
   handler: async (ctx, a) => {
+    for (const c of a.cash ?? []) {
+      const existing = await ctx.db
+        .query("jrnCash")
+        .withIndex("by_ticket", (q) =>
+          q.eq("account", c.account).eq("ticket", c.ticket)
+        )
+        .unique();
+      if (existing) {
+        await ctx.db.patch(existing._id, c);
+      } else {
+        await ctx.db.insert("jrnCash", c);
+      }
+    }
     let added = 0;
     for (const d of a.deals) {
       const existing = await ctx.db
@@ -556,14 +662,15 @@ export const ingestStats = internalMutation({
     currency: v.string(),
     accountType: v.string(),
     serverTime: v.number(),
+    offsetMs: v.optional(v.number()),
     stats: statsValue,
   },
   handler: async (ctx, a) => {
     const now = Date.now();
-    const row = { ...a, receivedAt: now } satisfies Record<
-      keyof typeof accountStatsFields,
-      unknown
-    >;
+    const row = { ...a, receivedAt: now } satisfies Partial<
+      Record<keyof typeof accountStatsFields, unknown>
+    > &
+      Omit<Record<keyof typeof accountStatsFields, unknown>, "offsetMs">;
     const latest = await ctx.db
       .query("jrnAccountStats")
       .withIndex("by_account", (q) => q.eq("account", a.account))
@@ -596,7 +703,12 @@ export const ingestStats = internalMutation({
     }
     await touchState(
       ctx,
-      { login: a.account, server: a.server, name: a.name },
+      {
+        login: a.account,
+        server: a.server,
+        name: a.name,
+        offsetMs: a.offsetMs,
+      },
       { lastStatsAt: now }
     );
   },

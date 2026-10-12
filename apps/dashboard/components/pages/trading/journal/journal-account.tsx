@@ -16,10 +16,13 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import {
   ACCOUNT_TYPE_LABEL,
+  balanceCurve,
+  type CashRow,
   cashFlows,
   eaOffline,
   type HistoryPoint,
 } from "@/lib/journal/account";
+import type { Trade } from "@/lib/journal/metrics";
 import { cn } from "@/lib/utils";
 import { axisMoney, Panel, pct, Stat } from "./journal-kit";
 import { money, tone } from "./journal-summary";
@@ -130,32 +133,37 @@ const shortDate = new Intl.DateTimeFormat("pt-BR", {
   year: "2-digit",
 });
 
-/** Real balance and equity (daily snapshots), deposits and withdrawals. */
-function BalanceChart({ points }: { points: HistoryPoint[] }) {
-  const data = useMemo(
-    () =>
-      points.map((p) => ({
-        date: new Date(p.time),
-        balance: p.balance,
-        equity: p.equity,
-      })),
-    [points]
-  );
-  const markers = useMemo(
-    () =>
-      cashFlows(points).map((f) => ({
-        date: new Date(f.time),
-        icon: f.amount > 0 ? "+" : "−",
-        title: `${f.amount > 0 ? "Depósito" : "Levantamento"} ${money(Math.abs(f.amount))}`,
-        description: shortDate.format(new Date(f.time)),
-        color: f.amount > 0 ? "var(--up)" : "var(--down)",
-      })),
-    [points]
-  );
+interface Marker {
+  date: Date;
+  icon: string;
+  title: string;
+  description: string;
+  color: string;
+}
+
+const cashMarker = (time: number, amount: number): Marker => ({
+  date: new Date(time),
+  icon: amount > 0 ? "+" : "−",
+  title: `${amount > 0 ? "Depósito" : "Levantamento"} ${money(Math.abs(amount))}`,
+  description: shortDate.format(new Date(time)),
+  color: amount > 0 ? "var(--up)" : "var(--down)",
+});
+
+/** Balance (and equity, when known) over time, with deposit markers. */
+function BalanceChart({
+  data,
+  markers,
+  empty,
+}: {
+  data: { date: Date; balance: number; equity?: number }[];
+  markers: Marker[];
+  empty: string;
+}) {
+  const withEquity = data.some((d) => d.equity !== undefined);
   if (data.length < 2) {
     return (
       <p className="flex h-32 items-center justify-center border border-dashed text-center text-muted-foreground text-sm">
-        A curva de saldo aparece a partir de dois dias de estatísticas do EA.
+        {empty}
       </p>
     );
   }
@@ -172,12 +180,14 @@ function BalanceChart({ points }: { points: HistoryPoint[] }) {
         stroke="var(--up)"
         strokeWidth={2}
       />
-      <Line
-        curve={curveMonotoneX}
-        dataKey="equity"
-        stroke="var(--muted-foreground)"
-        strokeWidth={1.5}
-      />
+      {withEquity ? (
+        <Line
+          curve={curveMonotoneX}
+          dataKey="equity"
+          stroke="var(--muted-foreground)"
+          strokeWidth={1.5}
+        />
+      ) : null}
       {markers.length ? <ChartMarkers items={markers} size={20} /> : null}
       <YAxis formatValue={axisMoney} />
       <XAxis />
@@ -188,14 +198,95 @@ function BalanceChart({ points }: { points: HistoryPoint[] }) {
             label: "Saldo",
             value: money(Number(p.balance)),
           },
-          {
-            color: "var(--muted-foreground)",
-            label: "Equity",
-            value: money(Number(p.equity)),
-          },
+          ...(withEquity
+            ? [
+                {
+                  color: "var(--muted-foreground)",
+                  label: "Equity",
+                  value: money(Number(p.equity)),
+                },
+              ]
+            : []),
         ]}
       />
     </LineChart>
+  );
+}
+
+/**
+ * The real balance curve: rebuilt from the deposits, withdrawals and
+ * trades of the EA v4.01; else the EA's daily balance × equity snapshots.
+ */
+function AccountCurve({
+  account,
+  balance,
+  trades,
+  now,
+}: {
+  account: string;
+  balance: number;
+  trades: Trade[];
+  now: number;
+}) {
+  const cash = useQuery(api.journal.cash, { account });
+  const history = useQuery(api.journal.statsHistory, {
+    account,
+    from: now - YEAR,
+  });
+  const curve = useMemo(
+    () => (cash?.length ? balanceCurve(trades, cash as CashRow[]) : null),
+    [cash, trades]
+  );
+  if (curve) {
+    const last = curve.at(-1)?.balance ?? 0;
+    // Entry commissions of open positions are already off the balance
+    const gap = Math.abs(last - balance);
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="font-medium text-sm">Saldo real da conta</p>
+        <p className="text-muted-foreground text-xs">
+          Reconstruído desde o primeiro depósito com os depósitos, levantamentos
+          e todas as operações fechadas enviadas pelo EA.
+        </p>
+        <p
+          className={cn(
+            "text-xs tabular-nums",
+            gap <= 1 ? "text-muted-foreground" : "text-[var(--down)]"
+          )}
+        >
+          {gap <= 1
+            ? `✓ Bate com o saldo do MT5 (${money(balance)}).`
+            : `Saldo reconstruído ${money(last)} · MT5 ${money(balance)}: faltam negócios ou depósitos (diferença ${money(last - balance, true)}).`}
+        </p>
+        <BalanceChart
+          data={curve.map((p) => ({
+            date: new Date(p.time),
+            balance: p.balance,
+          }))}
+          empty="A curva aparece com o primeiro depósito e a primeira operação."
+          markers={(cash ?? []).map((c) => cashMarker(c.time, c.amount))}
+        />
+      </div>
+    );
+  }
+  const points = (history ?? []) as HistoryPoint[];
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="font-medium text-sm">Saldo × equity</p>
+      <p className="text-muted-foreground text-xs">
+        Um ponto por dia das estatísticas do EA. Atualize o EA para a v4.01 para
+        ver a curva completa desde o primeiro depósito.
+      </p>
+      <BalanceChart
+        data={points.map((p) => ({
+          date: new Date(p.time),
+          balance: p.balance,
+          equity: p.equity,
+        }))}
+        empty="A curva de saldo aparece a partir de dois dias de estatísticas do EA."
+        markers={cashFlows(points).map((f) => cashMarker(f.time, f.amount))}
+      />
+    </div>
   );
 }
 
@@ -207,8 +298,8 @@ function Check({ account }: { account: string }) {
   if (check.issues.length === 0) {
     return (
       <p className="text-muted-foreground text-xs">
-        ✓ Os totais do EA batem com as {check.panel.trades} saídas guardadas no
-        painel.
+        ✓ Sincronizado com o MT5: as {check.panel.trades} operações fechadas e o
+        lucro líquido batem com o EA.
       </p>
     );
   }
@@ -221,24 +312,30 @@ function Check({ account }: { account: string }) {
       {check.issues.map((i) => (
         <p className="tabular-nums" key={i.field}>
           {i.field === "trades"
-            ? `Saídas: EA ${i.ea} · painel ${i.panel}`
+            ? `Operações fechadas: EA ${i.ea} · painel ${i.panel}`
             : `Lucro líquido: EA ${money(i.ea, true)} · painel ${money(i.panel, true)}`}
         </p>
       ))}
       <p className="text-muted-foreground">
         Faltam negócios no painel (ou o EA enviou só uma parte do histórico).
-        Reinicie o EA com “Todo o histórico” para reenviar.
+        Remova e volte a anexar o EA com “Todo o histórico” para reenviar: o
+        painel ignora o que já tem. EAs anteriores à v4.01 contam cada saída
+        parcial como uma operação.
       </p>
     </div>
   );
 }
 
-function AccountBody({ row, now }: { row: Row; now: number }) {
+function AccountBody({
+  row,
+  now,
+  trades,
+}: {
+  row: Row;
+  now: number;
+  trades: Trade[];
+}) {
   const s = row.stats;
-  const history = useQuery(api.journal.statsHistory, {
-    account: row.account,
-    from: now - YEAR,
-  });
   const offline = eaOffline(row.receivedAt, now);
   const c = row.currency;
   const growth = s.initialDeposit
@@ -335,52 +432,47 @@ function AccountBody({ row, now }: { row: Row; now: number }) {
         ganhos / {s.maxConLosses} perdas.
       </p>
       <Check account={row.account} />
-      <div className="flex flex-col gap-1">
-        <p className="font-medium text-sm">Saldo × equity</p>
-        <p className="text-muted-foreground text-xs">
-          Um ponto por dia (hora do servidor). Inclui depósitos e levantamentos,
-          que a curva de capital das operações não mostra.
-        </p>
-        {history ? <BalanceChart points={history} /> : null}
-      </div>
+      <AccountCurve
+        account={row.account}
+        balance={s.balance}
+        now={now}
+        trades={trades}
+      />
     </div>
   );
 }
 
-/** Card at the top of the summary; hidden until the EA sends statistics. */
-export function JournalAccount({ account }: { account: string }) {
-  const rows = useQuery(api.journal.accountStats, {});
+/**
+ * Card at the top of the summary for the account chosen in the journal
+ * filter; hidden until the EA sends its statistics, and when the filter
+ * adds up several accounts.
+ */
+export function JournalAccount({
+  account,
+  trades,
+}: {
+  account: string;
+  /** Every trade of the account (any period), for the balance curve. */
+  trades: Trade[];
+}) {
+  const rows = useQuery(
+    api.journal.accountStats,
+    account ? { account } : "skip"
+  );
   const now = useNow();
-  const [picked, setPicked] = useState("");
-  if (!rows?.length) {
+  const row = rows?.[0];
+  if (!row) {
     return null;
   }
-  const row =
-    rows.find((r) => r.account === (picked || account)) ?? (rows[0] as Row);
   return (
     <Panel
       action={
-        rows.length > 1 ? (
-          <select
-            aria-label="Conta MT5"
-            className="h-8 rounded-md border bg-background px-2 text-sm"
-            onChange={(e) => setPicked(e.target.value)}
-            value={row.account}
-          >
-            {rows.map((r) => (
-              <option key={r.account} value={r.account}>
-                {r.account} · {r.server}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-muted-foreground text-xs">#{row.account}</span>
-        )
+        <span className="text-muted-foreground text-xs">#{row.account}</span>
       }
       description="Dados do terminal enviados pelo EA TradingJournal Complete."
       title="Conta MT5"
     >
-      <AccountBody now={now} row={row} />
+      <AccountBody now={now} row={row} trades={trades} />
     </Panel>
   );
 }

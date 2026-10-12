@@ -96,6 +96,9 @@ string Envelope(const string dealsJson)
    j += "\"account\":\"" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "\",";
    j += "\"server\":\"" + Esc(AccountInfoString(ACCOUNT_SERVER)) + "\",";
    j += "\"name\":\"" + Esc(AccountInfoString(ACCOUNT_COMPANY)) + "\",";
+   // Broker clock - UTC: the panel converts the deal times to UTC
+   long offset = (long)MathRound((double)(TimeTradeServer() - TimeGMT()) / 900.0) * 900;
+   j += "\"server_offset_sec\":" + IntegerToString(offset) + ",";
    j += "\"deals\":[" + dealsJson + "]}";
    return j;
   }

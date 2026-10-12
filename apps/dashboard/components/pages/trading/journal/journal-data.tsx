@@ -8,17 +8,17 @@ import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 /**
- * Journal data controls: load fictitious trades to preview the charts,
- * remove them, or wipe every operation from the journal database.
+ * Journal data controls. The journal only shows what the EA sends from
+ * MT5; these remove fictitious trades left by older versions of the panel
+ * or wipe the journal database (the EA then re-sends the real history).
  */
 
-type Busy = null | "seed" | "demo" | "all";
+type Busy = null | "demo" | "all";
 
 const MAX_ROUNDS = 200;
 
 function useJournalData() {
   const hasDemo = useQuery(api.journal.hasDemo, {}) ?? false;
-  const seed = useMutation(api.journal.seedDemo);
   const clear = useMutation(api.journal.clearJournal);
   const [busy, setBusy] = useState<Busy>(null);
   const [message, setMessage] = useState("");
@@ -27,11 +27,6 @@ function useJournalData() {
     setBusy(kind);
     setMessage("");
     try {
-      if (kind === "seed") {
-        const n = await seed({});
-        setMessage(`${Math.round(n / 2)} operações fictícias carregadas.`);
-        return;
-      }
       // Big journals are cleared in batches
       for (let i = 0; i < MAX_ROUNDS; i++) {
         const { done } = await clear({ scope: kind });
@@ -89,35 +84,26 @@ function ConfirmButton({
   );
 }
 
-/** Header shortcut: load the demo, or a badge to remove it. */
-export function JournalDemoToggle() {
+/** Warning while fictitious data of older versions is still stored. */
+export function JournalDemoNotice() {
   const { hasDemo, busy, run } = useJournalData();
-  if (hasDemo) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="rounded-full border border-dashed px-2 py-0.5 text-muted-foreground text-xs">
-          Dados fictícios
-        </span>
-        <ConfirmButton
-          armedLabel="Toque de novo para remover"
-          disabled={busy !== null}
-          label={busy === "demo" ? "Removendo…" : "Remover"}
-          onConfirm={() => run("demo")}
-          size="xs"
-        />
-      </div>
-    );
+  if (!hasDemo) {
+    return null;
   }
   return (
-    <Button
-      disabled={busy !== null}
-      onClick={() => run("seed")}
-      size="xs"
-      variant="outline"
-    >
-      <Icon className="size-3.5" name="IconSparklesSoft" />
-      {busy === "seed" ? "Carregando…" : "Carregar dados fictícios"}
-    </Button>
+    <div className="flex flex-wrap items-center gap-2 border border-[var(--down)] border-dashed p-2 text-xs">
+      <span className="text-[var(--down)]">
+        Há operações fictícias (conta DEMO) guardadas de uma versão anterior.
+        Elas não vêm do seu MT5.
+      </span>
+      <ConfirmButton
+        armedLabel="Toque de novo para remover"
+        disabled={busy !== null}
+        label={busy === "demo" ? "Removendo…" : "Remover fictícios"}
+        onConfirm={() => run("demo")}
+        size="xs"
+      />
+    </div>
   );
 }
 
@@ -131,17 +117,14 @@ export function JournalData({ className }: { className?: string }) {
       <div>
         <p className="font-medium text-sm">Banco de dados do diário</p>
         <p className="text-muted-foreground text-xs">
-          Carregue cerca de 14 meses de operações fictícias (conta DEMO) para
-          ver os gráficos cheios. Elas podem ser removidas sem tocar nas suas
-          operações reais. “Limpar tudo” apaga todas as operações, notas e
-          alertas; o token e os URLs continuam os mesmos.
+          O diário mostra só o que o EA envia do seu MT5. “Limpar tudo” apaga
+          todas as operações, depósitos, notas e alertas; o token e os URLs
+          continuam os mesmos. Para voltar a carregar o histórico real, remova e
+          volte a anexar o EA no gráfico: ele reenvia tudo e o painel ignora o
+          que já tiver.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button disabled={busy !== null} onClick={() => run("seed")} size="sm">
-          <Icon className="size-3.5" name="IconSparklesSoft" />
-          {busy === "seed" ? "Carregando…" : "Carregar dados fictícios"}
-        </Button>
         {hasDemo ? (
           <ConfirmButton
             armedLabel="Toque de novo: remove só a conta DEMO"

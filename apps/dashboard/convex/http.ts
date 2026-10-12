@@ -1,7 +1,9 @@
 import { httpRouter } from "convex/server";
 import {
+  cashFromBody,
   dealsFromBody,
   MAX_BODY,
+  offsetFromBody,
   parseSignal,
   sameToken,
   statsFromBody,
@@ -12,7 +14,8 @@ import { type ActionCtx, httpAction } from "./_generated/server";
 /**
  * Always-on webhooks of the trading journal (https://<deployment>.convex.site):
  *
- * - POST /journal/mt5?token=…          deals from the MT5 EAs
+ * - POST /journal/mt5?token=…          deals (and balance operations) from
+ *                                       the MT5 EAs
  * - POST /journal/mt5/stats?token=…    account statistics (TradingJournal
  *                                       Complete EA, Golden Bullet)
  * - POST /journal/tradingview?token=…  TradingView alert messages
@@ -76,6 +79,8 @@ http.route({
     }
     const { body } = read;
     const deals = dealsFromBody(body);
+    const cash = cashFromBody(body);
+    const offsetMs = offsetFromBody(body);
     const b = (body ?? {}) as Record<string, unknown>;
     const login =
       typeof b.account === "string" || typeof b.account === "number"
@@ -83,15 +88,22 @@ http.route({
         : "";
     const added = await ctx.runMutation(internal.journal.ingestDeals, {
       deals,
+      cash,
       account: login
         ? {
             login,
             server: String(b.server ?? "").slice(0, 80),
             name: String(b.name ?? b.broker ?? "").slice(0, 80),
+            ...(offsetMs === undefined ? {} : { offsetMs }),
           }
         : undefined,
     });
-    return json({ ok: true, received: deals.length, added });
+    return json({
+      ok: true,
+      received: deals.length,
+      added,
+      cash: cash.length,
+    });
   }),
 });
 

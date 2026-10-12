@@ -37,6 +37,8 @@ export const accountStatsFields = {
   /** Broker server time of the snapshot (ms). */
   serverTime: v.number(),
   receivedAt: v.number(),
+  /** Broker clock − UTC reported by the EA (ms). */
+  offsetMs: v.optional(v.number()),
   stats: statsValue,
 };
 
@@ -598,10 +600,18 @@ export default defineSchema({
     lastStatsAt: v.optional(v.number()),
     /** Options of the structured note fields (defaults when absent). */
     noteOptions: v.optional(v.record(v.string(), v.array(v.string()))),
-    /** Accounts seen by the EA (login → server/broker). */
+    /** Accounts seen by the EA (login → server/broker, clock offset). */
     accounts: v.optional(
       v.array(
-        v.object({ login: v.string(), server: v.string(), name: v.string() })
+        v.object({
+          login: v.string(),
+          server: v.string(),
+          name: v.string(),
+          /** Broker clock − UTC (ms), from the EA's server_offset_sec. */
+          offsetMs: v.optional(v.number()),
+          /** Last time the EA sent anything for this account. */
+          lastSeen: v.optional(v.number()),
+        })
       )
     ),
   }).index("by_key", ["key"]),
@@ -634,6 +644,23 @@ export default defineSchema({
   })
     .index("by_ticket", ["account", "ticket"])
     .index("by_time", ["time"]),
+
+  /**
+   * Balance operations that are not trades (deposits, withdrawals,
+   * credits, corrections), sent by the TradingJournal Complete EA.
+   */
+  jrnCash: defineTable({
+    account: v.string(),
+    ticket: v.string(),
+    /** deposit, withdrawal, credit, bonus, correction, interest, charge. */
+    kind: v.string(),
+    amount: v.number(),
+    comment: v.string(),
+    /** Broker server time (ms), like the deals. */
+    time: v.number(),
+  })
+    .index("by_ticket", ["account", "ticket"])
+    .index("by_account_time", ["account", "time"]),
 
   /** Latest statistics of each account (TradingJournal Complete EA). */
   jrnAccountStats: defineTable(accountStatsFields).index("by_account", [

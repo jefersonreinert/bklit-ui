@@ -206,17 +206,15 @@ const hm = (iso: string) =>
 /** News Impact suggested from the economic calendar of the entry day. */
 function NewsHint({
   trade,
-  offset,
   onPick,
 }: {
   trade: Trade;
-  offset: number;
   onPick: (impact: string) => void;
 }) {
-  const day = new Date(trade.openTime - offset);
+  const day = new Date(trade.openTime);
   const { events } = useCalendar(day, day);
   const hint = events
-    ? suggestImpact(trade.symbol, trade.openTime, events, offset)
+    ? suggestImpact(trade.symbol, trade.openTime, events)
     : null;
   if (!hint) {
     return null;
@@ -278,12 +276,10 @@ function NoteForm({
   trade,
   note,
   options,
-  offset,
 }: {
   trade: Trade;
   note: Note | undefined;
   options: NoteOptions;
-  offset: number;
 }) {
   const save = useMutation(api.journal.saveNote);
   const [fields, setFields] = useState<Fields>(() => fieldsOf(note));
@@ -317,11 +313,7 @@ function NoteForm({
         trade={trade}
       />
       {fields.newsImpact ? null : (
-        <NewsHint
-          offset={offset}
-          onPick={(v) => setField("newsImpact", v)}
-          trade={trade}
-        />
+        <NewsHint onPick={(v) => setField("newsImpact", v)} trade={trade} />
       )}
       <div className="grid gap-2 sm:grid-cols-2">
         <Input
@@ -378,7 +370,6 @@ interface DetailProps {
   note: Note | undefined;
   signals: SignalRow[];
   options: NoteOptions;
-  offset: number;
 }
 
 function EaFacts({ trade }: { trade: Trade }) {
@@ -405,7 +396,7 @@ function EaFacts({ trade }: { trade: Trade }) {
   );
 }
 
-function Detail({ trade, note, signals, options, offset }: DetailProps) {
+function Detail({ trade, note, signals, options }: DetailProps) {
   const near = signalsFor(trade, signals);
   return (
     <div className="flex flex-col gap-3 border-t bg-muted/20 p-3 text-sm">
@@ -453,13 +444,7 @@ function Detail({ trade, note, signals, options, offset }: DetailProps) {
           ))}
         </div>
       ) : null}
-      <NoteForm
-        key={trade.key}
-        note={note}
-        offset={offset}
-        options={options}
-        trade={trade}
-      />
+      <NoteForm key={trade.key} note={note} options={options} trade={trade} />
     </div>
   );
 }
@@ -500,7 +485,6 @@ function TradeRow({
   columns,
   signals,
   options,
-  offset,
 }: {
   trade: Trade;
   note: Note | undefined;
@@ -509,7 +493,6 @@ function TradeRow({
   columns: typeof COLUMNS;
   signals: SignalRow[];
   options: NoteOptions;
-  offset: number;
 }) {
   return (
     <li>
@@ -550,13 +533,7 @@ function TradeRow({
         <ExtraCells columns={columns} trade={t} />
       </button>
       {open ? (
-        <Detail
-          note={note}
-          offset={offset}
-          options={options}
-          signals={signals}
-          trade={t}
-        />
+        <Detail note={note} options={options} signals={signals} trade={t} />
       ) : null}
     </li>
   );
@@ -567,14 +544,11 @@ export function JournalTrades({
   notes,
   signals,
   options,
-  offsets,
 }: {
   trades: Trade[];
   notes: Note[];
   signals: SignalRow[];
   options: NoteOptions;
-  /** Broker clock − UTC per account (from the EA statistics). */
-  offsets: Map<string, number>;
 }) {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const { cols, toggle } = useColumns();
@@ -597,7 +571,6 @@ export function JournalTrades({
             columns={shown}
             key={t.key}
             note={noteOf.get(t.key)}
-            offset={offsets.get(t.account) ?? 0}
             onToggle={() => setOpenKey(openKey === t.key ? null : t.key)}
             open={openKey === t.key}
             options={options}

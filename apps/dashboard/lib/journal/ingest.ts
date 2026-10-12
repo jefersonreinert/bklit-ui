@@ -1,5 +1,6 @@
 import { type AccountStats, STAT_KEYS } from "./account";
 import type { Deal, DealEntry, DealExtras, Outcome, Side } from "./metrics";
+import { offsetFromSeconds } from "./time";
 
 /**
  * Validates what the webhooks receive: MT5 deals from the CasaBrasaJournal
@@ -137,15 +138,62 @@ export function normalizeDeal(raw: unknown): Deal | null {
   };
 }
 
-/** Body of POST /journal/mt5: one deal, {deals:[…]} or an array. */
-export function dealsFromBody(body: unknown): Deal[] {
-  const list = Array.isArray(body)
+/** The items of a POST /journal/mt5 body: {deals:[…]}, an array or one. */
+const listOf = (body: unknown): unknown[] =>
+  Array.isArray(body)
     ? body
     : ((body as { deals?: unknown[] } | null)?.deals ?? [body]);
-  return list
+
+/** Body of POST /journal/mt5: one deal, {deals:[…]} or an array. */
+export function dealsFromBody(body: unknown): Deal[] {
+  return listOf(body)
     .slice(0, MAX_DEALS)
     .map(normalizeDeal)
     .filter((d): d is Deal => d !== null);
+}
+
+/** A balance operation (deposit, withdrawal, credit…), not a trade. */
+export interface CashFlow {
+  account: string;
+  ticket: string;
+  kind: string;
+  amount: number;
+  comment: string;
+  /** Broker server time (ms). */
+  time: number;
+}
+
+/** The balance operations of a POST /journal/mt5 body (type "balance"). */
+export function cashFromBody(body: unknown): CashFlow[] {
+  const out: CashFlow[] = [];
+  for (const raw of listOf(body).slice(0, MAX_DEALS)) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const r = raw as Record<string, unknown>;
+    const ticket = str(r.ticket ?? r.deal);
+    if (str(r.type).toLowerCase() !== "balance" || !ticket) {
+      continue;
+    }
+    const amount = num(r.amount ?? r.profit);
+    out.push({
+      account: str(r.account) || "mt5",
+      ticket,
+      kind: str(r.kind, 20) || (amount >= 0 ? "deposit" : "withdrawal"),
+      amount,
+      comment: str(r.comment),
+      time: parseTime(r.time_msc ?? r.time),
+    });
+  }
+  return out;
+}
+
+/** Broker clock − UTC (ms) from the body's server_offset_sec, if sent. */
+export function offsetFromBody(body: unknown): number | undefined {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return;
+  }
+  return offsetFromSeconds((body as Record<string, unknown>).server_offset_sec);
 }
 
 export interface StatsPayload {
@@ -157,6 +205,8 @@ export interface StatsPayload {
   accountType: string;
   /** Broker server time of the snapshot (ms). */
   serverTime: number;
+  /** Broker clock − UTC (ms), when the EA sends it. */
+  offsetMs?: number;
   stats: AccountStats;
 }
 
@@ -191,6 +241,7 @@ export function statsFromBody(
     currency: str(b.currency, 10),
     accountType: str(b.account_type, 40),
     serverTime: b.time === undefined ? now : parseTime(b.time, now),
+    ...(offsetFromBody(b) === undefined ? {} : { offsetMs: offsetFromBody(b) }),
     stats,
   };
 }
