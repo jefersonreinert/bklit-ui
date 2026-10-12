@@ -114,3 +114,27 @@ Gráficos e tabelas:
 - resultado por ativo, compra × venda, dia da semana e hora de entrada.
 
 Cada operação aceita notas: setup, tags, avaliação da execução e texto livre (tabela `jrnNotes`).
+
+## Operar pelo painel (Gráficos → Operar, EA v4.10)
+
+Calculadora de lote, ordens e gestão das posições do MT5, executadas pelo EA TradingJournal Complete v4.10.
+
+- **Calculadora** (`lib/journal/lot.ts`, `lib/journal/ticket.ts`):
+  - lote pelo risco em % do saldo, a partir da distância ao stop, com o valor do tick ao vivo do MT5;
+  - a compra mede-se do ask e a venda do bid, por isso o spread já está incluído;
+  - comissão por lote opcional;
+  - SL em pips ou preço, TP por R:R ou preço;
+  - parciais em R e % do lote inicial, com breakeven depois da 1.ª;
+  - verificação de lote mínimo e máximo, lado do stop, distância mínima da corretora e preço das pendentes.
+- **Sync** (`POST /journal/mt5/sync`, `lib/journal/sync.ts`, `convex/eatrade.ts`):
+  - o EA envia o estado do terminal (conta, posições, pendentes, cotações, especificações, planos, resultados) e recebe em texto simples as ordens e os símbolos a cotar;
+  - ritmo de 1 s enquanto o ecrã está aberto (heartbeat `eatrade.watch` a cada 30 s) e de 15 s no resto do tempo.
+- **Tabelas:**
+  - `eaSessions`: estado por conta;
+  - `eaSymbols`: especificações;
+  - `eaCommands`: fila. Estados: pending → sent → done, error, expired ou cancelled.
+- **Segurança:**
+  - só o painel desbloqueado cria ordens;
+  - cada uma é entregue uma vez, expira em 10 s e fica como erro se o EA não responder em 60 s;
+  - lote máximo, risco máximo, só demo e stop obrigatório (entradas do EA) são verificados no ecrã, no Convex e no EA;
+  - o ecrã só deixa enviar quando o EA está no ritmo de 1 s.

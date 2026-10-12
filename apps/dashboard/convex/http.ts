@@ -8,8 +8,10 @@ import {
   sameToken,
   statsFromBody,
 } from "../lib/journal/ingest";
+import { syncFromBody, syncResponse } from "../lib/journal/sync";
 import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction } from "./_generated/server";
+import { syncArgs } from "./eatrade";
 
 /**
  * Always-on webhooks of the trading journal (https://<deployment>.convex.site):
@@ -18,6 +20,8 @@ import { type ActionCtx, httpAction } from "./_generated/server";
  *                                       the MT5 EAs
  * - POST /journal/mt5/stats?token=…    account statistics (TradingJournal
  *                                       Complete EA, Golden Bullet)
+ * - POST /journal/mt5/sync?token=…     terminal state in, queued orders out
+ *                                       (EA v4.10, trading from the panel)
  * - POST /journal/tradingview?token=…  TradingView alert messages
  *
  * TradingView cannot send headers, so the token goes in the URL; the EA
@@ -124,6 +128,33 @@ http.route({
     }
     await ctx.runMutation(internal.journal.ingestStats, payload);
     return json({ ok: true });
+  }),
+});
+
+http.route({
+  path: "/journal/mt5/sync",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!(await authorized(ctx, request))) {
+      return json({ ok: false, error: "unauthorized" }, 401);
+    }
+    const read = await readJson(request);
+    if ("error" in read) {
+      return read.error;
+    }
+    const payload = syncFromBody(read.body);
+    if (!payload) {
+      return json({ ok: false, error: "missing_account" }, 400);
+    }
+    const out = await ctx.runMutation(
+      internal.eatrade.sync,
+      syncArgs(payload, Date.now())
+    );
+    // Plain text: one item per line, simple to read in MQL5
+    return new Response(
+      syncResponse(out.nextMs, out.watch, out.commands, out.now),
+      { headers: { "content-type": "text/plain; charset=utf-8" } }
+    );
   }),
 });
 
