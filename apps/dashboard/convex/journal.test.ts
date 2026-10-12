@@ -53,7 +53,7 @@ describe("journal webhooks", () => {
         }),
       });
     const first = await (await send()).json();
-    expect(first).toEqual({ ok: true, received: 1, added: 1 });
+    expect(first).toEqual({ ok: true, received: 1, added: 1, cash: 0 });
     const again = await (await send()).json();
     expect(again.added).toBe(0);
     const p = t.withIdentity(panel);
@@ -100,7 +100,12 @@ describe("TradingJournal Complete EA (Golden Bullet)", () => {
       method: "POST",
       body: DEALS,
     });
-    expect(await res.json()).toEqual({ ok: true, received: 2, added: 2 });
+    expect(await res.json()).toEqual({
+      ok: true,
+      received: 2,
+      added: 2,
+      cash: 0,
+    });
     const deals = await t.withIdentity(panel).query(api.journal.deals, {});
     const exit = deals?.find((d) => d.entry === "out");
     expect(exit).toMatchObject({
@@ -208,9 +213,10 @@ describe("TradingJournal Complete EA (Golden Bullet)", () => {
     const check = await t
       .withIdentity(panel)
       .query(api.journal.accountCheck, { account: "52784901" });
-    // The example stats count 5 trades; only one exit was sent
-    expect(check?.panel).toEqual({ trades: 1, net: 198.25 });
-    expect(check?.issues.map((i) => i.field)).toEqual(["trades", "net"]);
+    // The example stats count 5 trades; only one position was sent. Its
+    // net (entry and exit commissions included) matches the EA's 196.50
+    expect(check?.panel).toEqual({ trades: 1, net: 196.5 });
+    expect(check?.issues.map((i) => i.field)).toEqual(["trades"]);
   });
 
   it("saves the Notion note fields and their options", async () => {
@@ -233,33 +239,87 @@ describe("TradingJournal Complete EA (Golden Bullet)", () => {
   });
 });
 
-describe("journal demo data and reset", () => {
-  it("loads fictitious trades, removes only them, then clears everything", async () => {
+describe("journal: real data only", () => {
+  it("converts broker times to UTC and keeps deposits apart", async () => {
     const { t, token } = await setup();
     const p = t.withIdentity(panel);
-    // A real deal that must survive removing the demo
+    // 2026-10-12 20:08:44 on the IC Markets clock (UTC+3)
+    const server = Date.UTC(2026, 9, 12, 20, 8, 44);
+    const res = await t.fetch(`/journal/mt5?token=${token}`, {
+      method: "POST",
+      body: JSON.stringify({
+        account: "53095644",
+        server: "ICMarketsEU-Demo",
+        server_offset_sec: 10_800,
+        deals: [
+          {
+            ...DEAL,
+            account: "53095644",
+            ticket: "1",
+            position: "1",
+            time_msc: server,
+          },
+          {
+            account: "53095644",
+            ticket: "2",
+            type: "balance",
+            kind: "deposit",
+            amount: 50_000,
+            time_msc: server - 3_600_000,
+          },
+        ],
+      }),
+    });
+    expect(await res.json()).toMatchObject({ added: 1, cash: 1 });
+    const deals = await p.query(api.journal.deals, {});
+    // October is US DST: New York close = UTC+3
+    expect(deals?.[0]?.time).toBe(Date.UTC(2026, 9, 12, 17, 8, 44));
+    const cash = await p.query(api.journal.cash, { account: "53095644" });
+    expect(cash?.map((c) => c.amount)).toEqual([50_000]);
+    expect(cash?.[0]?.time).toBe(Date.UTC(2026, 9, 12, 16, 8, 44));
+    const accounts = await p.query(api.journal.accounts, {});
+    expect(accounts?.[0]).toMatchObject({
+      login: "53095644",
+      demo: false,
+    });
+  });
+
+  it("removes fictitious data of older versions, then clears everything", async () => {
+    const { t, token } = await setup();
+    const p = t.withIdentity(panel);
+    // A real deal that must survive removing the old demo
     await t.fetch(`/journal/mt5?token=${token}`, {
       method: "POST",
       body: JSON.stringify({ account: 5001, ...DEAL }),
     });
-    const n = await p.mutation(api.journal.seedDemo, {});
-    expect(n).toBeGreaterThan(400);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("jrnDeals", {
+        account: "DEMO",
+        ticket: "d1",
+        position: "d1",
+        symbol: "EURUSD",
+        side: "buy",
+        entry: "in",
+        volume: 1,
+        price: 1,
+        sl: 0,
+        tp: 0,
+        profit: 0,
+        commission: 0,
+        swap: 0,
+        fee: 0,
+        magic: 0,
+        comment: "",
+        time: 1,
+      });
+    });
     expect(await p.query(api.journal.hasDemo, {})).toBe(true);
-    expect((await p.query(api.journal.deals, {}))?.length).toBe(n + 1);
-    expect((await p.query(api.journal.notes, {}))?.length).toBeGreaterThan(0);
-    expect(await p.query(api.journal.accountStats, {})).toHaveLength(1);
-    // Seeding twice replaces the demo instead of duplicating it
-    await p.mutation(api.journal.seedDemo, {});
-    expect((await p.query(api.journal.deals, {}))?.length).toBe(n + 1);
-
     expect(
       await p.mutation(api.journal.clearJournal, { scope: "demo" })
     ).toEqual({ done: true });
     expect(await p.query(api.journal.hasDemo, {})).toBe(false);
     const left = await p.query(api.journal.deals, {});
     expect(left?.map((d) => d.account)).toEqual(["5001"]);
-    expect(await p.query(api.journal.signals, {})).toEqual([]);
-    expect(await p.query(api.journal.accountStats, {})).toEqual([]);
 
     await p.mutation(api.journal.clearJournal, { scope: "all" });
     expect(await p.query(api.journal.deals, {})).toEqual([]);
@@ -270,7 +330,6 @@ describe("journal demo data and reset", () => {
 
   it("requires the panel", async () => {
     const { t } = await setup();
-    await expect(t.mutation(api.journal.seedDemo, {})).rejects.toThrow();
     await expect(
       t.mutation(api.journal.clearJournal, { scope: "all" })
     ).rejects.toThrow();

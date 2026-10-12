@@ -1,4 +1,4 @@
-import type { Deal } from "./metrics";
+import { buildTrades, type Deal, type Trade } from "./metrics";
 
 /**
  * Account statistics sent by the TradingJournal Complete EA
@@ -102,16 +102,17 @@ export const serverDay = (ms: number) =>
   new Date(ms).toISOString().slice(0, 10);
 
 /**
- * The EA's own totals, recomputed from the stored deals: closing deals
- * (out/inout) count as trades and their net is profit + commission + swap.
+ * The EA's totals (v4.01), recomputed from the stored deals with the same
+ * rule: one trade per closed position, its net is profit + commission
+ * (entry and exit) + swap + fee.
  */
 export function eaTotals(deals: Deal[]) {
   let trades = 0;
   let net = 0;
-  for (const d of deals) {
-    if (d.entry === "out" || d.entry === "inout") {
+  for (const t of buildTrades(deals)) {
+    if (t.closeTime !== null) {
       trades += 1;
-      net += d.profit + d.commission + d.swap;
+      net += t.net;
     }
   }
   return { trades, net: Math.round(net * 100) / 100 };
@@ -161,6 +162,34 @@ export const OFFLINE_MS = 15 * 60_000;
 /** "EA offline": no data for 15 min while the market is open. */
 export const eaOffline = (receivedAt: number, now: number) =>
   now - receivedAt > OFFLINE_MS && marketOpen(now);
+
+/** A balance operation as the panel reads it (UTC time). */
+export interface CashRow {
+  time: number;
+  amount: number;
+  kind: string;
+}
+
+const cents = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * The account balance after every deposit, withdrawal and closed trade,
+ * oldest first: the real curve rebuilt from the MT5 history (needs the
+ * balance operations of the EA v4.01).
+ */
+export function balanceCurve(trades: Trade[], cash: CashRow[]) {
+  const events = [
+    ...cash.map((c) => ({ time: c.time, amount: c.amount })),
+    ...trades
+      .filter((t) => t.closeTime !== null)
+      .map((t) => ({ time: t.closeTime ?? 0, amount: t.net })),
+  ].sort((a, b) => a.time - b.time);
+  let balance = 0;
+  return events.map((e) => {
+    balance = cents(balance + e.amount);
+    return { time: e.time, balance };
+  });
+}
 
 /**
  * Balance changes not explained by trading (deposits and withdrawals)

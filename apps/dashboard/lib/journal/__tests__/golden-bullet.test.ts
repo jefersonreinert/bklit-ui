@@ -10,8 +10,13 @@ import {
   marketOpen,
 } from "../account";
 import { groupBy, macroOf, summarize } from "../analytics";
-import { DEMO_ACCOUNT, demoAccount, demoDeals } from "../demo";
-import { dealsFromBody, normalizeDeal, statsFromBody } from "../ingest";
+import {
+  cashFromBody,
+  dealsFromBody,
+  normalizeDeal,
+  offsetFromBody,
+  statsFromBody,
+} from "../ingest";
 import { buildTrades, type Deal, marketOf } from "../metrics";
 import { serverOffset, suggestImpact, symbolCurrencies } from "../news";
 import { cleanOptions, noteOptionsOf } from "../note-fields";
@@ -158,12 +163,13 @@ describe("account statistics", () => {
   it("flags EA totals that differ from the stored deals", () => {
     const deals = dealsFromBody(fixture("POST_journal_mt5.json"));
     const panel = eaTotals(deals);
-    assert.deepEqual(panel, { trades: 1, net: 198.25 });
+    // One closed position: 200 − 1.75 (entry) − 1.75 (exit)
+    assert.deepEqual(panel, { trades: 1, net: 196.5 });
     assert.deepEqual(
-      divergences({ totalTrades: 1, netProfit: 198.25 }, panel),
+      divergences({ totalTrades: 1, netProfit: 196.5 }, panel),
       []
     );
-    const issues = divergences({ totalTrades: 5, netProfit: 196.5 }, panel);
+    const issues = divergences({ totalTrades: 5, netProfit: 296.5 }, panel);
     assert.deepEqual(
       issues.map((i) => i.field),
       ["trades", "net"]
@@ -203,16 +209,93 @@ describe("account statistics", () => {
     assert.equal(marketOpen(sat), false);
     assert.equal(eaOffline(sat - 5 * H, sat), false);
   });
+});
 
-  it("builds a demo account that matches its own deals", () => {
-    const now = Date.UTC(2026, 9, 14, 15);
-    const { latest, history } = demoAccount(now);
-    const deals = demoDeals(now);
-    assert.equal(latest.account, DEMO_ACCOUNT);
-    assert.deepEqual(divergences(latest.stats, eaTotals(deals)), []);
-    assert.ok(history.length > 100);
-    const days = new Set(history.map((h) => h.day));
-    assert.equal(days.size, history.length);
+describe("EA v4.01: balance operations and broker clock", () => {
+  it("reads deposits apart from the trades", () => {
+    const body = {
+      account: "53095644",
+      server_offset_sec: 10_800,
+      deals: [
+        {
+          account: "53095644",
+          ticket: "9",
+          type: "balance",
+          kind: "deposit",
+          amount: 50_000,
+          comment: "Deposit",
+          time_msc: 1_760_270_000_000,
+        },
+        {
+          account: "53095644",
+          ticket: "10",
+          type: "balance",
+          amount: -100,
+          time_msc: 1_760_280_000_000,
+        },
+      ],
+    };
+    assert.deepEqual(dealsFromBody(body), []);
+    const cash = cashFromBody(body);
+    assert.equal(cash.length, 2);
+    assert.equal(cash[0]?.kind, "deposit");
+    assert.equal(cash[0]?.amount, 50_000);
+    assert.equal(cash[1]?.kind, "withdrawal");
+    assert.equal(offsetFromBody(body), 3 * H);
+  });
+
+  it("takes the offset of the statistics", () => {
+    const p = statsFromBody({ account: "1", server_offset_sec: 7200 });
+    assert.equal(p?.offsetMs, 2 * H);
+    assert.equal(statsFromBody({ account: "1" })?.offsetMs, undefined);
+  });
+
+  it("counts a partially closed position once, like the EA", () => {
+    const base = {
+      account: "a",
+      position: "p",
+      symbol: "EURUSD",
+      volume: 1,
+      price: 1,
+      sl: 0,
+      tp: 0,
+      swap: 0,
+      fee: 0,
+      magic: 0,
+      comment: "",
+    };
+    const deals: Deal[] = [
+      {
+        ...base,
+        ticket: "1",
+        side: "buy",
+        entry: "in",
+        profit: 0,
+        commission: -2,
+        time: 0,
+      },
+      {
+        ...base,
+        ticket: "2",
+        side: "sell",
+        entry: "out",
+        volume: 0.5,
+        profit: 30,
+        commission: -1,
+        time: H,
+      },
+      {
+        ...base,
+        ticket: "3",
+        side: "sell",
+        entry: "out",
+        volume: 0.5,
+        profit: -10,
+        commission: -1,
+        time: 2 * H,
+      },
+    ];
+    assert.deepEqual(eaTotals(deals), { trades: 1, net: 16 });
   });
 });
 

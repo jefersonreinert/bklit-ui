@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useMemo, useState } from "react";
+import type { FunctionReturnType } from "convex/server";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { modelResolver, type TimeZoneId } from "@/lib/journal/analytics";
@@ -11,14 +12,13 @@ import {
   type Stats,
   type Trade,
 } from "@/lib/journal/metrics";
-import { serverOffset } from "@/lib/journal/news";
 import type { NoteOptions } from "@/lib/journal/note-fields";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
 import { JournalAccount } from "./journal-account";
 import { JournalBreakdown, type NoteRow } from "./journal-breakdown";
 import { JournalConnector } from "./journal-connector";
-import { JournalData, JournalDemoToggle } from "./journal-data";
+import { JournalData, JournalDemoNotice } from "./journal-data";
 import { JournalDistribution } from "./journal-distribution";
 import { Segmented } from "./journal-kit";
 import { JournalPerformance } from "./journal-performance";
@@ -46,6 +46,8 @@ type Tab = JournalTab;
 type Period = "7" | "30" | "90" | "ytd" | "all";
 
 const DAY = 86_400_000;
+/** Account filter value that adds up every account. */
+const ALL_ACCOUNTS = "*";
 const PERIODS: { id: Period; label: string }[] = [
   { id: "7", label: "7 d" },
   { id: "30", label: "30 d" },
@@ -168,7 +170,7 @@ function Filters({
 }: {
   period: Period;
   onPeriod: (p: Period) => void;
-  accounts: string[];
+  accounts: { login: string; label: string }[];
   account: string;
   onAccount: (a: string) => void;
   symbols: string[];
@@ -200,10 +202,12 @@ function Filters({
           onChange={(e) => onAccount(e.target.value)}
           value={account}
         >
-          <option value="">Todas as contas</option>
           {accounts.map((a) => (
-            <option key={a}>{a}</option>
+            <option key={a.login} value={a.login}>
+              {a.label}
+            </option>
           ))}
+          <option value={ALL_ACCOUNTS}>Todas as contas (somadas)</option>
         </select>
       ) : null}
       <select
@@ -230,11 +234,14 @@ function Analysis({
   modelOf,
   tags,
   account,
+  accountTrades,
   notes,
   options,
 }: {
   tab: Tab;
   trades: Trade[];
+  /** Every trade of the chosen account, any period (balance curve). */
+  accountTrades: Trade[];
   stats: Stats;
   open: number;
   tz: TimeZoneId;
@@ -248,7 +255,7 @@ function Analysis({
     case "summary":
       return (
         <>
-          <JournalAccount account={account} />
+          <JournalAccount account={account} trades={accountTrades} />
           <JournalSummary currency="" open={open} stats={stats} />
         </>
       );
@@ -275,33 +282,66 @@ function Analysis({
   }
 }
 
+type KnownAccounts = FunctionReturnType<typeof api.journal.accounts>;
+
+/**
+ * The account filter: accounts the EA reported (most recently active
+ * first) plus any other found in the deals, fictitious data of older
+ * versions last. One real account at a time, never mixed by default: the
+ * chosen one, else the one the EA sent data for most recently.
+ */
+function useAccountChoice(
+  known: KnownAccounts | undefined,
+  allTrades: Trade[],
+  account: string
+) {
+  const accounts = useMemo(() => {
+    const list = (known ?? []).map((a) => ({
+      login: a.login,
+      label: a.demo
+        ? `${a.login} · fictícia`
+        : [a.login, a.server].filter(Boolean).join(" · "),
+      demo: a.demo,
+    }));
+    for (const login of new Set(allTrades.map((t) => t.account))) {
+      if (!list.some((a) => a.login === login)) {
+        list.push({ login, label: login, demo: login === "DEMO" });
+      }
+    }
+    return [...list.filter((a) => !a.demo), ...list.filter((a) => a.demo)];
+  }, [known, allTrades]);
+  const selected = account || accounts.find((a) => !a.demo)?.login || "";
+  const all = selected === ALL_ACCOUNTS;
+  const inAccount = useCallback(
+    (t: Trade) => all || t.account === selected,
+    [all, selected]
+  );
+  return {
+    accounts,
+    selected,
+    /** The account of the "Conta MT5" card; empty when adding them up. */
+    single: all ? "" : selected,
+    inAccount,
+  };
+}
+
 export function JournalContent({ initialTab }: { initialTab: Tab }) {
   const settings = useQuery(api.journal.settings, {});
   const ensureToken = useMutation(api.journal.ensureToken);
   const [tab, setTab] = useState<Tab>(initialTab);
   useEffect(() => setTab(initialTab), [initialTab]);
-  const [period, setPeriod] = useState<Period>("90");
+  // "Tudo" by default: the same totals as the MT5 history of the account
+  const [period, setPeriod] = useState<Period>("all");
   const [account, setAccount] = useState("");
   const [symbol, setSymbol] = useState("");
   const [tz, setTz] = useState<TimeZoneId>("local");
   const from = useMemo(() => since(period), [period]);
-  // Deals from 30 days before the window, so positions opened earlier close
-  const deals = useQuery(api.journal.deals, {
-    from: from ? from - 30 * DAY : 0,
-  });
+  // The whole history: the period only filters what is shown, so positions
+  // opened earlier, the balance curve and the totals stay complete
+  const deals = useQuery(api.journal.deals, {});
   const signals = useQuery(api.journal.signals, { limit: 500 });
   const notes = useQuery(api.journal.notes, {});
-  const accountStats = useQuery(api.journal.accountStats, {});
-  const offsets = useMemo(
-    () =>
-      new Map(
-        (accountStats ?? []).map((r) => [
-          r.account,
-          serverOffset(r.serverTime, r.receivedAt),
-        ])
-      ),
-    [accountStats]
-  );
+  const known = useQuery(api.journal.accounts, {});
 
   useEffect(() => {
     if (settings && !settings.token) {
@@ -310,9 +350,10 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   }, [settings, ensureToken]);
 
   const allTrades = useMemo(() => buildTrades(deals ?? []), [deals]);
-  const accounts = useMemo(
-    () => [...new Set(allTrades.map((t) => t.account))],
-    [allTrades]
+  const { accounts, selected, single, inAccount } = useAccountChoice(
+    known,
+    allTrades,
+    account
   );
   const symbols = useMemo(
     () => [...new Set(allTrades.map((t) => t.symbol))].sort(),
@@ -323,10 +364,14 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       allTrades.filter(
         (t) =>
           (t.closeTime ?? t.openTime) >= from &&
-          (!account || t.account === account) &&
+          inAccount(t) &&
           (!symbol || t.symbol === symbol)
       ),
-    [allTrades, from, account, symbol]
+    [allTrades, from, inAccount, symbol]
+  );
+  const accountTrades = useMemo(
+    () => allTrades.filter((t) => t.account === selected),
+    [allTrades, selected]
   );
   const stats = useMemo(() => computeStats(trades), [trades]);
   const { modelOf, tags } = useMemo(() => {
@@ -367,8 +412,8 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
             {(stats.winRate * 100).toFixed(0)}% acerto
           </p>
         </div>
-        <JournalDemoToggle />
       </div>
+      <JournalDemoNotice />
       <Tabs onValueChange={(v) => setTab(v as Tab)} value={tab}>
         <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
           <TabsList>
@@ -383,7 +428,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       {FILTERED.has(tab) ? (
         <div className="flex flex-wrap items-center gap-2">
           <Filters
-            account={account}
+            account={selected}
             accounts={accounts}
             onAccount={setAccount}
             onPeriod={setPeriod}
@@ -410,7 +455,8 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       ) : null}
       {deals ? (
         <Analysis
-          account={account}
+          account={single}
+          accountTrades={accountTrades}
           modelOf={modelOf}
           notes={notes ?? []}
           open={open}
@@ -425,7 +471,6 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
       {tab === "trades" && deals ? (
         <JournalTrades
           notes={notes ?? []}
-          offsets={offsets}
           options={settings.noteOptions}
           signals={signals ?? []}
           trades={trades}

@@ -17,7 +17,7 @@ Os webhooks são HTTP actions do Convex (`convex/http.ts`), sempre ativos em `ht
 - Os negócios são gravados uma vez por `(conta, ticket)` (tabela `jrnDeals`). Por isso o EA pode reenviar o histórico sempre que reinicia.
 - Os alertas do TradingView ficam guardados (os 2000 mais recentes) em `jrnSignals`. Cada operação mostra os alertas do mesmo ativo recebidos até 10 minutos antes ou depois da entrada.
 
-## MT5: TradingJournal Complete (Golden Bullet v4, recomendado)
+## MT5: TradingJournal Complete (Golden Bullet v4.01, recomendado)
 
 Código-fonte em [`jefersonreinert/golden-bullet-mt5-convex`](https://github.com/jefersonreinert/golden-bullet-mt5-convex). O painel serve a pasta `MQL5` em `public/journal/GoldenBullet-TradingJournal-MT5.zip` (Conector → Baixar). Para atualizar o .zip, rode `zip -rX9` na pasta `MQL5` do repositório do EA.
 
@@ -61,7 +61,9 @@ As métricas derivadas dos trades (acerto, PF, Sharpe, drawdown…) continuam ca
   - hoje, semana e mês na hora do servidor (o `dailyDrawdown` é mostrado como resultado do dia sobre o saldo inicial do dia);
   - metas semanal e mensal;
   - "EA offline" após 15 min sem dados com o mercado aberto;
-  - verificação EA × painel e gráfico saldo × equity.
+  - verificação EA × painel ("Sincronizado com o MT5" quando as operações fechadas e o lucro líquido batem);
+  - saldo real da conta: curva reconstruída desde o primeiro depósito com os depósitos, levantamentos e operações (EA v4.01), comparada com o saldo do MT5; com EAs anteriores, o gráfico saldo × equity dos snapshots diários.
+- **Só dados reais**: o diário abre na conta com atividade mais recente do EA e no período "Tudo" (os mesmos totais do histórico do MT5). Várias contas nunca se somam por defeito ("Todas as contas (somadas)" é uma opção explícita). O painel já não cria dados fictícios; se ainda houver os de versões anteriores (conta `DEMO`), aparece um aviso para os remover.
 - **Operações**:
   - colunas que se podem ocultar: R:R planejado, R realizado, risco %, risco $, pontos, duração, mercado e outcome;
   - campos das notas como no Notion: Bias, Trade type, Entry timeframe, Entry macro, News impact e Psychology (opções editáveis no Conector).
@@ -71,7 +73,18 @@ As métricas derivadas dos trades (acerto, PF, Sharpe, drawdown…) continuam ca
 
 ### Fuso horário
 
-`time_msc` vem na hora do servidor da corretora (IC Markets ≈ UTC+2/+3), não em UTC, e o painel mantém esse relógio nos gráficos. Para comparar com o calendário económico (em UTC), o painel estima o desvio a partir do snapshot de estatísticas: hora do servidor menos hora de receção, arredondado a 30 min.
+`time_msc` vem na hora do servidor da corretora (IC Markets: UTC+3 no horário de verão dos EUA, UTC+2 no resto do ano), não em UTC. Os negócios ficam guardados nesse relógio e a query `journal.deals` devolve-os **já em UTC** (`lib/journal/time.ts`), por isso todos os gráficos, o calendário, a hora e o dia da semana batem com o MT5 (mostrados no fuso escolhido: local, Nova York ou UTC).
+
+- O desvio vem do EA: `server_offset_sec` (servidor − UTC) em cada envio de negócios e de estatísticas (EA v4.01 e `CasaBrasaJournal.mq5`). Sem ele, o painel estima-o pelo snapshot de estatísticas (hora do servidor menos hora de receção).
+- Corretoras em "New York close" (+2 h / +3 h) mudam com o horário de verão dos EUA: um negócio antigo usa o desvio da sua data, não o de hoje.
+
+### Depósitos e levantamentos
+
+O EA v4.01 envia também os movimentos de saldo que não são trades (`type: "balance"`, com `kind` deposit, withdrawal, credit, bonus, correction, interest ou charge, e `amount`) no mesmo `POST /journal/mt5`. Ficam na tabela `jrnCash` (um por `(conta, ticket)`) e servem para a curva de saldo real.
+
+### Contagem igual no EA e no painel
+
+Desde a v4.01, o EA conta **uma operação por posição** (fechos parciais somam-se), com o resultado líquido = lucro + comissões de entrada e saída + swap + taxa, ganho > 0, perda < 0 e zero = breakeven. É a mesma regra do painel, por isso a verificação EA × painel deve bater a 100 %.
 
 ## MT5 (versão simples): `public/journal/CasaBrasaJournal.mq5`
 
