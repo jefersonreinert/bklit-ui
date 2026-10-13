@@ -7,9 +7,19 @@ import { createLocalStore } from "@/lib/local-store";
  * localStorage and mirrored to Convex (SYNCED_KEYS) so every device sees it.
  */
 
+export type PlaceKind = "wine" | "pig" | "beer";
+
 export interface WorkPlace {
   id: string;
   name: string;
+  /** Short name for tables on small screens. */
+  short: string;
+  /** Neighbourhood, shown under the name. */
+  area: string;
+  /** What the venue is best known for: picks its icon. */
+  kind: PlaceKind;
+  /** Lower-case words that identify it on a rota. */
+  keywords: string[];
 }
 
 export interface WorkShift {
@@ -37,7 +47,6 @@ export interface WorkPunch {
 }
 
 export interface WorkSchedule {
-  places: WorkPlace[];
   shifts: WorkShift[];
   punches: WorkPunch[];
   /** How your name can appear in the company's rota. */
@@ -46,17 +55,38 @@ export interface WorkSchedule {
 
 export const DEFAULT_ALIASES = ["Jeferson", "Jefferson", "Jeff", "Jef"];
 
-export const DEFAULT_PLACES: WorkPlace[] = [
-  { id: "p1", name: "Local 1" },
-  { id: "p2", name: "Local 2" },
-  { id: "p3", name: "Local 3" },
+/** The company's three venues (fixed; ids kept from the first version). */
+export const PLACES: WorkPlace[] = [
+  {
+    id: "p1",
+    name: "VINOMAD",
+    short: "VINOMAD",
+    area: "Valletta Waterfront",
+    kind: "wine",
+    keywords: ["vinomad"],
+  },
+  {
+    id: "p2",
+    name: "Ribs House by The Brew",
+    short: "Ribs House",
+    area: "Naxxar",
+    kind: "pig",
+    keywords: ["ribs house", "ribs"],
+  },
+  {
+    id: "p3",
+    name: "The Brew Grill & Brewery",
+    short: "The Brew",
+    area: "Sliema",
+    kind: "beer",
+    keywords: ["the brew", "brew grill", "brewery", "brew"],
+  },
 ];
 
-/** One color per place: the panel's clay, kraft and manilla tones. */
+/** One color per place (same order as PLACES): clay, kraft, manilla. */
 export const PLACE_COLORS = ["#d97757", "#d4a27f", "#ebdbbc"];
 
 export const workStore = createLocalStore<WorkSchedule>("cb:work-schedule:v1", {
-  places: DEFAULT_PLACES,
   shifts: [],
   punches: [],
   aliases: DEFAULT_ALIASES,
@@ -287,16 +317,18 @@ export const cleanTime = (t: string) =>
 
 export const isDateKey = (d: string) => DATE_KEY.test(d);
 
-/** Place whose name best matches what the AI read on the rota. */
+/** Place whose name or keywords match what the AI read on the rota. */
 export function matchPlace(places: WorkPlace[], guess: string) {
   const g = guess.trim().toLowerCase();
   if (!g) {
     return null;
   }
+  // Full name first (the longest wins: "Ribs House by The Brew" vs "The
+  // Brew"), then keywords in PLACES order (Ribs House before The Brew).
+  const byName = places
+    .filter((p) => g.includes(p.name.trim().toLowerCase()))
+    .sort((a, b) => b.name.length - a.name.length)[0];
   return (
-    places.find((p) => {
-      const n = p.name.trim().toLowerCase();
-      return n.length > 2 && (g.includes(n) || n.includes(g));
-    }) ?? null
+    byName ?? places.find((p) => p.keywords.some((k) => g.includes(k))) ?? null
   );
 }

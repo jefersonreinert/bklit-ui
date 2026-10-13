@@ -348,7 +348,7 @@ One entry in shifts per day the worker works, Monday first:
 - raw = the cell text exactly as written.
 - note = anything useful (e.g. "code NXR, unclear", "split shift"), else "".
 
-placeGuess = the restaurant / venue name if visible on the page (logo, letterhead, title), else "".
+placeGuess = the venue if you can tell it from the page (logo, letterhead, title). The worker's venues are: {PLACES}. Answer with one of these names when it matches, else the name as written, else "".
 notes = short remarks for the worker in Portuguese (e.g. unclear handwriting on Thursday), else "".`;
 
 export interface ExtractedShift {
@@ -370,17 +370,22 @@ export interface ExtractedTimetable {
 const TEXT_TYPE = /^text\//;
 
 /**
- * hint is JSON: { aliases: string[], weekStart: "YYYY-MM-DD" }. Spreadsheets
+ * hint is JSON: { aliases: string[], weekStart: "YYYY-MM-DD", places: string[] }. Spreadsheets
  * arrive as text/csv files and are pasted into the prompt.
  */
 export function extractTimetable(files: ExtractFile[], hint?: string) {
   let aliases = ["Jeferson", "Jefferson", "Jeff", "Jef"];
   let weekStart = "";
+  let places: string[] = [];
   try {
     const parsed = JSON.parse(hint ?? "{}") as {
       aliases?: unknown;
       weekStart?: unknown;
+      places?: unknown;
     };
+    if (Array.isArray(parsed.places)) {
+      places = parsed.places.map(String).slice(0, 6);
+    }
     if (Array.isArray(parsed.aliases) && parsed.aliases.length) {
       aliases = parsed.aliases.map(String).slice(0, 12);
     }
@@ -397,10 +402,12 @@ export function extractTimetable(files: ExtractFile[], hint?: string) {
     );
   const media = files.filter((f) => !TEXT_TYPE.test(f.mimeType));
   const prompt = [
-    TIMETABLE_PROMPT.replace("{ALIASES}", aliases.join(", ")).replace(
-      "{WEEK_START}",
-      weekStart || "(unknown: use the dates printed in the rota)"
-    ),
+    TIMETABLE_PROMPT.replace("{ALIASES}", aliases.join(", "))
+      .replace(
+        "{WEEK_START}",
+        weekStart || "(unknown: use the dates printed in the rota)"
+      )
+      .replace("{PLACES}", places.join("; ") || "(not given)"),
     ...sheets.map((text, i) => `Spreadsheet ${i + 1} (CSV):\n${text}`),
   ].join("\n\n");
   return run<ExtractedTimetable>(media, prompt, TIMETABLE_SCHEMA);

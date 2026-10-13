@@ -20,7 +20,6 @@ import {
   monthReport,
   newId,
   openPunch,
-  PLACE_COLORS,
   punchMinutes,
   reportCSV,
   reportText,
@@ -31,9 +30,7 @@ import {
   type WorkShift,
   workStore,
 } from "@/lib/work-schedule";
-
-const selectClass =
-  "h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+import { PlaceMark, PlaceSelect } from "./place-ui";
 
 const monthLabel = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
@@ -44,16 +41,6 @@ const dayLabel = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "2-digit",
 });
-
-function Dot({ places, id }: { places: WorkPlace[]; id: string }) {
-  const i = places.findIndex((p) => p.id === id);
-  return (
-    <span
-      className="inline-block size-2.5 shrink-0 rounded-full border border-foreground/20"
-      style={{ background: PLACE_COLORS[i] ?? "var(--muted-foreground)" }}
-    />
-  );
-}
 
 /** Place of the shift running now or next today, else the first place. */
 function suggestedPlace(
@@ -134,18 +121,12 @@ export function ClockCard({
           </Button>
         ) : (
           <>
-            <select
-              aria-label="Local"
-              className={`${selectClass} h-11 sm:max-w-56`}
-              onChange={(e) => setPicked(e.target.value)}
+            <PlaceSelect
+              className="h-11 sm:max-w-64"
+              onChange={setPicked}
+              places={places}
               value={place}
-            >
-              {places.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
             <Button className="h-11 sm:flex-1" onClick={clockIn}>
               <Icon className="size-4" name="IconClock" />
               Registrar entrada ({clockTime(now)})
@@ -210,18 +191,11 @@ function PunchRow({
               type="date"
               value={punch.date}
             />
-            <select
-              aria-label="Local"
-              className={selectClass}
-              onChange={(e) => updatePunch(punch.id, { place: e.target.value })}
+            <PlaceSelect
+              onChange={(id) => updatePunch(punch.id, { place: id })}
+              places={places}
               value={punch.place}
-            >
-              {places.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
             <Input
               aria-label="Entrada"
               onChange={(e) => updatePunch(punch.id, { in: e.target.value })}
@@ -267,8 +241,8 @@ function PunchRow({
       </td>
       <td className="py-2">
         <span className="flex items-center gap-1.5">
-          <Dot id={punch.place} places={places} />
-          <span className="truncate">{place?.name ?? "Sem local"}</span>
+          <PlaceMark id={punch.place} places={places} />
+          <span className="truncate">{place?.short ?? "Sem local"}</span>
         </span>
       </td>
       <td className="py-2 tabular-nums">{punch.in}</td>
@@ -347,14 +321,11 @@ export function MonthReportCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-4 px-4">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {report.byPlace.map((t, i) => (
+          {report.byPlace.map((t) => (
             <div className="rounded-lg border px-3 py-2" key={t.place.id}>
               <p className="flex items-center gap-1.5 truncate text-muted-foreground text-xs">
-                <span
-                  className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ background: PLACE_COLORS[i] }}
-                />
-                {t.place.name}
+                <PlaceMark id={t.place.id} places={places} />
+                <span className="truncate">{t.place.short}</span>
               </p>
               <p className="font-semibold tabular-nums">
                 {formatHours(t.minutes)}

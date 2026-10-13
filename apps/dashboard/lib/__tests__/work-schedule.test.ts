@@ -8,15 +8,26 @@ import {
   monthReport,
   nextShift,
   openPunch,
+  PLACES,
   punchMinutes,
   reportCSV,
   rowsToCSV,
   shiftMinutes,
   shiftState,
+  type WorkPlace,
   type WorkPunch,
   type WorkShift,
   weekStart,
 } from "../work-schedule";
+
+const place = (id: string, name: string): WorkPlace => ({
+  id,
+  name,
+  short: name,
+  area: "",
+  kind: "wine",
+  keywords: [],
+});
 
 const shift = (date: string, start: string, end: string): WorkShift => ({
   id: `${date}-${start}`,
@@ -62,9 +73,9 @@ describe("work schedule", () => {
 
 describe("time clock", () => {
   const places = [
-    { id: "p1", name: "Sliema" },
-    { id: "p2", name: "St Julian's, Bay" },
-    { id: "p3", name: "Valletta" },
+    place("p1", "Sliema"),
+    place("p2", "St Julian's, Bay"),
+    place("p3", "Valletta"),
   ];
   const punch = (
     date: string,
@@ -123,11 +134,12 @@ describe("rota import", () => {
   it("cleans times and matches the venue to a place", () => {
     assert.equal(cleanTime("9:00"), "09:00");
     assert.equal(cleanTime("17-"), "");
-    const places = [
-      { id: "p1", name: "Vinomad" },
-      { id: "p2", name: "Local 2" },
-    ];
-    assert.equal(matchPlace(places, "VINOMAD Valletta Waterfront")?.id, "p1");
-    assert.equal(matchPlace(places, ""), null);
+    const guess = (text: string) => matchPlace(PLACES, text)?.id;
+    assert.equal(guess("VINOMAD Valletta Waterfront"), "p1");
+    assert.equal(guess("Ribs House by The Brew"), "p2");
+    assert.equal(guess("RIBS HOUSE"), "p2");
+    assert.equal(guess("The Brew Grill & Brewery Sliema"), "p3");
+    assert.equal(guess("The Brew"), "p3");
+    assert.equal(guess(""), undefined);
   });
 });

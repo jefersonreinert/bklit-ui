@@ -27,9 +27,7 @@ import {
   weekStart,
   workStore,
 } from "@/lib/work-schedule";
-
-const selectClass =
-  "h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+import { PlaceSelect } from "./place-ui";
 
 const dayLabel = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
@@ -120,7 +118,11 @@ export function TimetableImport({
       const out = await callExtract<ExtractedTimetable>(
         "timetable",
         uploads,
-        JSON.stringify({ aliases, weekStart: week })
+        JSON.stringify({
+          aliases,
+          weekStart: week,
+          places: places.map((p) => `${p.name} (${p.area})`),
+        })
       );
       const guessed = matchPlace(places, out.placeGuess);
       const placeId = guessed?.id ?? place;
@@ -243,23 +245,14 @@ export function TimetableImport({
             </div>
             <div className="flex flex-col gap-1 text-muted-foreground text-xs">
               Local
-              <select
-                aria-label="Local"
-                className={selectClass}
-                onChange={(e) => {
-                  setPlace(e.target.value);
-                  setDrafts((list) =>
-                    list.map((d) => ({ ...d, place: e.target.value }))
-                  );
+              <PlaceSelect
+                onChange={(id) => {
+                  setPlace(id);
+                  setDrafts((list) => list.map((d) => ({ ...d, place: id })));
                 }}
+                places={places}
                 value={place}
-              >
-                {places.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
@@ -329,18 +322,12 @@ export function TimetableImport({
                       type="time"
                       value={d.end}
                     />
-                    <select
-                      aria-label="Local"
-                      className={`${selectClass} col-span-2`}
-                      onChange={(e) => edit(d.id, { place: e.target.value })}
+                    <PlaceSelect
+                      className="col-span-2"
+                      onChange={(id) => edit(d.id, { place: id })}
+                      places={places}
                       value={d.place}
-                    >
-                      {places.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   {d.note ? (
                     <p className="text-muted-foreground text-xs">{d.note}</p>

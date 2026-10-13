@@ -30,6 +30,7 @@ import {
   newId,
   nextShift,
   PLACE_COLORS,
+  PLACES,
   shiftMinutes,
   shiftState,
   shiftsOn,
@@ -38,6 +39,7 @@ import {
   weekStart,
   workStore,
 } from "@/lib/work-schedule";
+import { PlaceMark, PlaceSelect } from "./place-ui";
 import { ClockCard, MonthReportCard } from "./time-clock";
 import { TimetableImport } from "./timetable-import";
 
@@ -57,9 +59,6 @@ const shortDate = new Intl.DateTimeFormat("pt-BR", {
   month: "2-digit",
 });
 
-const selectClass =
-  "h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
-
 /** Current time, refreshed every 30 s (null until mounted). */
 function useNow() {
   const [now, setNow] = useState<Date | null>(null);
@@ -75,17 +74,9 @@ function placeOf(places: WorkPlace[], id: string) {
   const i = places.findIndex((p) => p.id === id);
   return {
     name: places[i]?.name ?? "Sem local",
+    short: places[i]?.short ?? "Sem local",
     color: PLACE_COLORS[i] ?? "var(--muted-foreground)",
   };
-}
-
-function PlaceDot({ color }: { color: string }) {
-  return (
-    <span
-      className="inline-block size-2.5 shrink-0 rounded-full border border-foreground/20"
-      style={{ background: color }}
-    />
-  );
 }
 
 /* --------------------------------- today --------------------------------- */
@@ -147,7 +138,7 @@ function TodayCard({
                   {s.start} – {s.end}
                 </p>
                 <p className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                  <PlaceDot color={place.color} />
+                  <PlaceMark id={s.place} places={places} />
                   {place.name}
                   {s.note ? ` · ${s.note}` : ""}
                 </p>
@@ -271,12 +262,12 @@ function MonthCalendar({
                       className="flex items-center gap-1 truncate text-[10px] leading-tight md:text-xs"
                       key={s.id}
                     >
-                      <PlaceDot color={place.color} />
+                      <PlaceMark id={s.place} places={places} />
                       <span className="truncate tabular-nums">
                         {s.start}
                         <span className="hidden md:inline">
                           {" "}
-                          · {place.name}
+                          · {place.short}
                         </span>
                       </span>
                     </span>
@@ -287,10 +278,10 @@ function MonthCalendar({
           })}
         </div>
         <div className="mt-3 flex flex-wrap gap-3 px-2 text-muted-foreground text-xs">
-          {places.map((p, i) => (
+          {places.map((p) => (
             <span className="flex items-center gap-1.5" key={p.id}>
-              <PlaceDot color={PLACE_COLORS[i] ?? "currentColor"} />
-              {p.name}
+              <PlaceMark id={p.id} places={places} />
+              {p.short}
             </span>
           ))}
         </div>
@@ -397,8 +388,8 @@ function WeekTable({
                     </td>
                     <td className="py-2">
                       <span className="flex items-center gap-1.5">
-                        <PlaceDot color={place.color} />
-                        {place.name}
+                        <PlaceMark id={s.place} places={places} />
+                        {place.short}
                       </span>
                     </td>
                     <td className="py-2 text-right tabular-nums">
@@ -522,20 +513,14 @@ function DayEditor({
                   />
                 </div>
               </div>
-              <label className="flex flex-col gap-1 text-muted-foreground text-xs">
+              <div className="flex flex-col gap-1 text-muted-foreground text-xs">
                 Local
-                <select
-                  className={selectClass}
-                  onChange={(e) => update(s.id, { place: e.target.value })}
+                <PlaceSelect
+                  onChange={(id) => update(s.id, { place: id })}
+                  places={places}
                   value={s.place}
-                >
-                  {places.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                />
+              </div>
               <div className="flex flex-col gap-1 text-muted-foreground text-xs">
                 Nota (opcional)
                 <Input
@@ -578,20 +563,27 @@ function PlacesCard({
   places: WorkPlace[];
   aliases: string[];
 }) {
-  const rename = (id: string, name: string) =>
-    workStore.update((s) => ({
-      ...s,
-      places: s.places.map((p) => (p.id === id ? { ...p, name } : p)),
-    }));
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">Locais e nome</CardTitle>
+        <CardTitle className="text-base">Empresas e nome</CardTitle>
         <CardDescription>
-          Os 3 lugares da empresa e como o seu nome aparece nas escalas.
+          Os 3 lugares onde você trabalha e como o seu nome aparece nas escalas.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2 px-4 md:grid-cols-3">
+        {places.map((p) => (
+          <div
+            className="flex items-center gap-3 rounded-lg border px-3 py-2.5"
+            key={p.id}
+          >
+            <PlaceMark className="size-6" id={p.id} places={places} />
+            <div className="min-w-0">
+              <p className="truncate font-medium text-sm">{p.name}</p>
+              <p className="truncate text-muted-foreground text-xs">{p.area}</p>
+            </div>
+          </div>
+        ))}
         <div className="flex flex-col gap-1 text-muted-foreground text-xs md:col-span-3">
           Seu nome na escala (separe por vírgulas)
           <Input
@@ -602,23 +594,13 @@ function PlacesCard({
                 .split(",")
                 .map((a) => a.trim())
                 .filter(Boolean);
-              workStore.update((s) => ({
-                ...s,
+              workStore.update((st) => ({
+                ...st,
                 aliases: list.length ? list : DEFAULT_ALIASES,
               }));
             }}
           />
         </div>
-        {places.map((p, i) => (
-          <div className="flex items-center gap-2" key={p.id}>
-            <PlaceDot color={PLACE_COLORS[i] ?? "currentColor"} />
-            <Input
-              aria-label={`Nome do local ${i + 1}`}
-              onChange={(e) => rename(p.id, e.target.value)}
-              value={p.name}
-            />
-          </div>
-        ))}
       </CardContent>
     </Card>
   );
@@ -628,7 +610,8 @@ function PlacesCard({
 
 export function WorkPage() {
   const now = useNow();
-  const { places, shifts, punches, aliases } = workStore.use();
+  const { shifts, punches, aliases } = workStore.use();
+  const places = PLACES;
   const [importing, setImporting] = useState(false);
   const [month, setMonth] = useState(() => new Date());
   const [week, setWeek] = useState(() => weekStart(new Date()));
