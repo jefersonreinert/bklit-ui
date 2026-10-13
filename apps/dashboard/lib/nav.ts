@@ -116,6 +116,12 @@ export const navItems: NavItem[] = [
     icon: "IconCalendarClock",
   },
   {
+    href: "/ferry",
+    label: "Ferry",
+    description: "Horários do ferry Sliema ↔ Bugibba, pelo mês em Malta",
+    icon: "IconShip",
+  },
+  {
     href: "/notas",
     label: "Notas",
     description: "Notas em Markdown, gráficos, mídias e grafo de conexões",
