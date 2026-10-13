@@ -3,9 +3,14 @@ import { describe, it } from "node:test";
 import {
   dateKey,
   monthGrid,
+  monthReport,
   nextShift,
+  openPunch,
+  punchMinutes,
+  reportCSV,
   shiftMinutes,
   shiftState,
+  type WorkPunch,
   type WorkShift,
   weekStart,
 } from "../work-schedule";
@@ -49,5 +54,50 @@ describe("work schedule", () => {
     assert.equal(nextShift(list, now)?.start, "14:00");
     const late = new Date(2026, 9, 13, 21, 0);
     assert.equal(nextShift(list, late)?.date, "2026-10-14");
+  });
+});
+
+describe("time clock", () => {
+  const places = [
+    { id: "p1", name: "Sliema" },
+    { id: "p2", name: "St Julian's, Bay" },
+    { id: "p3", name: "Valletta" },
+  ];
+  const punch = (
+    date: string,
+    inAt: string,
+    out: string | null,
+    place: string
+  ): WorkPunch => ({ id: `${date}-${inAt}`, date, in: inAt, out, place });
+
+  it("counts an open punch up to now", () => {
+    const p = punch("2026-10-13", "09:00", null, "p1");
+    assert.equal(punchMinutes(p, new Date(2026, 9, 13, 11, 30)), 150);
+    assert.equal(openPunch([p])?.id, p.id);
+  });
+
+  it("totals the month per place, days and hours", () => {
+    const list = [
+      punch("2026-10-01", "09:00", "17:00", "p1"),
+      punch("2026-10-01", "18:00", "22:00", "p2"),
+      punch("2026-10-02", "22:00", "06:00", "p1"),
+      punch("2026-09-30", "09:00", "17:00", "p1"),
+      punch("2026-10-03", "09:00", null, "p3"),
+    ];
+    const r = monthReport(list, places, "2026-10");
+    assert.equal(r.rows.length, 3);
+    assert.equal(r.days, 2);
+    assert.equal(r.minutes, (8 + 4 + 8) * 60);
+    assert.deepEqual(
+      r.byPlace.map((t) => [t.place.id, t.days, t.minutes]),
+      [
+        ["p1", 2, 960],
+        ["p2", 1, 240],
+        ["p3", 0, 0],
+      ]
+    );
+    const csv = reportCSV(r, places);
+    assert.ok(csv.includes('2026-10-01,"St Julian\'s, Bay",18:00,22:00,4.00'));
+    assert.ok(csv.includes("Total,2,20.00"));
   });
 });

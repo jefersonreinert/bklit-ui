@@ -37,6 +37,7 @@ import {
   weekStart,
   workStore,
 } from "@/lib/work-schedule";
+import { ClockCard, MonthReportCard } from "./time-clock";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const longDate = new Intl.DateTimeFormat("pt-BR", {
@@ -600,7 +601,7 @@ function PlacesCard({ places }: { places: WorkPlace[] }) {
 
 export function WorkPage() {
   const now = useNow();
-  const { places, shifts } = workStore.use();
+  const { places, shifts, punches } = workStore.use();
   const [month, setMonth] = useState(() => new Date());
   const [week, setWeek] = useState(() => weekStart(new Date()));
   const [open, setOpen] = useState<string | null>(null);
@@ -619,6 +620,7 @@ export function WorkPage() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <TodayCard now={now} onOpen={openDay} places={places} shifts={shifts} />
+      <ClockCard now={now} places={places} punches={punches} shifts={shifts} />
       <MonthCalendar
         month={month}
         onOpen={openDay}
@@ -636,6 +638,7 @@ export function WorkPage() {
         start={week}
         todayKey={todayKey}
       />
+      <MonthReportCard now={now} places={places} punches={punches} />
       <PlacesCard places={places} />
       <DayEditor
         dayKey={open}

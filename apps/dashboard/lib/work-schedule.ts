@@ -24,9 +24,22 @@ export interface WorkShift {
   note?: string;
 }
 
+/** Time clock entry: when you actually started and finished work. */
+export interface WorkPunch {
+  id: string;
+  /** YYYY-MM-DD of the clock-in. */
+  date: string;
+  /** HH:MM */
+  in: string;
+  /** HH:MM, or null while still working. Earlier than `in` = next day. */
+  out: string | null;
+  place: string;
+}
+
 export interface WorkSchedule {
   places: WorkPlace[];
   shifts: WorkShift[];
+  punches: WorkPunch[];
 }
 
 export const DEFAULT_PLACES: WorkPlace[] = [
@@ -41,6 +54,7 @@ export const PLACE_COLORS = ["#d97757", "#d4a27f", "#ebdbbc"];
 export const workStore = createLocalStore<WorkSchedule>("cb:work-schedule:v1", {
   places: DEFAULT_PLACES,
   shifts: [],
+  punches: [],
 });
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -121,3 +135,119 @@ export function nextShift(shifts: WorkShift[], now: Date) {
 
 export const newId = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+/* ------------------------------ time clock ------------------------------- */
+
+export const clockTime = (d: Date) =>
+  `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+export const openPunch = (punches: WorkPunch[]) =>
+  punches.find((p) => p.out === null) ?? null;
+
+/** Worked minutes; an open punch counts up to `now`. */
+export function punchMinutes(p: WorkPunch, now?: Date) {
+  if (p.out) {
+    return shiftMinutes({ start: p.in, end: p.out });
+  }
+  if (!now) {
+    return 0;
+  }
+  const start = fromKey(p.date);
+  const [h = 0, m = 0] = p.in.split(":").map(Number);
+  start.setHours(h, m);
+  return Math.max(0, Math.floor((now.getTime() - start.getTime()) / 60_000));
+}
+
+/** YYYY-MM */
+export const monthKey = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+
+export interface PlaceTotal {
+  place: WorkPlace;
+  days: number;
+  minutes: number;
+}
+
+/** Closed punches of a month, with totals per place (for the payslip). */
+export function monthReport(
+  punches: WorkPunch[],
+  places: WorkPlace[],
+  month: string
+) {
+  const rows = punches
+    .filter((p) => p.out !== null && p.date.startsWith(month))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.in.localeCompare(b.in));
+  const byPlace: PlaceTotal[] = places.map((place) => {
+    const mine = rows.filter((r) => r.place === place.id);
+    return {
+      place,
+      days: new Set(mine.map((r) => r.date)).size,
+      minutes: mine.reduce((sum, r) => sum + punchMinutes(r), 0),
+    };
+  });
+  return {
+    rows,
+    byPlace,
+    days: new Set(rows.map((r) => r.date)).size,
+    minutes: rows.reduce((sum, r) => sum + punchMinutes(r), 0),
+  };
+}
+
+const CSV_SPECIAL = /[",\n]/;
+const QUOTE = /"/g;
+
+const hoursDecimal = (minutes: number) => (minutes / 60).toFixed(2);
+
+/** CSV for the company: one line per entry, then totals per place. */
+export function reportCSV(
+  report: ReturnType<typeof monthReport>,
+  places: WorkPlace[]
+) {
+  const name = (id: string) => places.find((p) => p.id === id)?.name ?? "";
+  const esc = (v: string) =>
+    CSV_SPECIAL.test(v) ? `"${v.replace(QUOTE, '""')}"` : v;
+  const lines = [
+    "Data,Local,Entrada,Saída,Horas",
+    ...report.rows.map((r) =>
+      [
+        r.date,
+        esc(name(r.place)),
+        r.in,
+        r.out ?? "",
+        hoursDecimal(punchMinutes(r)),
+      ].join(",")
+    ),
+    "",
+    "Local,Dias,Horas",
+    ...report.byPlace.map((t) =>
+      [esc(t.place.name), String(t.days), hoursDecimal(t.minutes)].join(",")
+    ),
+    ["Total", String(report.days), hoursDecimal(report.minutes)].join(","),
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
+/** Plain-text summary to paste in a message or e-mail. */
+export function reportText(
+  report: ReturnType<typeof monthReport>,
+  places: WorkPlace[],
+  title: string
+) {
+  const name = (id: string) => places.find((p) => p.id === id)?.name ?? "";
+  return [
+    title,
+    "",
+    ...report.rows.map(
+      (r) =>
+        `${r.date} · ${name(r.place)} · ${r.in}–${r.out} · ${formatHours(punchMinutes(r))}`
+    ),
+    "",
+    ...report.byPlace
+      .filter((t) => t.days > 0)
+      .map(
+        (t) =>
+          `${t.place.name}: ${t.days} ${t.days === 1 ? "dia" : "dias"}, ${formatHours(t.minutes)}`
+      ),
+    `Total: ${report.days} ${report.days === 1 ? "dia" : "dias"}, ${formatHours(report.minutes)}`,
+  ].join("\n");
+}
