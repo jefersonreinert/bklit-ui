@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useMemo, useState } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { mt5Symbol } from "@/lib/journal/lot";
 import { cn } from "@/lib/utils";
@@ -242,6 +242,33 @@ function TradeContent({ chartSymbol }: { chartSymbol: string }) {
   );
 }
 
+/** Keeps a Convex error (e.g. functions not deployed yet) inside this panel. */
+class TradeErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (!this.state.error) {
+      return this.props.children;
+    }
+    return (
+      <div className="p-4">
+        <Notice>
+          Não foi possível abrir o painel de operações. Se as funções do Convex
+          ainda não foram publicadas (npx convex deploy), publique-as e
+          recarregue a página.
+        </Notice>
+      </div>
+    );
+  }
+}
+
 export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
   return (
     <TelegramProvider
@@ -254,7 +281,9 @@ export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
         </div>
       }
     >
-      <TradeContent chartSymbol={chartSymbol} />
+      <TradeErrorBoundary>
+        <TradeContent chartSymbol={chartSymbol} />
+      </TradeErrorBoundary>
     </TelegramProvider>
   );
 }
