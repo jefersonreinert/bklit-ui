@@ -40,7 +40,11 @@ export interface WorkSchedule {
   places: WorkPlace[];
   shifts: WorkShift[];
   punches: WorkPunch[];
+  /** How your name can appear in the company's rota. */
+  aliases: string[];
 }
+
+export const DEFAULT_ALIASES = ["Jeferson", "Jefferson", "Jeff", "Jef"];
 
 export const DEFAULT_PLACES: WorkPlace[] = [
   { id: "p1", name: "Local 1" },
@@ -55,6 +59,7 @@ export const workStore = createLocalStore<WorkSchedule>("cb:work-schedule:v1", {
   places: DEFAULT_PLACES,
   shifts: [],
   punches: [],
+  aliases: DEFAULT_ALIASES,
 });
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -250,4 +255,48 @@ export function reportText(
       ),
     `Total: ${report.days} ${report.days === 1 ? "dia" : "dias"}, ${formatHours(report.minutes)}`,
   ].join("\n");
+}
+
+/* ---------------------------- rota import -------------------------------- */
+
+const CSV_CELL = /[",\n]/;
+
+/** Spreadsheet rows (from an .xlsx) as CSV text for the AI reader. */
+export function rowsToCSV(rows: unknown[][]) {
+  const cell = (v: unknown) => {
+    let text = "";
+    if (v instanceof Date) {
+      text = Number.isNaN(v.getTime()) ? "" : v.toISOString().slice(0, 10);
+    } else if (v !== null && v !== undefined) {
+      text = String(v);
+    }
+    return CSV_CELL.test(text) ? `"${text.replace(QUOTE, '""')}"` : text;
+  };
+  return rows
+    .filter((r) => r.some((v) => v !== null && v !== undefined && v !== ""))
+    .map((r) => r.map(cell).join(","))
+    .join("\n");
+}
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+const TIME = /^\d{1,2}:\d{2}$/;
+
+/** Normalises "9:00" → "09:00"; anything else → "". */
+export const cleanTime = (t: string) =>
+  TIME.test(t.trim()) ? t.trim().padStart(5, "0") : "";
+
+export const isDateKey = (d: string) => DATE_KEY.test(d);
+
+/** Place whose name best matches what the AI read on the rota. */
+export function matchPlace(places: WorkPlace[], guess: string) {
+  const g = guess.trim().toLowerCase();
+  if (!g) {
+    return null;
+  }
+  return (
+    places.find((p) => {
+      const n = p.name.trim().toLowerCase();
+      return n.length > 2 && (g.includes(n) || n.includes(g));
+    }) ?? null
+  );
 }

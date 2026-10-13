@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  cleanTime,
   dateKey,
+  matchPlace,
   monthGrid,
   monthReport,
   nextShift,
   openPunch,
   punchMinutes,
   reportCSV,
+  rowsToCSV,
   shiftMinutes,
   shiftState,
   type WorkPunch,
@@ -99,5 +102,32 @@ describe("time clock", () => {
     const csv = reportCSV(r, places);
     assert.ok(csv.includes('2026-10-01,"St Julian\'s, Bay",18:00,22:00,4.00'));
     assert.ok(csv.includes("Total,2,20.00"));
+  });
+});
+
+describe("rota import", () => {
+  it("turns spreadsheet rows into CSV with ISO dates", () => {
+    const csv = rowsToCSV([
+      [null, new Date(Date.UTC(2026, 9, 12)), new Date(Date.UTC(2026, 9, 13))],
+      ["Bar", "Monday", "Tuesday"],
+      [null, null, null],
+      ["Jeff", "", "11-17:00"],
+      ["Note", "a, b", 'say "hi"'],
+    ]);
+    assert.equal(
+      csv,
+      ',2026-10-12,2026-10-13\nBar,Monday,Tuesday\nJeff,,11-17:00\nNote,"a, b","say ""hi"""'
+    );
+  });
+
+  it("cleans times and matches the venue to a place", () => {
+    assert.equal(cleanTime("9:00"), "09:00");
+    assert.equal(cleanTime("17-"), "");
+    const places = [
+      { id: "p1", name: "Vinomad" },
+      { id: "p2", name: "Local 2" },
+    ];
+    assert.equal(matchPlace(places, "VINOMAD Valletta Waterfront")?.id, "p1");
+    assert.equal(matchPlace(places, ""), null);
   });
 });

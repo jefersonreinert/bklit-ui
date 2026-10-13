@@ -314,6 +314,98 @@ export const extractMenu = (files: ExtractFile[], hint?: string) =>
 export const extractInvoice = (files: ExtractFile[], hint?: string) =>
   run<ExtractedInvoice>(files, INVOICE_PROMPT, INVOICE_SCHEMA, hint);
 
+/* ------------------------------ work timetable ------------------------------ */
+
+const TIMETABLE_SCHEMA = obj({
+  nameAsWritten: str,
+  placeGuess: str,
+  weekStart: str,
+  shifts: arr(
+    obj({
+      date: str,
+      start: str,
+      end: str,
+      raw: str,
+      note: str,
+    })
+  ),
+  notes: str,
+});
+
+const TIMETABLE_PROMPT = `You receive a staff rota / timetable from a restaurant or bar: a photo (often HANDWRITTEN on paper), a PDF, or a spreadsheet given as CSV text. One worker uses this app; find ONLY that worker's row and return their shifts for the week.
+
+The worker's name can appear as any of these spellings (all the same person): {ALIASES}. Handwriting may misspell or abbreviate it (e.g. "JefFeson", "Jeferson", "Jeff", "Jef", "J.") — pick the row that best matches. Ignore every other person. nameAsWritten = the name exactly as written in the rota ("" if not found).
+
+Dates:
+- If the rota prints dates (header row, title like "12-17 Oct"), use them.
+- Otherwise columns are weekdays (M T W T F S S / Mon..Sun / Seg..Dom); map them onto the week starting Monday {WEEK_START}. weekStart = the Monday of the week you used, YYYY-MM-DD.
+
+One entry in shifts per day the worker works, Monday first:
+- date YYYY-MM-DD.
+- start/end in 24h HH:MM. "17-" or "17" or "18 -" means it starts at 17:00 and the end is not written: end = "". "11-17:00" or "11-5" means 11:00-17:00 (read pm sensibly: a restaurant shift ending at "5" after starting at "11" ends 17:00).
+- Days off ("Off", "OFF", "-", "—", "x", empty, "+") are NOT shifts: leave them out.
+- A cell with a code but no readable time (e.g. "NXR", "training", "?") → include it with start "" and end "", and explain in note.
+- raw = the cell text exactly as written.
+- note = anything useful (e.g. "code NXR, unclear", "split shift"), else "".
+
+placeGuess = the restaurant / venue name if visible on the page (logo, letterhead, title), else "".
+notes = short remarks for the worker in Portuguese (e.g. unclear handwriting on Thursday), else "".`;
+
+export interface ExtractedShift {
+  date: string;
+  start: string;
+  end: string;
+  raw: string;
+  note: string;
+}
+
+export interface ExtractedTimetable {
+  nameAsWritten: string;
+  placeGuess: string;
+  weekStart: string;
+  shifts: ExtractedShift[];
+  notes: string;
+}
+
+const TEXT_TYPE = /^text\//;
+
+/**
+ * hint is JSON: { aliases: string[], weekStart: "YYYY-MM-DD" }. Spreadsheets
+ * arrive as text/csv files and are pasted into the prompt.
+ */
+export function extractTimetable(files: ExtractFile[], hint?: string) {
+  let aliases = ["Jeferson", "Jefferson", "Jeff", "Jef"];
+  let weekStart = "";
+  try {
+    const parsed = JSON.parse(hint ?? "{}") as {
+      aliases?: unknown;
+      weekStart?: unknown;
+    };
+    if (Array.isArray(parsed.aliases) && parsed.aliases.length) {
+      aliases = parsed.aliases.map(String).slice(0, 12);
+    }
+    if (typeof parsed.weekStart === "string") {
+      weekStart = parsed.weekStart.slice(0, 10);
+    }
+  } catch {
+    // Not JSON: keep the defaults
+  }
+  const sheets = files
+    .filter((f) => TEXT_TYPE.test(f.mimeType))
+    .map((f) =>
+      Buffer.from(f.data, "base64").toString("utf8").slice(0, 60_000)
+    );
+  const media = files.filter((f) => !TEXT_TYPE.test(f.mimeType));
+  const prompt = [
+    TIMETABLE_PROMPT.replace("{ALIASES}", aliases.join(", ")).replace(
+      "{WEEK_START}",
+      weekStart || "(unknown: use the dates printed in the rota)"
+    ),
+    ...sheets.map((text, i) => `Spreadsheet ${i + 1} (CSV):\n${text}`),
+  ].join("\n\n");
+  return run<ExtractedTimetable>(media, prompt, TIMETABLE_SCHEMA);
+}
+
 /* ------------------------- free-form menu designs ------------------------ */
 
 const AI_ELEMENT = obj({

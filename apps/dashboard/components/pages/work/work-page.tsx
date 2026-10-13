@@ -22,6 +22,7 @@ import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import {
   addDays,
+  DEFAULT_ALIASES,
   dateKey,
   formatHours,
   fromKey,
@@ -38,6 +39,7 @@ import {
   workStore,
 } from "@/lib/work-schedule";
 import { ClockCard, MonthReportCard } from "./time-clock";
+import { TimetableImport } from "./timetable-import";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const longDate = new Intl.DateTimeFormat("pt-BR", {
@@ -569,7 +571,13 @@ function DayEditor({
   );
 }
 
-function PlacesCard({ places }: { places: WorkPlace[] }) {
+function PlacesCard({
+  places,
+  aliases,
+}: {
+  places: WorkPlace[];
+  aliases: string[];
+}) {
   const rename = (id: string, name: string) =>
     workStore.update((s) => ({
       ...s,
@@ -578,10 +586,29 @@ function PlacesCard({ places }: { places: WorkPlace[] }) {
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
-        <CardTitle className="text-base">Locais de trabalho</CardTitle>
-        <CardDescription>Os 3 lugares da empresa.</CardDescription>
+        <CardTitle className="text-base">Locais e nome</CardTitle>
+        <CardDescription>
+          Os 3 lugares da empresa e como o seu nome aparece nas escalas.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2 px-4 md:grid-cols-3">
+        <div className="flex flex-col gap-1 text-muted-foreground text-xs md:col-span-3">
+          Seu nome na escala (separe por vírgulas)
+          <Input
+            aria-label="Seu nome na escala"
+            defaultValue={aliases.join(", ")}
+            onBlur={(e) => {
+              const list = e.target.value
+                .split(",")
+                .map((a) => a.trim())
+                .filter(Boolean);
+              workStore.update((s) => ({
+                ...s,
+                aliases: list.length ? list : DEFAULT_ALIASES,
+              }));
+            }}
+          />
+        </div>
         {places.map((p, i) => (
           <div className="flex items-center gap-2" key={p.id}>
             <PlaceDot color={PLACE_COLORS[i] ?? "currentColor"} />
@@ -601,7 +628,8 @@ function PlacesCard({ places }: { places: WorkPlace[] }) {
 
 export function WorkPage() {
   const now = useNow();
-  const { places, shifts, punches } = workStore.use();
+  const { places, shifts, punches, aliases } = workStore.use();
+  const [importing, setImporting] = useState(false);
   const [month, setMonth] = useState(() => new Date());
   const [week, setWeek] = useState(() => weekStart(new Date()));
   const [open, setOpen] = useState<string | null>(null);
@@ -621,6 +649,20 @@ export function WorkPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <TodayCard now={now} onOpen={openDay} places={places} shifts={shifts} />
       <ClockCard now={now} places={places} punches={punches} shifts={shifts} />
+      <Button
+        className="h-11"
+        onClick={() => setImporting(true)}
+        variant="outline"
+      >
+        <Icon className="size-4" name="IconSparklesSoft" />
+        Importar escala da empresa (foto, PDF ou Excel)
+      </Button>
+      <TimetableImport
+        aliases={aliases}
+        onClose={() => setImporting(false)}
+        open={importing}
+        places={places}
+      />
       <MonthCalendar
         month={month}
         onOpen={openDay}
@@ -639,7 +681,7 @@ export function WorkPage() {
         todayKey={todayKey}
       />
       <MonthReportCard now={now} places={places} punches={punches} />
-      <PlacesCard places={places} />
+      <PlacesCard aliases={aliases} places={places} />
       <DayEditor
         dayKey={open}
         onClose={() => setOpen(null)}
