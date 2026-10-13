@@ -12,13 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +21,6 @@ import {
   formatHours,
   fromKey,
   monthGrid,
-  newId,
   nextShift,
   PLACE_COLORS,
   PLACES,
@@ -40,7 +32,7 @@ import {
   weekStart,
   workStore,
 } from "@/lib/work-schedule";
-import { PlaceMark, PlaceSelect } from "./place-ui";
+import { PlaceMark } from "./place-ui";
 import { ClockCard, MonthReportCard } from "./time-clock";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -416,146 +408,6 @@ function WeekTable({
   );
 }
 
-/* -------------------------------- editors -------------------------------- */
-
-function DayEditor({
-  dayKey,
-  shifts,
-  places,
-  onClose,
-}: {
-  dayKey: string | null;
-  shifts: WorkShift[];
-  places: WorkPlace[];
-  onClose: () => void;
-}) {
-  const list = dayKey ? shiftsOn(shifts, dayKey) : [];
-  const update = (id: string, patch: Partial<WorkShift>) =>
-    workStore.update((s) => ({
-      ...s,
-      shifts: s.shifts.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-    }));
-  const remove = (id: string) =>
-    workStore.update((s) => ({
-      ...s,
-      shifts: s.shifts.filter((x) => x.id !== id),
-    }));
-  const add = () => {
-    if (!dayKey) {
-      return;
-    }
-    const last = list.at(-1);
-    workStore.update((s) => ({
-      ...s,
-      shifts: [
-        ...s.shifts,
-        {
-          id: newId(),
-          date: dayKey,
-          start: "09:00",
-          end: "17:00",
-          place: last?.place ?? places[0]?.id ?? "p1",
-        },
-      ],
-    }));
-  };
-  const copyToNextDay = () => {
-    if (!dayKey) {
-      return;
-    }
-    const next = dateKey(addDays(fromKey(dayKey), 1));
-    workStore.update((s) => ({
-      ...s,
-      shifts: [
-        ...s.shifts.filter((x) => x.date !== next),
-        ...list.map((x) => ({ ...x, id: newId(), date: next })),
-      ],
-    }));
-  };
-
-  return (
-    <Sheet onOpenChange={(o) => (o ? null : onClose())} open={dayKey !== null}>
-      <SheetContent className="overflow-y-auto" side="right">
-        <SheetHeader>
-          <SheetTitle className="first-letter:uppercase">
-            {dayKey ? longDate.format(fromKey(dayKey)) : ""}
-          </SheetTitle>
-          <SheetDescription>
-            Horários e local de trabalho deste dia.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 px-4 pb-6">
-          {list.length ? null : (
-            <p className="text-muted-foreground text-sm">Folga.</p>
-          )}
-          {list.map((s) => (
-            <div
-              className="flex flex-col gap-2 rounded-lg border p-3"
-              key={s.id}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-                  Início
-                  <Input
-                    aria-label="Início"
-                    onChange={(e) => update(s.id, { start: e.target.value })}
-                    type="time"
-                    value={s.start}
-                  />
-                </div>
-                <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-                  Fim
-                  <Input
-                    aria-label="Fim"
-                    onChange={(e) => update(s.id, { end: e.target.value })}
-                    type="time"
-                    value={s.end}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-                Local
-                <PlaceSelect
-                  onChange={(id) => update(s.id, { place: id })}
-                  places={places}
-                  value={s.place}
-                />
-              </div>
-              <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-                Nota (opcional)
-                <Input
-                  aria-label="Nota"
-                  onChange={(e) => update(s.id, { note: e.target.value })}
-                  placeholder="Ex.: abrir a loja"
-                  value={s.note ?? ""}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-xs">
-                  {formatHours(shiftMinutes(s))}
-                </span>
-                <Button onClick={() => remove(s.id)} size="sm" variant="ghost">
-                  <Icon className="size-4" name="IconTrashCan" />
-                  Remover
-                </Button>
-              </div>
-            </div>
-          ))}
-          <Button onClick={add} variant="outline">
-            <Icon className="size-4" name="IconPlusSmall" />
-            Adicionar turno
-          </Button>
-          {list.length ? (
-            <Button onClick={copyToNextDay} variant="ghost">
-              Copiar para o dia seguinte
-            </Button>
-          ) : null}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 function PlacesCard({
   places,
   aliases,
@@ -615,7 +467,6 @@ export function WorkPage() {
   const router = useRouter();
   const [month, setMonth] = useState(() => new Date());
   const [week, setWeek] = useState(() => weekStart(new Date()));
-  const [open, setOpen] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
 
   if (!now) {
@@ -625,7 +476,7 @@ export function WorkPage() {
   const openDay = (key: string) => {
     setSelected(key);
     setWeek(weekStart(fromKey(key)));
-    setOpen(key);
+    router.push(`/escala/dia/${key}`);
   };
 
   return (
@@ -659,12 +510,6 @@ export function WorkPage() {
       />
       <MonthReportCard now={now} places={places} punches={punches} />
       <PlacesCard aliases={aliases} places={places} />
-      <DayEditor
-        dayKey={open}
-        onClose={() => setOpen(null)}
-        places={places}
-        shifts={shifts}
-      />
     </div>
   );
 }
