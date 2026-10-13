@@ -191,3 +191,11 @@ export function normalizePath(pathname: string | null) {
   }
   return pathname.replace(TRAILING_SLASHES, "");
 }
+
+/** The nav item for a path, including its sub-pages (/escala/importar). */
+export function navItemFor(pathname: string) {
+  return (
+    navItems.find((i) => i.href === pathname) ??
+    navItems.find((i) => i.href !== "/" && pathname.startsWith(`${i.href}/`))
+  );
+}

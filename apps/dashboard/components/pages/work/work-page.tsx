@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,6 @@ import {
 } from "@/lib/work-schedule";
 import { PlaceMark, PlaceSelect } from "./place-ui";
 import { ClockCard, MonthReportCard } from "./time-clock";
-import { TimetableImport } from "./timetable-import";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const longDate = new Intl.DateTimeFormat("pt-BR", {
@@ -612,7 +612,7 @@ export function WorkPage() {
   const now = useNow();
   const { shifts, punches, aliases } = workStore.use();
   const places = PLACES;
-  const [importing, setImporting] = useState(false);
+  const router = useRouter();
   const [month, setMonth] = useState(() => new Date());
   const [week, setWeek] = useState(() => weekStart(new Date()));
   const [open, setOpen] = useState<string | null>(null);
@@ -634,18 +634,12 @@ export function WorkPage() {
       <ClockCard now={now} places={places} punches={punches} shifts={shifts} />
       <Button
         className="h-11"
-        onClick={() => setImporting(true)}
+        onClick={() => router.push("/escala/importar")}
         variant="outline"
       >
         <Icon className="size-4" name="IconSparklesSoft" />
         Importar escala da empresa (foto, PDF ou Excel)
       </Button>
-      <TimetableImport
-        aliases={aliases}
-        onClose={() => setImporting(false)}
-        open={importing}
-        places={places}
-      />
       <MonthCalendar
         month={month}
         onOpen={openDay}

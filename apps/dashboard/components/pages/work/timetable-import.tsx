@@ -1,15 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Icon } from "@/lib/icons";
@@ -23,6 +24,7 @@ import {
   isDateKey,
   matchPlace,
   newId,
+  PLACES,
   rowsToCSV,
   type WorkPlace,
   weekStart,
@@ -140,17 +142,11 @@ const defaultWeek = () => dateKey(weekStart(addDays(new Date(), 1)));
 const fieldClass =
   "min-w-0 w-full appearance-none [&::-webkit-date-and-time-value]:text-left";
 
-export function TimetableImport({
-  open,
-  onClose,
-  places,
-  aliases,
-}: {
-  open: boolean;
-  onClose: () => void;
-  places: WorkPlace[];
-  aliases: string[];
-}) {
+/** Dedicated page (/escala/importar): read the company's rota with the AI. */
+export function TimetableImportPage() {
+  const router = useRouter();
+  const { aliases } = workStore.use();
+  const places = PLACES;
   const inputRef = useRef<HTMLInputElement>(null);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [week, setWeek] = useState(defaultWeek);
@@ -257,32 +253,37 @@ export function TimetableImport({
       ],
     }));
     reset();
-    onClose();
+    router.push("/escala");
   };
 
   const placeShort = (id: string) =>
     places.find((p) => p.id === id)?.short ?? "Sem local";
 
   return (
-    <Sheet
-      onOpenChange={(o) => {
-        if (!o) {
-          onClose();
-        }
-      }}
-      open={open}
-    >
-      <SheetContent className="overflow-y-auto" side="right">
-        <SheetHeader>
-          <SheetTitle>Importar escala</SheetTitle>
-          <SheetDescription>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <div>
+        <Button
+          onClick={() => router.push("/escala")}
+          size="sm"
+          variant="ghost"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar à escala
+        </Button>
+      </div>
+
+      <Card className="gap-3 py-4">
+        <CardHeader className="px-4">
+          <CardTitle className="text-base">
+            Importar escala da empresa
+          </CardTitle>
+          <CardDescription>
             Foto (até escrita à mão), PDF, Excel ou CSV. Escolha a empresa de
             cada arquivo; a IA encontra o seu nome ({aliases.join(", ")}) e os
             seus horários.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="flex flex-col gap-4 px-4 pb-6">
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 px-4">
           <input
             accept="image/*,application/pdf,.pdf,.xlsx,.xlsm,.csv,.tsv,.txt"
             className="hidden"
@@ -376,111 +377,119 @@ export function TimetableImport({
               {error}
             </p>
           ) : null}
+        </CardContent>
+      </Card>
 
-          {results.length ? (
-            <div className="flex flex-col gap-3">
-              {results.map((r) => (
-                <div className="flex flex-col gap-1 text-sm" key={r.pick}>
-                  <p className="flex items-center gap-2">
-                    <PlaceMark id={r.place} places={places} />
-                    <span className="font-medium">{placeShort(r.place)}</span>
-                    <span className="text-muted-foreground">
-                      {r.name
-                        ? `· encontrei "${r.name}"`
-                        : "· seu nome não está nesta escala"}
-                    </span>
-                  </p>
-                  {r.notes ? (
-                    <p className="text-muted-foreground text-xs">{r.notes}</p>
-                  ) : null}
-                </div>
-              ))}
-
-              {drafts.map((d) => (
-                <div
-                  className="flex flex-col gap-2 rounded-lg border p-3"
-                  key={d.id}
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <Switch
-                      aria-label={`Importar ${dayLabel.format(fromKey(d.date))}`}
-                      checked={d.include}
-                      disabled={!d.start}
-                      onCheckedChange={(v) => edit(d.id, { include: v })}
-                    />
-                    <span className="font-medium first-letter:uppercase">
-                      {dayLabel.format(fromKey(d.date))}
-                    </span>
-                    <PlaceMark id={d.place} places={places} />
-                    <span className="ml-auto truncate text-muted-foreground text-xs">
-                      “{d.raw}”
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
-                      Entrada
-                      <Input
-                        aria-label="Entrada"
-                        className={fieldClass}
-                        onChange={(e) =>
-                          edit(d.id, {
-                            start: e.target.value,
-                            include: e.target.value !== "",
-                          })
-                        }
-                        type="time"
-                        value={d.start}
-                      />
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
-                      Saída
-                      <Input
-                        aria-label="Saída"
-                        className={fieldClass}
-                        onChange={(e) => edit(d.id, { end: e.target.value })}
-                        type="time"
-                        value={d.end}
-                      />
-                    </div>
-                  </div>
-                  {d.note ? (
-                    <p className="text-muted-foreground text-xs">{d.note}</p>
-                  ) : null}
-                </div>
-              ))}
-
-              {drafts.some((d) => !d.end) ? (
-                <div className="flex items-center gap-3 text-muted-foreground text-xs">
-                  <span className="flex-1">
-                    Dias sem saída na escala (ex.: “18-”) terminam às
+      {results.length ? (
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4">
+            <CardTitle className="text-base">Revisar turnos</CardTitle>
+            <CardDescription>
+              Confira e ajuste antes de adicionar à escala.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 px-4">
+            {results.map((r) => (
+              <div className="flex flex-col gap-1 text-sm" key={r.pick}>
+                <p className="flex items-center gap-2">
+                  <PlaceMark id={r.place} places={places} />
+                  <span className="font-medium">{placeShort(r.place)}</span>
+                  <span className="text-muted-foreground">
+                    {r.name
+                      ? `· encontrei "${r.name}"`
+                      : "· seu nome não está nesta escala"}
                   </span>
-                  <Input
-                    aria-label="Saída padrão"
-                    className={`${fieldClass} w-28`}
-                    onChange={(e) => setClosing(e.target.value || "23:00")}
-                    type="time"
-                    value={closing}
-                  />
-                </div>
-              ) : null}
-
-              <div className="flex items-center gap-3 text-sm">
-                <Switch
-                  aria-label="Substituir os turnos já marcados nesses dias"
-                  checked={replace}
-                  onCheckedChange={setReplace}
-                />
-                Substituir os turnos já marcados nesses dias
+                </p>
+                {r.notes ? (
+                  <p className="text-muted-foreground text-xs">{r.notes}</p>
+                ) : null}
               </div>
+            ))}
 
-              <Button disabled={!chosen.length} onClick={save}>
-                Adicionar {chosen.length}{" "}
-                {chosen.length === 1 ? "turno" : "turnos"} à escala
-              </Button>
+            {drafts.map((d) => (
+              <div
+                className="flex flex-col gap-2 rounded-lg border p-3"
+                key={d.id}
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <Switch
+                    aria-label={`Importar ${dayLabel.format(fromKey(d.date))}`}
+                    checked={d.include}
+                    disabled={!d.start}
+                    onCheckedChange={(v) => edit(d.id, { include: v })}
+                  />
+                  <span className="font-medium first-letter:uppercase">
+                    {dayLabel.format(fromKey(d.date))}
+                  </span>
+                  <PlaceMark id={d.place} places={places} />
+                  <span className="ml-auto truncate text-muted-foreground text-xs">
+                    “{d.raw}”
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
+                    Entrada
+                    <Input
+                      aria-label="Entrada"
+                      className={fieldClass}
+                      onChange={(e) =>
+                        edit(d.id, {
+                          start: e.target.value,
+                          include: e.target.value !== "",
+                        })
+                      }
+                      type="time"
+                      value={d.start}
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
+                    Saída
+                    <Input
+                      aria-label="Saída"
+                      className={fieldClass}
+                      onChange={(e) => edit(d.id, { end: e.target.value })}
+                      type="time"
+                      value={d.end}
+                    />
+                  </div>
+                </div>
+                {d.note ? (
+                  <p className="text-muted-foreground text-xs">{d.note}</p>
+                ) : null}
+              </div>
+            ))}
+
+            {drafts.some((d) => !d.end) ? (
+              <div className="flex items-center gap-3 text-muted-foreground text-xs">
+                <span className="flex-1">
+                  Dias sem saída na escala (ex.: “18-”) terminam às
+                </span>
+                <Input
+                  aria-label="Saída padrão"
+                  className={`${fieldClass} w-32 shrink-0`}
+                  onChange={(e) => setClosing(e.target.value || "23:00")}
+                  type="time"
+                  value={closing}
+                />
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-3 text-sm">
+              <Switch
+                aria-label="Substituir os turnos já marcados nesses dias"
+                checked={replace}
+                onCheckedChange={setReplace}
+              />
+              Substituir os turnos já marcados nesses dias
             </div>
-          ) : null}
-        </div>
-      </SheetContent>
-    </Sheet>
+
+            <Button disabled={!chosen.length} onClick={save}>
+              Adicionar {chosen.length}{" "}
+              {chosen.length === 1 ? "turno" : "turnos"} à escala
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   );
 }

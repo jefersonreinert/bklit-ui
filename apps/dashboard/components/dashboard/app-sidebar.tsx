@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { documentStats, RESTAURANT_NAME } from "@/lib/data";
 import { Icon } from "@/lib/icons";
-import { navItems, normalizePath } from "@/lib/nav";
+import { navItemFor, navItems, normalizePath } from "@/lib/nav";
 import { useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
@@ -36,7 +36,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         Menu
       </span>
       {navItems.map((item) => {
-        const active = pathname === item.href;
+        const active = navItemFor(pathname)?.href === item.href;
         return (
           <Link
             aria-current={active ? "page" : undefined}
