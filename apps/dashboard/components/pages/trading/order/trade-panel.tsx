@@ -80,7 +80,9 @@ function SetupHelp({ reason }: { reason: "no-ea" | "disabled" | "demo" }) {
         <>
           O EA ainda não sincronizou. Instale o TradingJournal Complete{" "}
           <b>v4.10</b> (Diário → Conector → Baixar) e anexe-o a um gráfico no
-          MT5.
+          MT5. Se já está a correr, confira o <b>InpUrl</b> (URL do webhook com
+          o token) e se o URL do Convex está liberado no WebRequest; os erros
+          aparecem na aba Experts do MT5.
         </>
       ) : null}
       {reason === "disabled" ? (
@@ -271,19 +273,21 @@ class TradeErrorBoundary extends Component<
 
 export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
   return (
-    <TelegramProvider
-      fallback={
-        <div className="p-4">
-          <Notice>
-            O painel de operações usa o banco central (Convex), que não está
-            configurado nesta instalação.
-          </Notice>
-        </div>
-      }
-    >
-      <TradeErrorBoundary>
-        <TradeContent chartSymbol={chartSymbol} />
-      </TradeErrorBoundary>
-    </TelegramProvider>
+    <div className="operar journal-palette">
+      <TelegramProvider
+        fallback={
+          <div className="p-4">
+            <Notice>
+              O painel de operações usa o banco central (Convex), que não está
+              configurado nesta instalação.
+            </Notice>
+          </div>
+        }
+      >
+        <TradeErrorBoundary>
+          <TradeContent chartSymbol={chartSymbol} />
+        </TradeErrorBoundary>
+      </TelegramProvider>
+    </div>
   );
 }
