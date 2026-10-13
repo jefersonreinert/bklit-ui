@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -140,9 +139,6 @@ async function spark(symbols: string[]) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
-    return NextResponse.json({ error: "locked" }, { status: 401 });
-  }
   const symbols = (request.nextUrl.searchParams.get("symbols") ?? "")
     .split(",")
     .filter((s) => SYMBOL.test(s))

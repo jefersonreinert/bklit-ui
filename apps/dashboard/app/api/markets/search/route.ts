@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +14,6 @@ interface YahooQuote {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
-    return NextResponse.json({ error: "locked" }, { status: 401 });
-  }
   const q = (request.nextUrl.searchParams.get("q") ?? "").trim().slice(0, 40);
   if (!q) {
     return NextResponse.json({ results: [] });
