@@ -271,19 +271,21 @@ class TradeErrorBoundary extends Component<
 
 export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
   return (
-    <TelegramProvider
-      fallback={
-        <div className="p-4">
-          <Notice>
-            O painel de operações usa o banco central (Convex), que não está
-            configurado nesta instalação.
-          </Notice>
-        </div>
-      }
-    >
-      <TradeErrorBoundary>
-        <TradeContent chartSymbol={chartSymbol} />
-      </TradeErrorBoundary>
-    </TelegramProvider>
+    <div className="operar journal-palette">
+      <TelegramProvider
+        fallback={
+          <div className="p-4">
+            <Notice>
+              O painel de operações usa o banco central (Convex), que não está
+              configurado nesta instalação.
+            </Notice>
+          </div>
+        }
+      >
+        <TradeErrorBoundary>
+          <TradeContent chartSymbol={chartSymbol} />
+        </TradeErrorBoundary>
+      </TelegramProvider>
+    </div>
   );
 }
