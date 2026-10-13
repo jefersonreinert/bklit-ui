@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Icon } from "@/lib/icons";
 import type { ExtractedTimetable } from "@/lib/server/extract";
 import { callExtract, prepareFile, type UploadFile } from "@/lib/upload";
@@ -27,7 +28,7 @@ import {
   weekStart,
   workStore,
 } from "@/lib/work-schedule";
-import { PlaceSelect } from "./place-ui";
+import { PlaceMark, PlaceSelect } from "./place-ui";
 
 const dayLabel = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
@@ -75,8 +76,69 @@ interface Draft {
   note: string;
 }
 
+/** A chosen file and the company its rota belongs to. */
+interface Pick {
+  id: string;
+  file: File;
+  place: string;
+  /** The user picked the company: don't replace it with the AI's guess. */
+  chosen: boolean;
+}
+
+interface FileResult {
+  pick: string;
+  place: string;
+  name: string;
+  notes: string;
+}
+
+/** Reads one file with the AI; its days go to the file's company. */
+async function readPick(
+  pick: Pick,
+  opts: { aliases: string[]; week: string; places: WorkPlace[] }
+): Promise<{ result: FileResult; days: Draft[] } | null> {
+  const uploads = await toUpload(pick.file);
+  if (!uploads.length) {
+    return null;
+  }
+  const out = await callExtract<ExtractedTimetable>(
+    "timetable",
+    uploads,
+    JSON.stringify({
+      aliases: opts.aliases,
+      weekStart: opts.week,
+      places: opts.places.map((p) => `${p.name} (${p.area})`),
+    })
+  );
+  const guessed = pick.chosen ? null : matchPlace(opts.places, out.placeGuess);
+  const place = guessed?.id ?? pick.place;
+  const days = out.shifts
+    .filter((x) => isDateKey(x.date))
+    .map((x) => {
+      const start = cleanTime(x.start);
+      return {
+        id: `${pick.id}:${newId()}`,
+        include: start !== "",
+        date: x.date,
+        start,
+        end: cleanTime(x.end),
+        place,
+        raw: x.raw,
+        note: x.note,
+      };
+    });
+  return {
+    result: { pick: pick.id, place, name: out.nameAsWritten, notes: out.notes },
+    days,
+  };
+}
+
 /** Next week's Monday on Sundays (the rota arrives then), else this week's. */
 const defaultWeek = () => dateKey(weekStart(addDays(new Date(), 1)));
+
+/* Native date/time inputs on iOS have a wide intrinsic size: let them shrink. */
+const fieldClass =
+  "min-w-0 w-full appearance-none [&::-webkit-date-and-time-value]:text-left";
 
 export function TimetableImport({
   open,
@@ -90,63 +152,81 @@ export function TimetableImport({
   aliases: string[];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<File[]>([]);
+  const [picks, setPicks] = useState<Pick[]>([]);
   const [week, setWeek] = useState(defaultWeek);
-  const [place, setPlace] = useState(places[0]?.id ?? "p1");
   const [closing, setClosing] = useState("23:00");
   const [replace, setReplace] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ExtractedTimetable | null>(null);
+  const [results, setResults] = useState<FileResult[]>([]);
   const [drafts, setDrafts] = useState<Draft[]>([]);
 
   const reset = () => {
-    setFiles([]);
-    setResult(null);
+    setPicks([]);
+    setResults([]);
     setDrafts([]);
     setError(null);
+  };
+
+  const addFiles = (list: File[]) => {
+    const fallback = places[0]?.id ?? "p1";
+    setPicks((prev) => [
+      ...prev,
+      ...list.map((file) => ({
+        id: newId(),
+        file,
+        // Guess from the file name ("vinomad.jpg"), else the first company
+        place: matchPlace(places, file.name)?.id ?? fallback,
+        chosen: false,
+      })),
+    ]);
+    setResults([]);
+    setDrafts([]);
+  };
+
+  /** Changing a file's company also moves its days already read. */
+  const setPickPlace = (id: string, place: string) => {
+    setPicks((list) =>
+      list.map((p) => (p.id === id ? { ...p, place, chosen: true } : p))
+    );
+    setResults((list) =>
+      list.map((r) => (r.pick === id ? { ...r, place } : r))
+    );
+    setDrafts((list) =>
+      list.map((d) => (d.id.startsWith(`${id}:`) ? { ...d, place } : d))
+    );
   };
 
   const read = async () => {
     setBusy(true);
     setError(null);
     try {
-      const uploads = (await Promise.all(files.map(toUpload))).flat();
-      if (!uploads.length) {
-        throw new Error("Nenhum conteúdo encontrado no arquivo.");
+      const found: FileResult[] = [];
+      const days: Draft[] = [];
+      // One request per file: each file belongs to its own company
+      for (const pick of picks) {
+        const out = await readPick(pick, { aliases, week, places });
+        if (!out) {
+          continue;
+        }
+        if (out.result.place !== pick.place) {
+          setPicks((list) =>
+            list.map((p) =>
+              p.id === pick.id ? { ...p, place: out.result.place } : p
+            )
+          );
+        }
+        found.push(out.result);
+        days.push(...out.days);
       }
-      const out = await callExtract<ExtractedTimetable>(
-        "timetable",
-        uploads,
-        JSON.stringify({
-          aliases,
-          weekStart: week,
-          places: places.map((p) => `${p.name} (${p.area})`),
-        })
-      );
-      const guessed = matchPlace(places, out.placeGuess);
-      const placeId = guessed?.id ?? place;
-      if (guessed) {
-        setPlace(guessed.id);
+      if (!found.length) {
+        throw new Error("Nenhum conteúdo encontrado nos arquivos.");
       }
-      setResult(out);
-      setDrafts(
-        out.shifts
-          .filter((s) => isDateKey(s.date))
-          .map((s) => {
-            const start = cleanTime(s.start);
-            return {
-              id: newId(),
-              include: start !== "",
-              date: s.date,
-              start,
-              end: cleanTime(s.end),
-              place: placeId,
-              raw: s.raw,
-              note: s.note,
-            };
-          })
+      days.sort(
+        (x, y) => x.date.localeCompare(y.date) || x.start.localeCompare(y.start)
       );
+      setResults(found);
+      setDrafts(days);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na leitura.");
     } finally {
@@ -161,11 +241,11 @@ export function TimetableImport({
 
   const chosen = drafts.filter((d) => d.include && d.start);
   const save = () => {
-    const dates = new Set(chosen.map((d) => d.date));
+    const days = new Set(chosen.map((d) => d.date));
     workStore.update((s) => ({
       ...s,
       shifts: [
-        ...s.shifts.filter((x) => !(replace && dates.has(x.date))),
+        ...s.shifts.filter((x) => !(replace && days.has(x.date))),
         ...chosen.map((d) => ({
           id: newId(),
           date: d.date,
@@ -180,6 +260,9 @@ export function TimetableImport({
     onClose();
   };
 
+  const placeShort = (id: string) =>
+    places.find((p) => p.id === id)?.short ?? "Sem local";
+
   return (
     <Sheet
       onOpenChange={(o) => {
@@ -193,8 +276,9 @@ export function TimetableImport({
         <SheetHeader>
           <SheetTitle>Importar escala</SheetTitle>
           <SheetDescription>
-            Foto (até escrita à mão), PDF, Excel ou CSV. A IA encontra o seu
-            nome ({aliases.join(", ")}) e os seus horários.
+            Foto (até escrita à mão), PDF, Excel ou CSV. Escolha a empresa de
+            cada arquivo; a IA encontra o seu nome ({aliases.join(", ")}) e os
+            seus horários.
           </SheetDescription>
         </SheetHeader>
 
@@ -204,59 +288,82 @@ export function TimetableImport({
             className="hidden"
             multiple
             onChange={(e) => {
-              setFiles(Array.from(e.target.files ?? []));
-              setResult(null);
-              setDrafts([]);
+              addFiles(Array.from(e.target.files ?? []));
               e.target.value = "";
             }}
             ref={inputRef}
             type="file"
           />
+
+          {picks.length ? (
+            <ul className="flex flex-col gap-2">
+              {picks.map((p) => (
+                <li
+                  className="flex flex-col gap-2 rounded-lg border p-3"
+                  key={p.id}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      className="size-4 shrink-0 text-muted-foreground"
+                      name="IconFolder1"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {p.file.name}
+                    </span>
+                    <Button
+                      aria-label={`Remover ${p.file.name}`}
+                      onClick={() => {
+                        setPicks((list) => list.filter((x) => x.id !== p.id));
+                        setResults((list) =>
+                          list.filter((r) => r.pick !== p.id)
+                        );
+                        setDrafts((list) =>
+                          list.filter((d) => !d.id.startsWith(`${p.id}:`))
+                        );
+                      }}
+                      size="icon-sm"
+                      variant="ghost"
+                    >
+                      <Icon className="size-4" name="IconTrashCan" />
+                    </Button>
+                  </div>
+                  <PlaceSelect
+                    label={`Empresa de ${p.file.name}`}
+                    onChange={(id) => setPickPlace(p.id, id)}
+                    places={places}
+                    value={p.place}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           <Button
             className="h-11"
             onClick={() => inputRef.current?.click()}
             variant="outline"
           >
             <Icon className="size-4" name="IconPlusSmall" />
-            {files.length ? "Trocar arquivo" : "Escolher foto ou arquivo"}
+            {picks.length
+              ? "Adicionar outro arquivo"
+              : "Escolher foto ou arquivo"}
           </Button>
-          {files.length ? (
-            <ul className="text-muted-foreground text-xs">
-              {files.map((f) => (
-                <li className="truncate" key={f.name}>
-                  {f.name}
-                </li>
-              ))}
-            </ul>
-          ) : null}
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-              Semana (segunda)
-              <Input
-                aria-label="Semana (segunda-feira)"
-                onChange={(e) =>
-                  e.target.value &&
-                  setWeek(dateKey(weekStart(fromKey(e.target.value))))
-                }
-                type="date"
-                value={week}
-              />
-            </div>
-            <div className="flex flex-col gap-1 text-muted-foreground text-xs">
-              Local
-              <PlaceSelect
-                onChange={(id) => {
-                  setPlace(id);
-                  setDrafts((list) => list.map((d) => ({ ...d, place: id })));
-                }}
-                places={places}
-                value={place}
-              />
-            </div>
+          <div className="flex flex-col gap-1 text-muted-foreground text-xs">
+            Semana (segunda-feira), se a escala não tiver datas
+            <Input
+              aria-label="Semana (segunda-feira)"
+              className={fieldClass}
+              onChange={(e) =>
+                e.target.value &&
+                setWeek(dateKey(weekStart(fromKey(e.target.value))))
+              }
+              type="date"
+              value={week}
+            />
           </div>
 
-          <Button disabled={!files.length || busy} onClick={read}>
+          <Button disabled={!picks.length || busy} onClick={read}>
             {busy ? (
               <Spinner />
             ) : (
@@ -270,64 +377,71 @@ export function TimetableImport({
             </p>
           ) : null}
 
-          {result ? (
+          {results.length ? (
             <div className="flex flex-col gap-3">
-              <p className="text-sm">
-                {result.nameAsWritten
-                  ? `Encontrei "${result.nameAsWritten}"`
-                  : "Não encontrei o seu nome nesta escala."}
-                {result.placeGuess ? ` · ${result.placeGuess}` : ""}
-              </p>
-              {result.notes ? (
-                <p className="text-muted-foreground text-xs">{result.notes}</p>
-              ) : null}
+              {results.map((r) => (
+                <div className="flex flex-col gap-1 text-sm" key={r.pick}>
+                  <p className="flex items-center gap-2">
+                    <PlaceMark id={r.place} places={places} />
+                    <span className="font-medium">{placeShort(r.place)}</span>
+                    <span className="text-muted-foreground">
+                      {r.name
+                        ? `· encontrei "${r.name}"`
+                        : "· seu nome não está nesta escala"}
+                    </span>
+                  </p>
+                  {r.notes ? (
+                    <p className="text-muted-foreground text-xs">{r.notes}</p>
+                  ) : null}
+                </div>
+              ))}
 
               {drafts.map((d) => (
                 <div
                   className="flex flex-col gap-2 rounded-lg border p-3"
                   key={d.id}
                 >
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
+                  <div className="flex items-center gap-2 text-sm">
+                    <Switch
+                      aria-label={`Importar ${dayLabel.format(fromKey(d.date))}`}
                       checked={d.include}
                       disabled={!d.start}
-                      onChange={(e) =>
-                        edit(d.id, { include: e.target.checked })
-                      }
-                      type="checkbox"
+                      onCheckedChange={(v) => edit(d.id, { include: v })}
                     />
                     <span className="font-medium first-letter:uppercase">
                       {dayLabel.format(fromKey(d.date))}
                     </span>
-                    <span className="ml-auto text-muted-foreground text-xs">
+                    <PlaceMark id={d.place} places={places} />
+                    <span className="ml-auto truncate text-muted-foreground text-xs">
                       “{d.raw}”
                     </span>
-                  </label>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      aria-label="Início"
-                      onChange={(e) =>
-                        edit(d.id, {
-                          start: e.target.value,
-                          include: e.target.value !== "",
-                        })
-                      }
-                      type="time"
-                      value={d.start}
-                    />
-                    <Input
-                      aria-label="Fim"
-                      onChange={(e) => edit(d.id, { end: e.target.value })}
-                      placeholder={closing}
-                      type="time"
-                      value={d.end}
-                    />
-                    <PlaceSelect
-                      className="col-span-2"
-                      onChange={(id) => edit(d.id, { place: id })}
-                      places={places}
-                      value={d.place}
-                    />
+                    <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
+                      Entrada
+                      <Input
+                        aria-label="Entrada"
+                        className={fieldClass}
+                        onChange={(e) =>
+                          edit(d.id, {
+                            start: e.target.value,
+                            include: e.target.value !== "",
+                          })
+                        }
+                        type="time"
+                        value={d.start}
+                      />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1 text-muted-foreground text-xs">
+                      Saída
+                      <Input
+                        aria-label="Saída"
+                        className={fieldClass}
+                        onChange={(e) => edit(d.id, { end: e.target.value })}
+                        type="time"
+                        value={d.end}
+                      />
+                    </div>
                   </div>
                   {d.note ? (
                     <p className="text-muted-foreground text-xs">{d.note}</p>
@@ -336,13 +450,13 @@ export function TimetableImport({
               ))}
 
               {drafts.some((d) => !d.end) ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <div className="flex items-center gap-3 text-muted-foreground text-xs">
                   <span className="flex-1">
-                    Sem horário de saída na escala (ex.: “17-”): usar
+                    Dias sem saída na escala (ex.: “18-”) terminam às
                   </span>
                   <Input
                     aria-label="Saída padrão"
-                    className="w-28"
+                    className={`${fieldClass} w-28`}
                     onChange={(e) => setClosing(e.target.value || "23:00")}
                     type="time"
                     value={closing}
@@ -350,14 +464,14 @@ export function TimetableImport({
                 </div>
               ) : null}
 
-              <label className="flex items-center gap-2 text-sm">
-                <input
+              <div className="flex items-center gap-3 text-sm">
+                <Switch
+                  aria-label="Substituir os turnos já marcados nesses dias"
                   checked={replace}
-                  onChange={(e) => setReplace(e.target.checked)}
-                  type="checkbox"
+                  onCheckedChange={setReplace}
                 />
                 Substituir os turnos já marcados nesses dias
-              </label>
+              </div>
 
               <Button disabled={!chosen.length} onClick={save}>
                 Adicionar {chosen.length}{" "}
