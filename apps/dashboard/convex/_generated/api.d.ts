@@ -11,19 +11,20 @@
 import type * as access from "../access.js";
 import type * as crons from "../crons.js";
 import type * as designs from "../designs.js";
+import type * as eatrade from "../eatrade.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as ict from "../ict.js";
 import type * as journal from "../journal.js";
 import type * as lib from "../lib.js";
 import type * as metatrader from "../metatrader.js";
+import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
 import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
 import type * as telegram from "../telegram.js";
 import type * as tgmedia from "../tgmedia.js";
-import type * as mtproto from "../mtproto.js";
 import type * as vouchers from "../vouchers.js";
 
 import type {
@@ -36,19 +37,20 @@ declare const fullApi: ApiFromModules<{
   access: typeof access;
   crons: typeof crons;
   designs: typeof designs;
+  eatrade: typeof eatrade;
   files: typeof files;
   http: typeof http;
   ict: typeof ict;
   journal: typeof journal;
   lib: typeof lib;
   metatrader: typeof metatrader;
+  mtproto: typeof mtproto;
   notes: typeof notes;
   pos: typeof pos;
   staff: typeof staff;
   stores: typeof stores;
   telegram: typeof telegram;
   tgmedia: typeof tgmedia;
-  mtproto: typeof mtproto;
   vouchers: typeof vouchers;
 }>;
 

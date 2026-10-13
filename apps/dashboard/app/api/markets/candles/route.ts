@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -77,9 +76,6 @@ function toCandles(json: YahooChart) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
-    return NextResponse.json({ error: "locked" }, { status: 401 });
-  }
   const symbol = request.nextUrl.searchParams.get("symbol") ?? "";
   const tf = request.nextUrl.searchParams.get("tf") ?? "1h";
   const live = request.nextUrl.searchParams.get("live") === "1";

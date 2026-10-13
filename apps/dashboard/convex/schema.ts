@@ -44,6 +44,154 @@ export const accountStatsFields = {
 
 const historyFields = numbers(HISTORY_KEYS);
 
+const tradeSide = v.union(v.literal("buy"), v.literal("sell"));
+
+/** Terminal state sent every sync by the EA (v4.10). */
+export const eaSessionFields = {
+  account: v.string(),
+  server: v.string(),
+  updatedAt: v.number(),
+  /** Last heartbeat of the panel's trading screen (fast polling). */
+  panelSeenAt: v.optional(v.number()),
+  /** Symbols the panel wants quoted. */
+  watch: v.array(v.string()),
+  /** Market Watch symbols of the terminal. */
+  symbols: v.array(v.string()),
+  info: v.object({
+    balance: v.number(),
+    equity: v.number(),
+    margin: v.number(),
+    freeMargin: v.number(),
+    leverage: v.number(),
+    currency: v.string(),
+    tradeAllowed: v.boolean(),
+    demo: v.boolean(),
+  }),
+  limits: v.object({
+    allowTrading: v.boolean(),
+    maxLot: v.number(),
+    maxRiskPct: v.number(),
+    demoOnly: v.boolean(),
+    requireSl: v.boolean(),
+  }),
+  positions: v.array(
+    v.object({
+      ticket: v.string(),
+      symbol: v.string(),
+      side: tradeSide,
+      volume: v.number(),
+      priceOpen: v.number(),
+      priceCurrent: v.number(),
+      sl: v.number(),
+      tp: v.number(),
+      profit: v.number(),
+      swap: v.number(),
+      time: v.number(),
+      magic: v.number(),
+      comment: v.string(),
+    })
+  ),
+  orders: v.array(
+    v.object({
+      ticket: v.string(),
+      symbol: v.string(),
+      side: tradeSide,
+      type: v.union(v.literal("limit"), v.literal("stop")),
+      volume: v.number(),
+      price: v.number(),
+      sl: v.number(),
+      tp: v.number(),
+      time: v.number(),
+    })
+  ),
+  quotes: v.array(
+    v.object({
+      symbol: v.string(),
+      bid: v.number(),
+      ask: v.number(),
+      spread: v.number(),
+      tickValue: v.number(),
+      marginBuy: v.number(),
+      marginSell: v.number(),
+      time: v.number(),
+    })
+  ),
+  plans: v.array(
+    v.object({
+      ticket: v.string(),
+      breakeven: v.boolean(),
+      levels: v.array(
+        v.object({ price: v.number(), volume: v.number(), done: v.boolean() })
+      ),
+    })
+  ),
+};
+
+export const symbolSpecFields = {
+  account: v.string(),
+  symbol: v.string(),
+  digits: v.number(),
+  point: v.number(),
+  tickSize: v.number(),
+  tickValue: v.number(),
+  contractSize: v.number(),
+  volumeMin: v.number(),
+  volumeMax: v.number(),
+  volumeStep: v.number(),
+  stopsLevel: v.number(),
+  updatedAt: v.number(),
+};
+
+export const commandStatus = v.union(
+  v.literal("pending"),
+  v.literal("sent"),
+  v.literal("done"),
+  v.literal("error"),
+  v.literal("expired"),
+  v.literal("cancelled")
+);
+
+export const commandFields = {
+  account: v.string(),
+  kind: v.union(
+    v.literal("open"),
+    v.literal("close"),
+    v.literal("modify"),
+    v.literal("cancel")
+  ),
+  symbol: v.optional(v.string()),
+  side: v.optional(tradeSide),
+  orderType: v.optional(
+    v.union(v.literal("market"), v.literal("limit"), v.literal("stop"))
+  ),
+  volume: v.optional(v.number()),
+  price: v.optional(v.number()),
+  sl: v.optional(v.number()),
+  tp: v.optional(v.number()),
+  ticket: v.optional(v.string()),
+  partials: v.optional(
+    v.array(v.object({ price: v.number(), volume: v.number() }))
+  ),
+  breakeven: v.optional(v.boolean()),
+  comment: v.optional(v.string()),
+  /** Risk shown in the calculator when the order was sent (audit). */
+  riskPct: v.optional(v.number()),
+  status: commandStatus,
+  createdAt: v.number(),
+  sentAt: v.optional(v.number()),
+  doneAt: v.optional(v.number()),
+  result: v.optional(
+    v.object({
+      ok: v.boolean(),
+      retcode: v.number(),
+      message: v.string(),
+      ticket: v.string(),
+      price: v.number(),
+      volume: v.number(),
+    })
+  ),
+};
+
 export const noteFields = Object.fromEntries(
   NOTE_FIELDS.map((f) => [f, v.optional(v.string())])
 ) as Record<
@@ -661,6 +809,20 @@ export default defineSchema({
   })
     .index("by_ticket", ["account", "ticket"])
     .index("by_account_time", ["account", "time"]),
+
+  /** Live terminal state of each account (EA v4.10 sync). */
+  eaSessions: defineTable(eaSessionFields).index("by_account", ["account"]),
+
+  /** Symbol specifications sent by the EA (lot calculator). */
+  eaSymbols: defineTable(symbolSpecFields).index("by_account_symbol", [
+    "account",
+    "symbol",
+  ]),
+
+  /** Orders and position changes created in the panel, run by the EA. */
+  eaCommands: defineTable(commandFields)
+    .index("by_account_status", ["account", "status"])
+    .index("by_account_created", ["account", "createdAt"]),
 
   /** Latest statistics of each account (TradingJournal Complete EA). */
   jrnAccountStats: defineTable(accountStatsFields).index("by_account", [

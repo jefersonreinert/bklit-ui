@@ -50,6 +50,7 @@ import { DrawingSettingsDialog } from "./mt5/tv/drawing-settings-dialog";
 import { GoToDateDialog } from "./mt5/tv/go-to-date-dialog";
 import { ReplayControls } from "./mt5/tv/replay-controls";
 import { useReplay } from "./mt5/tv/use-replay";
+import { TradePanel } from "./order/trade-panel";
 import { SymbolIcon } from "./symbol-icon";
 import { SymbolOverview } from "./symbol-overview";
 import { ToolRail, toolLabel } from "./trading-tools";
@@ -59,8 +60,10 @@ type Panel = "watchlist" | "search" | "settings" | "goto" | null;
 type View = MobileView;
 
 const VIEW_KEY = "cb:trading:view";
+/** Full-width views that replace the chart. */
+const SIDE_VIEWS = new Set<string>(["explore", "journal", "trade"]);
 
-const VIEWS = new Set<string>(["list", "chart", "explore", "journal"]);
+const VIEWS = new Set<string>(["list", "chart", "explore", "trade", "journal"]);
 
 function initialView(): View {
   try {
@@ -309,6 +312,34 @@ function JournalView({
   );
 }
 
+/** Trading (all sizes): lot calculator, orders and positions via the EA. */
+function TradeView({
+  onView,
+  symbol,
+}: {
+  onView: (v: View) => void;
+  symbol: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden border-b px-3 py-2 md:block">
+        <button
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => onView("chart")}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar ao gráfico
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <TradePanel chartSymbol={symbol} />
+      </div>
+      <TabBar onView={onView} view="trade" />
+    </div>
+  );
+}
+
 /** Explore (all sizes): market cards, shortcuts and top stories. */
 function ExplorePanel({
   onView,
@@ -350,7 +381,7 @@ export function TradingPage() {
   const [panel, setPanel] = useState<Panel>(null);
   const { view, setView } = useMobileView();
   const [journalTab, setJournalTab] = useState<JournalTab>("summary");
-  const sidePanel = view === "explore" || view === "journal";
+  const sidePanel = SIDE_VIEWS.has(view);
   const [overview, setOverview] = useState<string | null>(null);
   const [rail, setRail] = useState(false);
   const [drawSettings, setDrawSettings] = useState(false);
@@ -423,6 +454,7 @@ export function TradingPage() {
       {view === "journal" ? (
         <JournalView onView={setView} tab={journalTab} />
       ) : null}
+      {view === "trade" ? <TradeView onView={setView} symbol={symbol} /> : null}
       {view === "explore" ? (
         <ExplorePanel
           onPick={setOverview}
@@ -453,6 +485,7 @@ export function TradingPage() {
             onOverview={() => setOverview(symbol)}
             onPanel={setPanel}
             onReplay={toggleReplay}
+            onTrade={() => setView("trade")}
             price={price}
             replayActive={replay.active}
             symbol={symbol}
@@ -580,10 +613,12 @@ function TopBar({
   onCycle,
   onOverview,
   onExplore,
+  onTrade,
   onJournal,
 }: {
   onJournal: (tab: JournalTab) => void;
   onExplore: () => void;
+  onTrade: () => void;
   onCycle: (dir: -1 | 1) => void;
   onOverview: () => void;
   label: string;
@@ -660,6 +695,11 @@ function TopBar({
             icon="IconCompassRound"
             label="Explorar mercados"
             onClick={onExplore}
+          />
+          <BarButton
+            icon="IconCalculator"
+            label="Operar: calculadora de lote e ordens no MT5"
+            onClick={onTrade}
           />
           <BarButton
             icon="IconNotebook"

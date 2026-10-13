@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { isRange, parseYahooChart, YAHOO_RANGE } from "@/lib/markets/history";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +15,6 @@ const HEADERS = {
 const cache = new Map<string, { at: number; body: unknown }>();
 
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
-    return NextResponse.json({ error: "locked" }, { status: 401 });
-  }
   const symbol = request.nextUrl.searchParams.get("symbol") ?? "";
   const range = request.nextUrl.searchParams.get("range") ?? "1D";
   if (!(SYMBOL.test(symbol) && isRange(range))) {

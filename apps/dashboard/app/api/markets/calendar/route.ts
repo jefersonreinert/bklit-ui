@@ -4,7 +4,6 @@ import {
   forexFactoryCalendar,
   investingCalendar,
 } from "@/lib/server/markets";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +37,6 @@ async function load(from: string, to: string) {
 
 /** Economic calendar for a date range (YYYY-MM-DD). */
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
-    return NextResponse.json({ error: "locked" }, { status: 401 });
-  }
   const from = request.nextUrl.searchParams.get("from") ?? "";
   const to = request.nextUrl.searchParams.get("to") ?? from;
   if (!(DAY.test(from) && DAY.test(to))) {
