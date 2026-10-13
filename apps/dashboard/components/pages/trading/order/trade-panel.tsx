@@ -4,9 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { mt5Symbol } from "@/lib/journal/lot";
-import { useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
-import { UnlockCard } from "../../browser/unlock-card";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
 import { Panel, Stat } from "../journal/journal-kit";
 import { money, tone } from "../journal/journal-summary";
@@ -273,15 +271,6 @@ class TradeErrorBoundary extends Component<
   }
 }
 
-/** Without the access code Convex hides the EA session; ask for it here. */
-function TradeGate({ chartSymbol }: { chartSymbol: string }) {
-  const status = useSyncStatus();
-  if (status === "locked") {
-    return <UnlockCard onDone={() => undefined} />;
-  }
-  return <TradeContent chartSymbol={chartSymbol} />;
-}
-
 export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
   return (
     <div className="operar journal-palette">
@@ -296,7 +285,7 @@ export function TradePanel({ chartSymbol }: { chartSymbol: string }) {
         }
       >
         <TradeErrorBoundary>
-          <TradeGate chartSymbol={chartSymbol} />
+          <TradeContent chartSymbol={chartSymbol} />
         </TradeErrorBoundary>
       </TelegramProvider>
     </div>

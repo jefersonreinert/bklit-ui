@@ -264,10 +264,10 @@ describe("trading from the panel (EA v4.10)", () => {
     expect(kinds.sort()).toEqual(["cancel", "close", "modify"]);
   });
 
-  it("requires the panel for every trading function", async () => {
+  it("works without the panel's access code", async () => {
     const { t, sync } = await setup();
     await sync();
-    await expect(t.mutation(api.eatrade.sendOrder, order)).rejects.toThrow();
-    expect(await t.query(api.eatrade.session, {})).toBeNull();
+    expect(await t.query(api.eatrade.session, {})).not.toBeNull();
+    await t.mutation(api.eatrade.sendOrder, order);
   });
 });

@@ -16,7 +16,6 @@ import {
   type QueryCtx,
   query,
 } from "./_generated/server";
-import { isPanel, requirePanel } from "./lib";
 import { eaSessionFields, symbolSpecFields } from "./schema";
 
 /**
@@ -106,13 +105,13 @@ async function queue(
 
 /* --------------------------------- panel --------------------------------- */
 
+// Open by choice of the owner: no access code for Gráficos → Operar. The EA
+// inputs (allow trading, demo only, max lot and risk, SL) still apply.
+
 /** Live state of an account (or the most recently synced one). */
 export const session = query({
   args: { account: v.optional(v.string()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const rows = a.account
       ? [await sessionOf(ctx, a.account)].filter((r) => r !== null)
       : await ctx.db.query("eaSessions").collect();
@@ -141,9 +140,6 @@ export const session = query({
 export const specs = query({
   args: { account: v.string(), symbols: v.array(v.string()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const out: SymbolSpec[] = [];
     for (const symbol of a.symbols.slice(0, MAX_WATCH)) {
       const s = await specOf(ctx, a.account, symbol);
@@ -170,9 +166,6 @@ export const specs = query({
 export const commands = query({
   args: { account: v.string() },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const rows = await ctx.db
       .query("eaCommands")
       .withIndex("by_account_created", (q) => q.eq("account", a.account))
@@ -199,7 +192,6 @@ export const commands = query({
 export const watch = mutation({
   args: { account: v.string(), symbols: v.array(v.string()) },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await sessionOf(ctx, a.account);
     if (!s) {
       return;
@@ -286,7 +278,6 @@ export const sendOrder = mutation({
     riskPct: v.optional(v.number()),
   },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await tradableSession(ctx, a.account);
     const partials = (a.partials ?? []).filter((p) => p.volume > 0);
     const problem =
@@ -319,7 +310,6 @@ export const closePosition = mutation({
     volume: v.optional(v.number()),
   },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await tradableSession(ctx, a.account);
     const pos = s.positions.find((p) => p.ticket === a.ticket);
     if (!pos) {
@@ -343,7 +333,6 @@ export const modify = mutation({
     tp: v.number(),
   },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await tradableSession(ctx, a.account);
     const target =
       s.positions.find((p) => p.ticket === a.ticket) ??
@@ -368,7 +357,6 @@ export const modify = mutation({
 export const cancelOrder = mutation({
   args: { account: v.string(), ticket: v.string() },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await tradableSession(ctx, a.account);
     const order = s.orders.find((o) => o.ticket === a.ticket);
     if (!order) {
@@ -386,7 +374,6 @@ export const cancelOrder = mutation({
 export const cancelCommand = mutation({
   args: { id: v.id("eaCommands") },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const c = await ctx.db.get(a.id);
     if (c?.status === "pending") {
       await ctx.db.patch(a.id, { status: "cancelled", doneAt: Date.now() });
