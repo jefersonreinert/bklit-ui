@@ -91,3 +91,16 @@ export const toMinutes = (hhmm: string) => {
 /** Index of the next departure at `minutes`, or -1 after the last one. */
 export const nextTrip = (list: FerryTrip[], minutes: number) =>
   list.findIndex((t) => toMinutes(t.depart) >= minutes);
+
+/** "agora", "em 12 min", "em 1 h 5 min". */
+export function waitLabel(minutes: number) {
+  if (minutes < 1) {
+    return "agora";
+  }
+  if (minutes < 60) {
+    return `em ${minutes} min`;
+  }
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `em ${h} h ${m} min` : `em ${h} h`;
+}

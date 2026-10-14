@@ -84,14 +84,17 @@ const WEATHER: Record<number, [string, string]> = {
   95: ["Trovoada", "⛈️"],
 };
 
-function Weather() {
+export interface WeatherNow {
+  temp: number;
+  code: number;
+  max: number;
+  min: number;
+}
+
+/** Today's weather where the user said they are (Open-Meteo, no key). */
+export function useWeather() {
   const { weather } = useBrowser();
-  const [data, setData] = useState<{
-    temp: number;
-    code: number;
-    max: number;
-    min: number;
-  } | null>(null);
+  const [data, setData] = useState<WeatherNow | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!weather) {
@@ -125,6 +128,11 @@ function Weather() {
     );
   };
   const [label, emoji] = WEATHER[data?.code ?? 0] ?? ["", "🌡️"];
+  return { place: weather, data, error, locate, label, emoji };
+}
+
+function Weather() {
+  const { place: weather, data, error, locate, label, emoji } = useWeather();
   return (
     <Card className="bg-gradient-to-br from-[#4a6fa5] to-[#8fb3e0] text-white">
       {weather ? (

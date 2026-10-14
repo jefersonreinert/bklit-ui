@@ -863,4 +863,11 @@ export default defineSchema({
     ...noteFields,
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  /** The home screen's wallpaper file (photo or video); at most one. */
+  homeWallpapers: defineTable({
+    storageId: v.id("_storage"),
+    kind: v.union(v.literal("image"), v.literal("video")),
+    createdAt: v.number(),
+  }),
 });
