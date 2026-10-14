@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Icon } from "@/lib/icons";
+import { getSession } from "@/lib/pos/store";
 import type { PosOrder } from "@/lib/pos/types";
 
 const API = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api`;
 const POLL_MS = 3000;
+
+/** The POS user's PIN session lets the server create and check charges. */
+const sessionHeader = () => ({ "x-pos-session": getSession() ?? "" });
 
 /** Crisp SVG QR code (quiet zone included). */
 export function QrCode({
@@ -118,7 +122,7 @@ export function SumupQrStep({
     setState({ kind: "loading" });
     const res = await fetch(`${API}/pos/checkout/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...sessionHeader() },
       body: JSON.stringify({
         amount,
         currency,
@@ -160,6 +164,7 @@ export function SumupQrStep({
     const timer = setInterval(async () => {
       const res = await fetch(`${API}/pos/checkout/${readyId}/`, {
         cache: "no-store",
+        headers: sessionHeader(),
       }).catch(() => null);
       const body = (await res?.json().catch(() => null)) as {
         status?: string;

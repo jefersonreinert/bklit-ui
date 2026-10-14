@@ -423,17 +423,13 @@ export function PosGate({ children }: { children: ReactNode }) {
       </Screen>
     );
   }
-  if (sync === "locked") {
-    return <PanelLock />;
-  }
   if (status === undefined || (status && user === undefined)) {
     return <Loading />;
   }
-  if (status === null) {
-    return <PanelLock />;
-  }
-  if (!status.hasUsers) {
-    return <SetupAdmin />;
+  // Only the very first setup (creating the administrator) needs the
+  // panel's access code; after that each person signs in with their PIN.
+  if (!status?.hasUsers) {
+    return sync === "synced" ? <SetupAdmin /> : <PanelLock />;
   }
   if (!user) {
     return <Login lockedUntil={status.lockedUntil} />;

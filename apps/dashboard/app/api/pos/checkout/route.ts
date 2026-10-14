@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { canCharge } from "@/lib/server/pos-session";
 import { createCheckout, sumupKey } from "@/lib/server/sumup";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   if (!sumupKey()) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
-  if (!(await hasAccess(request))) {
+  if (!(await canCharge(request))) {
     return NextResponse.json({ error: "locked" }, { status: 401 });
   }
   const body = (await request.json().catch(() => ({}))) as {

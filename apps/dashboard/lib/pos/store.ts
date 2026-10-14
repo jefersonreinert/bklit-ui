@@ -120,6 +120,13 @@ function read(): PosData {
 let started = false;
 let closedRefs = 0;
 let stopClosed: (() => void) | null = null;
+let stopLists: (() => void) | null = null;
+
+/** Args of the live POS lists: this device's PIN session. */
+function listArgs(): { session?: string } {
+  const token = getSession();
+  return token ? { session: token } : {};
+}
 
 function watch<Q extends FunctionReference<"query">>(
   query: Q,
@@ -156,12 +163,43 @@ function start() {
   } catch {
     state.printers = [];
   }
-  watch(api.pos.catalog, {}, (v) => {
+  watchLists();
+  // Signing in or out with a PIN changes what the server lets us read
+  sessionListeners.add(() => {
+    state.catalog = undefined;
+    state.open = undefined;
+    watchLists();
+    if (stopClosed) {
+      stopClosed();
+      watchClosed();
+    }
+    emit();
+  });
+}
+
+function watchLists() {
+  stopLists?.();
+  const args = listArgs();
+  const stopCatalog = watch(api.pos.catalog, args, (v) => {
     state.catalog = v;
   });
-  watch(api.pos.openOrders, {}, (v) => {
+  const stopOpen = watch(api.pos.openOrders, args, (v) => {
     state.open = v;
   });
+  stopLists = () => {
+    stopCatalog();
+    stopOpen();
+  };
+}
+
+function watchClosed() {
+  stopClosed = watch(
+    api.pos.closedOrders,
+    { since: closedSince(), ...listArgs() },
+    (v) => {
+      state.closed = v;
+    }
+  );
 }
 
 /** The orders list and receipts need closed orders: watch only while used. */
@@ -169,13 +207,7 @@ export function useClosedOrders() {
   useEffect(() => {
     closedRefs++;
     if (!stopClosed) {
-      stopClosed = watch(
-        api.pos.closedOrders,
-        { since: closedSince() },
-        (v) => {
-          state.closed = v;
-        }
-      );
+      watchClosed();
     }
     return () => {
       closedRefs--;
@@ -399,9 +431,10 @@ function editOpen(
   store: OptimisticLocalStore,
   fn: (orders: ServerOrder[]) => ServerOrder[]
 ) {
-  const cur = store.getQuery(api.pos.openOrders, {});
+  const args = listArgs();
+  const cur = store.getQuery(api.pos.openOrders, args);
   if (cur) {
-    store.setQuery(api.pos.openOrders, {}, fn(cur));
+    store.setQuery(api.pos.openOrders, args, fn(cur));
   }
 }
 
@@ -416,9 +449,10 @@ function editOrder(
 }
 
 function editCatalog(store: OptimisticLocalStore, fn: (c: Catalog) => Catalog) {
-  const cur = store.getQuery(api.pos.catalog, {});
+  const args = listArgs();
+  const cur = store.getQuery(api.pos.catalog, args);
   if (cur) {
-    store.setQuery(api.pos.catalog, {}, fn(cur));
+    store.setQuery(api.pos.catalog, args, fn(cur));
   }
 }
 

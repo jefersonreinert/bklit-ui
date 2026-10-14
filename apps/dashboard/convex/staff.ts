@@ -12,12 +12,20 @@ import {
   staff,
   validPin,
 } from "./access";
-import { isPanel, requirePanel } from "./lib";
+import { requirePanel } from "./lib";
 
 /** POS users with a 4-digit PIN, sessions per device and an audit log. */
 
+/** Every MAX_FAILS wrong PINs lock the login, for longer each time. */
 const MAX_FAILS = 5;
 const LOCK_MS = 60_000;
+const MAX_LOCK_MS = 60 * 60_000;
+
+/** 1, 2, 4, 8… minutes (up to 1 hour) after each round of wrong PINs. */
+export const lockFor = (fails: number) =>
+  fails > 0 && fails % MAX_FAILS === 0
+    ? Math.min(LOCK_MS * 2 ** (fails / MAX_FAILS - 1), MAX_LOCK_MS)
+    : 0;
 
 const publicUser = (u: Doc<"posUsers">) => ({
   id: u._id,
@@ -34,9 +42,6 @@ const cleanPerms = (perms: string[]) => PERMS.filter((p) => perms.includes(p));
 export const status = query({
   args: { session: v.optional(v.string()) },
   handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const any = await ctx.db.query("posUsers").first();
     const m = await meta(ctx);
     return { hasUsers: Boolean(any), lockedUntil: m?.lockedUntil ?? 0 };
@@ -47,9 +52,6 @@ export const status = query({
 export const me = query({
   args: { session: v.optional(v.string()) },
   handler: async (ctx, { session }) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const user = await staff(ctx, session);
     return user ? publicUser(user) : null;
   },
@@ -102,7 +104,6 @@ export const setup = mutation({
 export const login = mutation({
   args: { pin: v.string(), device: v.string() },
   handler: async (ctx, { pin, device }) => {
-    await requirePanel(ctx);
     const m = await meta(ctx);
     const now = Date.now();
     if (m?.lockedUntil && m.lockedUntil > now) {
@@ -118,9 +119,10 @@ export const login = mutation({
     if (!user?.active) {
       if (m) {
         const fails = (m.failedLogins ?? 0) + 1;
+        const lock = lockFor(fails);
         await ctx.db.patch(m._id, {
-          failedLogins: fails >= MAX_FAILS ? 0 : fails,
-          lockedUntil: fails >= MAX_FAILS ? now + LOCK_MS : m.lockedUntil,
+          failedLogins: fails,
+          lockedUntil: lock ? now + lock : m.lockedUntil,
         });
       }
       return { error: "wrong" as const };
