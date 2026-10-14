@@ -316,14 +316,14 @@ export function WallpaperPanel() {
           >
             {action}
           </button>
-          {progress !== null ? (
+          {progress === null ? null : (
             <div className="h-1 overflow-hidden rounded-full bg-white/10">
               <div
                 className="h-full bg-white transition-[width]"
                 style={{ width: `${progress}%` }}
               />
             </div>
-          ) : null}
+          )}
           <p className="text-white/50 text-xs">
             Foto até {MAX_IMAGE_MB} MB ou vídeo até {MAX_VIDEO_MB} MB. O vídeo
             toca sem som e em loop. Fica salvo para todos os seus aparelhos.
