@@ -8,6 +8,7 @@ import {
 } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useMemo, useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { FilterSelect } from "@/components/pages/beverages/bev-shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -740,11 +741,7 @@ export function TelegramGallery({ initialChatId }: { initialChatId?: string }) {
     return <p className="text-muted-foreground text-sm">Carregando…</p>;
   }
   if (summary === null) {
-    return (
-      <Notice>
-        Desbloqueie o painel com o código de acesso para ver a galeria.
-      </Notice>
-    );
+    return <PanelUnlock what="ver a galeria" />;
   }
   return (
     <div className="flex flex-col gap-4">

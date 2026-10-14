@@ -173,16 +173,19 @@ async function ensureState(ctx: MutationCtx): Promise<Doc<"jrnState">> {
 
 /* --------------------------------- panel --------------------------------- */
 
-/** Connector setup (the token is the panel's own secret, shown to it). */
+/**
+ * Connector setup. The diário opens without the access code (the user asked
+ * for it), but the token is the connectors' secret: only a browser that
+ * entered the code (panel) gets it.
+ */
 export const settings = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const s = await getState(ctx);
+    const panel = await isPanel(ctx);
     return {
-      token: s?.token ?? null,
+      panel,
+      token: panel ? (s?.token ?? null) : null,
       lastMt5At: s?.lastMt5At ?? null,
       lastTvAt: s?.lastTvAt ?? null,
       lastStatsAt: s?.lastStatsAt ?? null,
@@ -218,9 +221,6 @@ export const rotateToken = mutation({
 export const deals = query({
   args: { from: v.optional(v.number()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const from = a.from ?? 0;
     const offsets = await accountOffsets(ctx);
     const now = Date.now();
@@ -244,9 +244,6 @@ export const deals = query({
 export const cash = query({
   args: { account: v.string() },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const offset = (await accountOffsets(ctx)).get(a.account);
     const now = Date.now();
     const rows = await ctx.db
@@ -270,9 +267,6 @@ export const cash = query({
 export const accounts = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const s = await getState(ctx);
     const stats = await ctx.db.query("jrnAccountStats").collect();
     const seenAt = new Map(stats.map((r) => [r.account, r.receivedAt]));
@@ -301,9 +295,6 @@ export const accounts = query({
 export const signals = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const rows = await ctx.db
       .query("jrnSignals")
       .withIndex("by_received")
@@ -316,9 +307,6 @@ export const signals = query({
 export const notes = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const rows = await ctx.db.query("jrnNotes").collect();
     return rows.map(({ _id, _creationTime, ...n }) => n);
   },
@@ -334,7 +322,6 @@ export const saveNote = mutation({
     ...noteFields,
   },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const structured = Object.fromEntries(
       NOTE_FIELDS.filter((f) => a[f] !== undefined).map((f) => [
         f,
@@ -372,7 +359,6 @@ export const saveNoteOptions = mutation({
     options: v.array(v.string()),
   },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await ensureState(ctx);
     await ctx.db.patch(s._id, {
       noteOptions: { ...s.noteOptions, [a.field]: cleanOptions(a.options) },
@@ -384,9 +370,6 @@ export const saveNoteOptions = mutation({
 export const accountStats = query({
   args: { account: v.optional(v.string()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const rows = a.account
       ? await ctx.db
           .query("jrnAccountStats")
@@ -403,9 +386,6 @@ export const accountStats = query({
 export const statsHistory = query({
   args: { account: v.string(), from: v.optional(v.number()) },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const day = serverDay(a.from ?? 0);
     const offset = (await accountOffsets(ctx)).get(a.account);
     const now = Date.now();
@@ -429,9 +409,6 @@ export const statsHistory = query({
 export const accountCheck = query({
   args: { account: v.string() },
   handler: async (ctx, a) => {
-    if (!(await isPanel(ctx))) {
-      return null;
-    }
     const stats = await ctx.db
       .query("jrnAccountStats")
       .withIndex("by_account", (q) => q.eq("account", a.account))
@@ -451,7 +428,6 @@ export const accountCheck = query({
 export const deleteSignal = mutation({
   args: { id: v.id("jrnSignals") },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     await ctx.db.delete(a.id);
   },
 });
@@ -460,7 +436,6 @@ export const deleteSignal = mutation({
 export const deleteAccount = mutation({
   args: { account: v.string() },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const rows = await ctx.db
       .query("jrnDeals")
       .withIndex("by_ticket", (q) => q.eq("account", a.account))
@@ -541,7 +516,6 @@ async function clearDemoBatch(ctx: MutationCtx) {
 export const clearJournal = mutation({
   args: { scope: v.union(v.literal("demo"), v.literal("all")) },
   handler: async (ctx, a) => {
-    await requirePanel(ctx);
     const s = await getState(ctx);
     if (a.scope === "demo") {
       const done = await clearDemoBatch(ctx);
@@ -586,9 +560,6 @@ export const clearJournal = mutation({
 export const hasDemo = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
-      return false;
-    }
     const one = await ctx.db
       .query("jrnDeals")
       .withIndex("by_ticket", (q) => q.eq("account", DEMO_ACCOUNT))

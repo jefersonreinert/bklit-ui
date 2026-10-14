@@ -2,6 +2,7 @@
 
 import { useAction, useMutation } from "convex/react";
 import { useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { ServiceTile } from "@/components/dashboard/service-logos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -318,12 +319,7 @@ function Body() {
     return <p className="text-muted-foreground text-sm">Carregando…</p>;
   }
   if (status === null) {
-    return (
-      <Notice>
-        Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code) para
-        ligar o MetaTrader.
-      </Notice>
-    );
+    return <PanelUnlock what="ligar o MetaTrader" />;
   }
   return status.configured ? (
     <Configured status={status} />

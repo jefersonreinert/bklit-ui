@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import { Icon } from "@/lib/icons";
@@ -212,6 +213,10 @@ export function JournalConnector({ settings }: { settings: Settings }) {
   const token = settings.token ?? "";
   const mt5Url = `${base}/journal/mt5?token=${token}`;
   const tvUrl = `${base}/journal/tradingview?token=${token}`;
+  // The token is the connectors' secret: only after the access code
+  if (!settings.panel) {
+    return <PanelUnlock what="ver o token e os links dos conectores" />;
+  }
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-2 sm:grid-cols-2">

@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { modelResolver, type TimeZoneId } from "@/lib/journal/analytics";
@@ -344,7 +345,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   const known = useQuery(api.journal.accounts, {});
 
   useEffect(() => {
-    if (settings && !settings.token) {
+    if (settings?.panel && !settings.token) {
       ensureToken({});
     }
   }, [settings, ensureToken]);
@@ -394,10 +395,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   if (settings === null) {
     return (
       <div className="p-4">
-        <Notice>
-          Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code)
-          para ver o diário de trading.
-        </Notice>
+        <PanelUnlock what="ver o diário de trading" />
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { type ReactNode, useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
@@ -111,12 +112,7 @@ function Workspace() {
     return <p className="text-muted-foreground text-sm">Carregando…</p>;
   }
   if (status === null) {
-    return (
-      <Notice>
-        Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code) para
-        usar o MetaTrader.
-      </Notice>
-    );
+    return <PanelUnlock what="usar o MetaTrader" />;
   }
   if (!status.configured) {
     return <NotConfigured />;

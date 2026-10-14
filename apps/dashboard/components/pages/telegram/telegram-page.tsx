@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TG_TOOLS } from "@/lib/telegram/catalog";
@@ -49,12 +50,7 @@ function Workspace() {
     return <p className="text-muted-foreground text-sm">Carregando…</p>;
   }
   if (status === null) {
-    return (
-      <Notice>
-        Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code) para
-        usar o Telegram.
-      </Notice>
-    );
+    return <PanelUnlock what="usar o Telegram" />;
   }
   const live = (body: React.ReactNode) =>
     status.connected ? body : <NotConnected text={NOT_CONNECTED} />;

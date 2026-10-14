@@ -328,10 +328,12 @@ describe("journal: real data only", () => {
     expect(settings?.accounts).toEqual([]);
   });
 
-  it("requires the panel", async () => {
+  it("opens without the access code but keeps the token secret", async () => {
     const { t } = await setup();
-    await expect(
-      t.mutation(api.journal.clearJournal, { scope: "all" })
-    ).rejects.toThrow();
+    expect(await t.query(api.journal.deals, {})).toEqual([]);
+    const settings = await t.query(api.journal.settings, {});
+    expect(settings?.panel).toBe(false);
+    expect(settings?.token).toBeNull();
+    await expect(t.mutation(api.journal.rotateToken, {})).rejects.toThrow();
   });
 });
