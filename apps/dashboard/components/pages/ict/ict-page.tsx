@@ -8,6 +8,7 @@ import {
   MetricTile,
   type MetricTone,
 } from "@/components/dashboard/metric-tile";
+import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
@@ -298,12 +299,7 @@ function Monitor() {
     return <Notice text="A ligar à base de dados…" title="A carregar" />;
   }
   if (o === null) {
-    return (
-      <Notice
-        text="Desbloqueie o painel com o código de acesso (WhatsApp, POS ou Code) para ver o monitor."
-        title="Painel bloqueado"
-      />
-    );
+    return <PanelUnlock what="ver o monitor" />;
   }
   return (
     <div className="flex flex-col gap-4 md:gap-6">
