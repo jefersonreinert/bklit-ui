@@ -23,6 +23,7 @@ import { Icon, type IconName } from "@/lib/icons";
 import { navItems } from "@/lib/nav";
 import { firstName, usePreferences } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
+import { HomeDock, IconEditor } from "./home-dock";
 import { WallpaperLayer, WallpaperPanel } from "./home-wallpaper";
 import { AppIcon, useNow, WidgetView } from "./home-widgets";
 
@@ -416,35 +417,9 @@ function Hero() {
   );
 }
 
-function Dock({ onApps }: { onApps: () => void }) {
-  const { dock } = useHome();
-  return (
-    <nav
-      aria-label="Dock"
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-    >
-      <div className="flex max-w-full items-end gap-1 overflow-x-auto rounded-[30px] bg-white/10 p-2 ring-1 ring-white/20 backdrop-blur-2xl backdrop-saturate-150 [scrollbar-width:none]">
-        {dock.map((h) => (
-          <div className="flex w-11 shrink-0 justify-center sm:w-12" key={h}>
-            <AppIcon href={h} showLabel={false} />
-          </div>
-        ))}
-        <span className="mx-1 h-10 w-px shrink-0 self-center bg-white/20" />
-        <button
-          aria-label="Todos os apps"
-          className="flex size-11 shrink-0 items-center justify-center rounded-[22%] bg-white/15 text-white ring-1 ring-white/20 transition hover:bg-white/25 active:scale-95 sm:size-12"
-          onClick={onApps}
-          type="button"
-        >
-          <Icon className="size-6" name="IconApps" />
-        </button>
-      </div>
-    </nav>
-  );
-}
-
 export function HomePage() {
   const [panel, setPanel] = useState<Panel>(null);
+  const [iconFor, setIconFor] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const close = () => setPanel(null);
 
@@ -482,9 +457,23 @@ export function HomePage() {
         <WidgetGrid editing={editing} onAdd={() => setPanel("gallery")} />
       </main>
 
-      <Dock onApps={() => setPanel("apps")} />
+      <HomeDock
+        editing={editing}
+        onAdd={() => setPanel("gallery")}
+        onApps={() => setPanel("apps")}
+        onEdit={setIconFor}
+      />
 
       <AnimatePresence>
+        {iconFor ? (
+          <Overlay
+            key="icon"
+            onClose={() => setIconFor(null)}
+            title="Ícone do app"
+          >
+            <IconEditor href={iconFor} onDone={() => setIconFor(null)} />
+          </Overlay>
+        ) : null}
         {panel === "wallpaper" ? (
           <Overlay key="wallpaper" onClose={close} title="Papel de parede">
             <WallpaperPanel />

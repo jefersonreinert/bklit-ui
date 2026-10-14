@@ -1,18 +1,13 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { type FormEvent, type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { unlock } from "@/lib/code/client";
 import { setDim, setWallpaper, useHome, type Wallpaper } from "@/lib/home";
 import { Icon } from "@/lib/icons";
-import {
-  convexClient,
-  refreshSyncAuth,
-  useSyncStatus,
-} from "@/lib/sync/convex-client";
+import { convexClient, useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 
 /** Videos bigger than this are refused (they would load slowly). */
@@ -152,49 +147,14 @@ async function saveWallpaper(
   }
   const uploadUrl = await client.mutation(api.home.generateUploadUrl, {});
   const storageId = await upload(uploadUrl, file, onProgress);
-  return await client.mutation(api.home.setWallpaper, {
+  const saved = await client.mutation(api.home.setWallpaper, {
     storageId: storageId as Id<"_storage">,
     kind,
   });
-}
-
-function Unlock() {
-  const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (await unlock(code)) {
-      refreshSyncAuth();
-    } else {
-      setError("Código incorreto.");
-    }
-  };
-  return (
-    <form className="flex flex-col gap-2" onSubmit={submit}>
-      <p className="text-sm text-white/70">
-        Para salvar o papel de parede, digite uma vez o código de acesso do
-        painel neste aparelho.
-      </p>
-      <div className="flex gap-2">
-        <input
-          aria-label="Código de acesso"
-          className="h-11 min-w-0 flex-1 rounded-xl bg-white/10 px-3 text-white outline-none ring-1 ring-white/15 placeholder:text-white/40 focus:ring-white/40"
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Código de acesso"
-          type="password"
-          value={code}
-        />
-        <button
-          className="h-11 rounded-xl bg-white px-4 font-medium text-black text-sm disabled:opacity-50"
-          disabled={!code}
-          type="submit"
-        >
-          Liberar
-        </button>
-      </div>
-      {error ? <p className="text-rose-300 text-sm">{error}</p> : null}
-    </form>
-  );
+  if (!saved.ok) {
+    throw new Error(saved.error);
+  }
+  return { url: saved.url, storageId: saved.storageId, kind: saved.kind };
 }
 
 function Preview({ wallpaper }: { wallpaper: Wallpaper | null }) {
@@ -262,7 +222,6 @@ export function WallpaperPanel() {
       .catch(() => null);
   };
 
-  const locked = sync === "locked";
   let action: ReactNode = (
     <>
       <Icon className="size-4" name="IconCloudUpload" />
@@ -297,39 +256,33 @@ export function WallpaperPanel() {
         ) : null}
       </div>
 
-      {locked ? (
-        <Unlock />
-      ) : (
-        <>
-          <input
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={(e) => pick(e.target.files?.[0])}
-            ref={input}
-            type="file"
+      <input
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={(e) => pick(e.target.files?.[0])}
+        ref={input}
+        type="file"
+      />
+      <button
+        className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white font-medium text-black text-sm transition active:scale-[0.98] disabled:opacity-60"
+        disabled={progress !== null || sync === "off"}
+        onClick={() => input.current?.click()}
+        type="button"
+      >
+        {action}
+      </button>
+      {progress === null ? null : (
+        <div className="h-1 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full bg-white transition-[width]"
+            style={{ width: `${progress}%` }}
           />
-          <button
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white font-medium text-black text-sm transition active:scale-[0.98] disabled:opacity-60"
-            disabled={progress !== null || sync !== "synced"}
-            onClick={() => input.current?.click()}
-            type="button"
-          >
-            {action}
-          </button>
-          {progress === null ? null : (
-            <div className="h-1 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full bg-white transition-[width]"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          )}
-          <p className="text-white/50 text-xs">
-            Foto até {MAX_IMAGE_MB} MB ou vídeo até {MAX_VIDEO_MB} MB. O vídeo
-            toca sem som e em loop. Fica salvo para todos os seus aparelhos.
-          </p>
-        </>
+        </div>
       )}
+      <p className="text-white/50 text-xs">
+        Foto até {MAX_IMAGE_MB} MB ou vídeo até {MAX_VIDEO_MB} MB. O vídeo toca
+        sem som e em loop. Fica salvo para todos os seus aparelhos.
+      </p>
       {error ? <p className="text-rose-300 text-sm">{error}</p> : null}
 
       <div className="flex flex-col gap-2">

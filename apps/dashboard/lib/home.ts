@@ -52,6 +52,8 @@ export interface HomeData {
   widgets: HomeWidget[];
   /** Pages in the dock at the bottom (nav hrefs). */
   dock: string[];
+  /** Custom icon per page (small image data URL), by nav href. */
+  icons: Record<string, string>;
   wallpaper: Wallpaper | null;
   /** How much the wallpaper is darkened, 0–0.8. */
   dim: number;
@@ -281,6 +283,7 @@ const DEFAULT_HOME: HomeData = {
     widget("vendas"),
   ],
   dock: DEFAULT_DOCK,
+  icons: {},
   wallpaper: null,
   dim: 0.35,
 };
@@ -343,6 +346,34 @@ export function toggleDock(href: string) {
       ? h.dock.filter((d) => d !== href)
       : [...h.dock, href],
   }));
+}
+
+/** Moves a dock page one place left (-1) or right (+1). */
+export function moveDock(href: string, step: -1 | 1) {
+  homeStore.update((h) => {
+    const i = h.dock.indexOf(href);
+    const j = i + step;
+    if (i < 0 || j < 0 || j >= h.dock.length) {
+      return h;
+    }
+    const dock = [...h.dock];
+    dock.splice(i, 1);
+    dock.splice(j, 0, href);
+    return { ...h, dock };
+  });
+}
+
+/** A page's own icon (image data URL), or null for the default one. */
+export function setPageIcon(href: string, icon: string | null) {
+  homeStore.update((h) => {
+    const icons = { ...h.icons };
+    if (icon) {
+      icons[href] = icon;
+    } else {
+      delete icons[href];
+    }
+    return { ...h, icons };
+  });
 }
 
 export const setDim = (dim: number) =>

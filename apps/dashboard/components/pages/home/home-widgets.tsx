@@ -455,47 +455,77 @@ const APP_ICON_COLORS = [
   "from-[#ebdbbc] to-[#b49f74]",
 ];
 
-/** A page as an app icon (home screen dock, shortcuts widget). */
+/**
+ * A page's square icon: the image the user uploaded for it, or its line icon
+ * on a brand gradient. Sized by the caller (className).
+ */
+export function AppGlyph({
+  href,
+  className,
+}: {
+  href: string;
+  className?: string;
+}) {
+  const { icons } = useHome();
+  const item = navItemFor(href);
+  if (!item) {
+    return null;
+  }
+  const custom = icons[item.href];
+  const i = navItems.indexOf(item);
+  return (
+    <span
+      className={cn(
+        "relative flex aspect-square items-center justify-center overflow-hidden rounded-[22%] bg-gradient-to-br text-white shadow-lg ring-1 ring-white/20 [container-type:inline-size]",
+        custom ? "bg-white/10" : APP_ICON_COLORS[i % APP_ICON_COLORS.length],
+        className
+      )}
+    >
+      {custom ? (
+        // biome-ignore lint/performance/noImgElement: small data URL chosen by the user
+        <img
+          alt=""
+          className="size-full object-cover"
+          draggable={false}
+          height={160}
+          src={custom}
+          width={160}
+        />
+      ) : (
+        <Icon className="size-[50cqw]" name={item.icon} />
+      )}
+    </span>
+  );
+}
+
+/** A page as an app icon with its name (shortcuts widget, all apps). */
 export function AppIcon({
   href,
   size = "md",
-  showLabel = true,
 }: {
   href: string;
   size?: "md" | "lg";
-  showLabel?: boolean;
 }) {
   const item = navItemFor(href);
   if (!item) {
     return null;
   }
-  const i = navItems.indexOf(item);
   return (
     <Link
-      className={cn(
-        "group flex flex-col items-center gap-1.5",
-        showLabel && "w-16"
-      )}
+      className="group flex w-16 flex-col items-center gap-1.5"
       href={item.href}
       title={item.label}
     >
-      <span
+      <AppGlyph
         className={cn(
-          "flex items-center justify-center rounded-[22%] bg-gradient-to-br text-white shadow-lg ring-1 ring-white/20 transition-transform group-hover:scale-105 group-active:scale-95",
-          APP_ICON_COLORS[i % APP_ICON_COLORS.length],
-          size === "lg" ? "size-14" : "size-11 sm:size-12"
+          "transition-transform group-hover:scale-105 group-active:scale-95",
+          size === "lg" ? "size-14" : "size-12"
         )}
-      >
-        <Icon
-          className={size === "lg" ? "size-7" : "size-6"}
-          name={item.icon}
-        />
+        href={item.href}
+      />
+      <span className="w-full truncate text-center text-[11px] text-white/85">
+        {item.label}
       </span>
-      {showLabel ? (
-        <span className="w-full truncate text-center text-[11px] text-white/85">
-          {item.label}
-        </span>
-      ) : null}
     </Link>
   );
 }

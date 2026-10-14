@@ -3,10 +3,12 @@ import { describe, it } from "node:test";
 import {
   addWidget,
   homeStore,
+  moveDock,
   moveWidget,
   nextSize,
   removeWidget,
   resizeWidget,
+  setPageIcon,
   toggleDock,
 } from "../home";
 
@@ -46,5 +48,15 @@ describe("home screen layout", () => {
     toggleDock("/ferry");
     toggleDock("/pos");
     assert.deepEqual(homeStore.get().dock, ["/ferry"]);
+    toggleDock("/pos");
+    moveDock("/pos", -1);
+    assert.deepEqual(homeStore.get().dock, ["/pos", "/ferry"]);
+  });
+
+  it("keeps a custom icon per page until it is removed", () => {
+    setPageIcon("/pos", "data:image/png;base64,AAAA");
+    assert.equal(homeStore.get().icons["/pos"], "data:image/png;base64,AAAA");
+    setPageIcon("/pos", null);
+    assert.equal(homeStore.get().icons["/pos"], undefined);
   });
 });
