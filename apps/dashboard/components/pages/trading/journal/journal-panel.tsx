@@ -345,7 +345,7 @@ export function JournalContent({ initialTab }: { initialTab: Tab }) {
   const known = useQuery(api.journal.accounts, {});
 
   useEffect(() => {
-    if (settings && !settings.token) {
+    if (settings?.panel && !settings.token) {
       ensureToken({});
     }
   }, [settings, ensureToken]);
