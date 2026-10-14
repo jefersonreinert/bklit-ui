@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { TODAY } from "@/lib/data";
 import { Icon } from "@/lib/icons";
-import { type NavItem, navItems, normalizePath } from "@/lib/nav";
+import { type NavItem, navItemFor, navItems, normalizePath } from "@/lib/nav";
 import { usePreferences } from "@/lib/preferences";
 import { AnthropicWordmark } from "./anthropic-wordmark";
 import { SidebarBrand, SidebarFooterCard, SidebarNav } from "./app-sidebar";
@@ -22,8 +22,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 export function AppHeader() {
   const pathname = normalizePath(usePathname());
-  const current =
-    navItems.find((i) => i.href === pathname) ?? (navItems[0] as NavItem);
+  const current = navItemFor(pathname) ?? (navItems[0] as NavItem);
   const [open, setOpen] = useState(false);
   const prefs = usePreferences();
 

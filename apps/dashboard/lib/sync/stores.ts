@@ -25,6 +25,7 @@ export const SYNCED_KEYS = [
   "cb:menu-designs:v1",
   "cb:design-library:v1",
   "cb:invoices:v1",
+  "cb:work-schedule:v1",
   "casa-brasa-ai-conversations",
   "casa-brasa-ai-connectors",
 ] as const;

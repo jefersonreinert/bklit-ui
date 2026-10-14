@@ -1,0 +1,145 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  cleanTime,
+  dateKey,
+  matchPlace,
+  monthGrid,
+  monthReport,
+  nextShift,
+  openPunch,
+  PLACES,
+  punchMinutes,
+  reportCSV,
+  rowsToCSV,
+  shiftMinutes,
+  shiftState,
+  type WorkPlace,
+  type WorkPunch,
+  type WorkShift,
+  weekStart,
+} from "../work-schedule";
+
+const place = (id: string, name: string): WorkPlace => ({
+  id,
+  name,
+  short: name,
+  area: "",
+  kind: "wine",
+  keywords: [],
+});
+
+const shift = (date: string, start: string, end: string): WorkShift => ({
+  id: `${date}-${start}`,
+  date,
+  start,
+  end,
+  place: "p1",
+});
+
+describe("work schedule", () => {
+  it("measures normal and overnight shifts", () => {
+    assert.equal(shiftMinutes({ start: "09:00", end: "17:30" }), 510);
+    assert.equal(shiftMinutes({ start: "22:00", end: "06:00" }), 480);
+  });
+
+  it("starts weeks on Monday and fills a 6-week month grid", () => {
+    // 2026-10-13 is a Tuesday
+    assert.equal(dateKey(weekStart(new Date(2026, 9, 13))), "2026-10-12");
+    const grid = monthGrid(new Date(2026, 9, 13));
+    assert.equal(grid.length, 42);
+    assert.equal(dateKey(grid[0] ?? new Date()), "2026-09-28");
+  });
+
+  it("knows if a shift is ahead, running or done", () => {
+    const s = shift("2026-10-13", "09:00", "17:00");
+    assert.equal(shiftState(s, 8 * 60), "before");
+    assert.equal(shiftState(s, 12 * 60), "now");
+    assert.equal(shiftState(s, 17 * 60), "after");
+  });
+
+  it("finds the next shift that has not ended", () => {
+    const list = [
+      shift("2026-10-14", "10:00", "18:00"),
+      shift("2026-10-13", "09:00", "12:00"),
+      shift("2026-10-13", "14:00", "20:00"),
+    ];
+    const now = new Date(2026, 9, 13, 13, 0);
+    assert.equal(nextShift(list, now)?.start, "14:00");
+    const late = new Date(2026, 9, 13, 21, 0);
+    assert.equal(nextShift(list, late)?.date, "2026-10-14");
+  });
+});
+
+describe("time clock", () => {
+  const places = [
+    place("p1", "Sliema"),
+    place("p2", "St Julian's, Bay"),
+    place("p3", "Valletta"),
+  ];
+  const punch = (
+    date: string,
+    inAt: string,
+    out: string | null,
+    place: string
+  ): WorkPunch => ({ id: `${date}-${inAt}`, date, in: inAt, out, place });
+
+  it("counts an open punch up to now", () => {
+    const p = punch("2026-10-13", "09:00", null, "p1");
+    assert.equal(punchMinutes(p, new Date(2026, 9, 13, 11, 30)), 150);
+    assert.equal(openPunch([p])?.id, p.id);
+  });
+
+  it("totals the month per place, days and hours", () => {
+    const list = [
+      punch("2026-10-01", "09:00", "17:00", "p1"),
+      punch("2026-10-01", "18:00", "22:00", "p2"),
+      punch("2026-10-02", "22:00", "06:00", "p1"),
+      punch("2026-09-30", "09:00", "17:00", "p1"),
+      punch("2026-10-03", "09:00", null, "p3"),
+    ];
+    const r = monthReport(list, places, "2026-10");
+    assert.equal(r.rows.length, 3);
+    assert.equal(r.days, 2);
+    assert.equal(r.minutes, (8 + 4 + 8) * 60);
+    assert.deepEqual(
+      r.byPlace.map((t) => [t.place.id, t.days, t.minutes]),
+      [
+        ["p1", 2, 960],
+        ["p2", 1, 240],
+        ["p3", 0, 0],
+      ]
+    );
+    const csv = reportCSV(r, places);
+    assert.ok(csv.includes('2026-10-01,"St Julian\'s, Bay",18:00,22:00,4.00'));
+    assert.ok(csv.includes("Total,2,20.00"));
+  });
+});
+
+describe("rota import", () => {
+  it("turns spreadsheet rows into CSV with ISO dates", () => {
+    const csv = rowsToCSV([
+      [null, new Date(Date.UTC(2026, 9, 12)), new Date(Date.UTC(2026, 9, 13))],
+      ["Bar", "Monday", "Tuesday"],
+      [null, null, null],
+      ["Jeff", "", "11-17:00"],
+      ["Note", "a, b", 'say "hi"'],
+    ]);
+    assert.equal(
+      csv,
+      ',2026-10-12,2026-10-13\nBar,Monday,Tuesday\nJeff,,11-17:00\nNote,"a, b","say ""hi"""'
+    );
+  });
+
+  it("cleans times and matches the venue to a place", () => {
+    assert.equal(cleanTime("9:00"), "09:00");
+    assert.equal(cleanTime("17-"), "");
+    const guess = (text: string) => matchPlace(PLACES, text)?.id;
+    assert.equal(guess("VINOMAD Valletta Waterfront"), "p1");
+    assert.equal(guess("Ribs House by The Brew"), "p2");
+    assert.equal(guess("RIBS HOUSE"), "p2");
+    assert.equal(guess("The Brew Grill & Brewery Sliema"), "p3");
+    assert.equal(guess("The Brew"), "p3");
+    assert.equal(guess(""), undefined);
+  });
+});

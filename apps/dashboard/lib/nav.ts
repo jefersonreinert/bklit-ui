@@ -116,6 +116,12 @@ export const navItems: NavItem[] = [
     icon: "IconCalendarClock",
   },
   {
+    href: "/escala",
+    label: "Escala de trabalho",
+    description: "Seus turnos: dia, horário e local de trabalho",
+    icon: "IconCalendarClock",
+  },
+  {
     href: "/ferry",
     label: "Ferry",
     description: "Horários do ferry Sliema ↔ Bugibba, pelo mês em Malta",
@@ -184,4 +190,12 @@ export function normalizePath(pathname: string | null) {
     return "/";
   }
   return pathname.replace(TRAILING_SLASHES, "");
+}
+
+/** The nav item for a path, including its sub-pages (/escala/importar). */
+export function navItemFor(pathname: string) {
+  return (
+    navItems.find((i) => i.href === pathname) ??
+    navItems.find((i) => i.href !== "/" && pathname.startsWith(`${i.href}/`))
+  );
 }

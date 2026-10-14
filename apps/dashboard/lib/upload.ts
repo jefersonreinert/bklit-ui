@@ -149,7 +149,7 @@ async function pdfsAsImages(files: UploadFile[]): Promise<UploadFile[]> {
 }
 
 export async function callExtract<T>(
-  kind: "menu" | "invoice" | "scan" | "design" | "elements",
+  kind: "menu" | "invoice" | "scan" | "design" | "elements" | "timetable",
   files: UploadFile[],
   hint?: string
 ): Promise<T> {
