@@ -6,11 +6,21 @@ import { type ReactNode, useEffect, useState } from "react";
  * Charts (NumberFlow, live streams, locale formatting) render client-side only
  * so the static GitHub Pages export never hits hydration mismatches.
  */
-export function ClientOnly({ children }: { children: ReactNode }) {
+export function ClientOnly({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  /** Shown before mounting instead of the card skeleton. */
+  fallback?: ReactNode;
+}) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
+    if (fallback !== undefined) {
+      return fallback;
+    }
     return (
       <div
         aria-busy="true"
@@ -19,6 +29,7 @@ export function ClientOnly({ children }: { children: ReactNode }) {
         {Array.from({ length: 8 }, (_, i) => (
           <div
             className="acrylic h-40 animate-pulse rounded-xl bg-card ring-1 ring-foreground/10"
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
             key={i}
           />
         ))}

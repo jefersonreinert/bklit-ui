@@ -16,6 +16,7 @@ import {
   ROUTES,
   timetableFor,
   toMinutes,
+  waitLabel,
 } from "@/lib/ferry";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
@@ -45,18 +46,6 @@ function useMaltaNow() {
     return () => clearInterval(id);
   }, []);
   return now;
-}
-
-function waitLabel(minutes: number) {
-  if (minutes < 1) {
-    return "agora";
-  }
-  if (minutes < 60) {
-    return `em ${minutes} min`;
-  }
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `em ${h} h ${m} min` : `em ${h} h`;
 }
 
 function RouteCard({

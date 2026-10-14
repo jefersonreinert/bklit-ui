@@ -10,6 +10,12 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   {
     href: "/",
+    label: "Início",
+    description: "Sua tela inicial com widgets e papel de parede",
+    icon: "IconHome",
+  },
+  {
+    href: "/dashboard",
     label: "Dashboard",
     description: "Visão geral do restaurante",
     icon: "IconLayoutDashboard",
