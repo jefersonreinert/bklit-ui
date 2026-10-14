@@ -1,7 +1,7 @@
 import { ConvexError } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { requirePanel } from "./lib";
+import { isPanel } from "./lib";
 
 /** What a POS user may do. "users" is the administrator. */
 export const PERMS = [
@@ -66,7 +66,7 @@ export async function requireStaff(
   session: string | undefined,
   perm?: Perm | Perm[]
 ): Promise<Doc<"posUsers">> {
-  await requirePanel(ctx);
+  // The POS needs only the user's PIN session, not the panel access code
   const user = await staff(ctx, session);
   if (!user) {
     throw new ConvexError("POS_LOCKED");
@@ -76,6 +76,11 @@ export async function requireStaff(
     throw new ConvexError("POS_FORBIDDEN");
   }
   return user;
+}
+
+/** Panel browsers (access code) or any signed-in POS user may read POS data. */
+export async function canReadPos(ctx: QueryCtx, session: string | undefined) {
+  return (await isPanel(ctx)) || (await staff(ctx, session)) !== null;
 }
 
 export async function audit(

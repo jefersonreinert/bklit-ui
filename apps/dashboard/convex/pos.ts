@@ -1,8 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
-import { audit, meta, requireStaff } from "./access";
-import { isPanel, requirePanel } from "./lib";
+import { audit, canReadPos, meta, requireStaff } from "./access";
+import { requirePanel } from "./lib";
 import { modifierGroup, posItem } from "./schema";
 
 /**
@@ -47,9 +47,9 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Products, floor plan, settings and receipt design. */
 export const catalog = query({
-  args: {},
-  handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
+  args: { session: v.optional(v.string()) },
+  handler: async (ctx, { session }) => {
+    if (!(await canReadPos(ctx, session))) {
       return null;
     }
     const [products, m] = await Promise.all([
@@ -72,9 +72,9 @@ export const catalog = query({
 
 /** Orders being served right now (open or waiting for card payment). */
 export const openOrders = query({
-  args: {},
-  handler: async (ctx) => {
-    if (!(await isPanel(ctx))) {
+  args: { session: v.optional(v.string()) },
+  handler: async (ctx, { session }) => {
+    if (!(await canReadPos(ctx, session))) {
       return null;
     }
     const [open, paying] = await Promise.all([
@@ -93,9 +93,9 @@ export const openOrders = query({
 
 /** Paid and cancelled orders since a time (orders list, receipts). */
 export const closedOrders = query({
-  args: { since: v.number() },
-  handler: async (ctx, { since }) => {
-    if (!(await isPanel(ctx))) {
+  args: { since: v.number(), session: v.optional(v.string()) },
+  handler: async (ctx, { since, session }) => {
+    if (!(await canReadPos(ctx, session))) {
       return null;
     }
     const [paid, voided] = await Promise.all([

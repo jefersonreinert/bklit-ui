@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { canCharge } from "@/lib/server/pos-session";
 import { checkoutStatus } from "@/lib/server/sumup";
-import { hasAccess } from "@/lib/server/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +8,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await hasAccess(request))) {
+  if (!(await canCharge(request))) {
     return NextResponse.json({ error: "locked" }, { status: 401 });
   }
   const { id } = await params;
