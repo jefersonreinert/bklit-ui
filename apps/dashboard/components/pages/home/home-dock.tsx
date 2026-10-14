@@ -2,7 +2,7 @@
 
 import { motion, useAnimationControls } from "motion/react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { moveDock, setPageIcon, toggleDock, useHome } from "@/lib/home";
 import { Icon } from "@/lib/icons";
@@ -46,7 +46,11 @@ function DockApp({
     return null;
   }
   const glyph = (
-    <AppGlyph className="size-full shadow-black/40 shadow-xl" href={href} />
+    <AppGlyph
+      className="size-full shadow-black/40 shadow-xl"
+      href={href}
+      round
+    />
   );
   return (
     <>
@@ -74,8 +78,8 @@ function DockApp({
             type="button"
           >
             {glyph}
-            <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-white text-black shadow-lg">
-              <Icon className="size-3" name="IconPencil" />
+            <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-white text-black shadow-lg">
+              <Icon className="size-2.5" name="IconPencil" />
             </span>
           </motion.button>
         ) : (
@@ -111,10 +115,11 @@ export function HomeDock({
 }) {
   const { dock } = useHome();
   const canHover = useCanHover();
-  const size = canHover ? 48 : 42;
+  // The component's own sizes: 40 px icons that grow to 60 px
+  const size = 40;
   // No magnification while editing or on touch screens
-  const magnification = canHover && !editing ? 76 : size;
-  const icon = "group relative rounded-none";
+  const magnification = canHover && !editing ? 60 : size;
+  const icon = "group relative";
 
   return (
     <nav
@@ -128,12 +133,8 @@ export function HomeDock({
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <Dock
-          className={cn(
-            "mt-0 gap-1.5 rounded-[24px] border-white/20 bg-white/10 px-2 pb-2 backdrop-blur-2xl backdrop-saturate-150 sm:gap-2",
-            canHover ? "h-[66px]" : "h-[60px]"
-          )}
+          className="mt-0 border-white/20 bg-white/10 backdrop-blur-2xl backdrop-saturate-150"
           direction="bottom"
-          distance={150}
           magnification={magnification}
         >
           {dock.map((h) => (
@@ -141,12 +142,12 @@ export function HomeDock({
               <DockApp editing={editing} href={h} onEdit={onEdit} />
             </DockIcon>
           ))}
-          <span className="mx-0.5 mb-1 h-9 w-px shrink-0 self-end bg-white/25" />
+          <span className="mx-0.5 h-full w-px shrink-0 self-stretch bg-white/25" />
           <DockIcon className={icon} size={size}>
             {editing ? (
               <motion.button
                 aria-label="Adicionar ao dock"
-                className="flex size-full items-center justify-center rounded-[22%] border-2 border-white/40 border-dashed text-white hover:bg-white/10"
+                className="flex size-full items-center justify-center rounded-full border-2 border-white/40 border-dashed text-white hover:bg-white/10"
                 onClick={onAdd}
                 type="button"
                 whileTap={{ scale: 0.9 }}
@@ -156,7 +157,7 @@ export function HomeDock({
             ) : (
               <motion.button
                 aria-label="Todos os apps"
-                className="flex size-full items-center justify-center rounded-[22%] bg-white/15 text-white ring-1 ring-white/20 hover:bg-white/25"
+                className="flex size-full items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/20 hover:bg-white/25"
                 onClick={onApps}
                 type="button"
                 whileTap={{ scale: 0.9 }}
@@ -202,6 +203,18 @@ async function iconFromFile(file: File) {
   }
 }
 
+/** An http(s) image link, or null. */
+export function cleanImageLink(raw: string) {
+  try {
+    const url = new URL(raw.trim());
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function IconEditor({
   href,
   onDone,
@@ -213,6 +226,7 @@ export function IconEditor({
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState("");
   const item = navItemFor(href);
   if (!item) {
     return null;
@@ -237,6 +251,26 @@ export function IconEditor({
     }
   };
 
+  const applyLink = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const url = cleanImageLink(link);
+    if (!url) {
+      setError("Cole um link que comece com https://");
+      return;
+    }
+    setBusy(true);
+    try {
+      await loadImage(url);
+      setPageIcon(href, url);
+      setLink("");
+    } catch {
+      setError("Não consegui abrir essa imagem. Confira o link.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const row =
     "flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/10 text-sm ring-1 ring-white/15 hover:bg-white/15 disabled:opacity-40";
 
@@ -250,7 +284,7 @@ export function IconEditor({
           key={icons[href] ?? "default"}
           transition={{ type: "spring", stiffness: 300, damping: 18 }}
         >
-          <AppGlyph className="size-full" href={href} />
+          <AppGlyph className="size-full" href={href} round />
         </motion.div>
         <div className="min-w-0">
           <p className="font-semibold text-lg">{item.label}</p>
@@ -274,9 +308,26 @@ export function IconEditor({
         <Icon className="size-4" name="IconCloudUpload" />
         {busy ? "Preparando…" : "Carregar foto ou logo"}
       </button>
+      <form className="flex gap-2" onSubmit={applyLink}>
+        <input
+          aria-label="Link da imagem"
+          className="h-11 min-w-0 flex-1 rounded-xl bg-white/10 px-3 text-sm text-white outline-none ring-1 ring-white/15 placeholder:text-white/40 focus:ring-white/40"
+          inputMode="url"
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Ou cole o link de uma imagem"
+          value={link}
+        />
+        <button
+          className="h-11 shrink-0 rounded-xl bg-white/15 px-4 font-medium text-sm ring-1 ring-white/20 hover:bg-white/25 disabled:opacity-40"
+          disabled={!link.trim() || busy}
+          type="submit"
+        >
+          Usar link
+        </button>
+      </form>
       <p className="text-white/50 text-xs">
-        A imagem é cortada em quadrado e fica salva para todos os seus
-        aparelhos. Logos com fundo transparente ficam ótimos.
+        A foto ou o link fica salvo para todos os seus aparelhos. Logos com
+        fundo transparente ficam ótimos.
       </p>
       {error ? <p className="text-rose-300 text-sm">{error}</p> : null}
 

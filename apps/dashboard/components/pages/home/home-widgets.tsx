@@ -462,9 +462,12 @@ const APP_ICON_COLORS = [
 export function AppGlyph({
   href,
   className,
+  round,
 }: {
   href: string;
   className?: string;
+  /** Circle (dock) instead of the rounded square. */
+  round?: boolean;
 }) {
   const { icons } = useHome();
   const item = navItemFor(href);
@@ -476,13 +479,14 @@ export function AppGlyph({
   return (
     <span
       className={cn(
-        "relative flex aspect-square items-center justify-center overflow-hidden rounded-[22%] bg-gradient-to-br text-white shadow-lg ring-1 ring-white/20 [container-type:inline-size]",
+        "relative flex aspect-square items-center justify-center overflow-hidden bg-gradient-to-br text-white shadow-lg ring-1 ring-white/20 [container-type:inline-size]",
+        round ? "rounded-full" : "rounded-[22%]",
         custom ? "bg-white/10" : APP_ICON_COLORS[i % APP_ICON_COLORS.length],
         className
       )}
     >
       {custom ? (
-        // biome-ignore lint/performance/noImgElement: small data URL chosen by the user
+        // biome-ignore lint/performance/noImgElement: image (or link) chosen by the user
         <img
           alt=""
           className="size-full object-cover"
