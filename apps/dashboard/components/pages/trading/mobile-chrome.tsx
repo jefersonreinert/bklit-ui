@@ -214,7 +214,8 @@ function ToolButton({
       aria-pressed={active}
       className={cn(
         "flex size-10 shrink-0 items-center justify-center rounded-lg text-foreground disabled:opacity-30",
-        active && "bg-[#2962ff]/12 text-[#2962ff]"
+        active &&
+          "bg-draw-accent/20 text-foreground ring-1 ring-draw-accent ring-inset"
       )}
       disabled={disabled}
       onClick={onClick}
