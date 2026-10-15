@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const symbols = (request.nextUrl.searchParams.get("symbols") ?? "")
     .split(",")
     .filter((s) => SYMBOL.test(s))
-    .slice(0, 40);
+    .slice(0, 60);
   const now = Date.now();
   const stale = symbols.filter((s) => {
     const hit = cache.get(s);

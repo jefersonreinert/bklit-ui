@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Round symbol marks like TradingView's watchlist: two overlapping flags
- * for currency pairs, colored badges for indices, crypto, metals, rates
- * and a letter badge for stocks.
+ * for currency pairs, colored badges for indices, crypto, metals, rates,
+ * real logos for the big stocks and a letter badge for the rest.
  */
 
 const FLAGS: Record<string, ReactNode> = {
@@ -176,6 +176,71 @@ const BADGES: Record<string, Badge> = {
   "HG=F": { bg: "#b87333", text: "Cu" },
 };
 
+/**
+ * Stocks with a real logo in public/logos/stocks (TradingView-style square
+ * marks, cropped to a circle here). Others keep the colored letter badge.
+ */
+export const STOCK_LOGOS = new Set([
+  "AAPL",
+  "ABBV",
+  "ADBE",
+  "AMD",
+  "AMZN",
+  "AVGO",
+  "AXP",
+  "BA",
+  "BAC",
+  "BRK-B",
+  "CAT",
+  "COST",
+  "CRM",
+  "CSCO",
+  "CVX",
+  "DIS",
+  "GOOGL",
+  "GS",
+  "HD",
+  "IBM",
+  "INTC",
+  "JNJ",
+  "JPM",
+  "KO",
+  "LLY",
+  "MA",
+  "MCD",
+  "META",
+  "MRK",
+  "MSFT",
+  "NFLX",
+  "NKE",
+  "NVDA",
+  "ORCL",
+  "PEP",
+  "PFE",
+  "PG",
+  "PYPL",
+  "QCOM",
+  "SBUX",
+  "T",
+  "TSLA",
+  "TXN",
+  "UBER",
+  "UNH",
+  "V",
+  "VZ",
+  "WFC",
+  "WMT",
+  "XOM",
+]);
+
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+export function stockLogoSrc(symbol: string) {
+  return STOCK_LOGOS.has(symbol)
+    ? `${BASE_PATH}/logos/stocks/${symbol}.svg`
+    : null;
+}
+
 const PAIR = /^([A-Z]{3})([A-Z]{3})=X$/;
 const SINGLE_PAIR = /^([A-Z]{3})=X$/;
 const RATE = /^\^(IRX|FVX|TNX|TYX)$/;
@@ -231,6 +296,29 @@ export function SymbolIcon({
     return (
       <span aria-hidden="true" className={box}>
         <Flag className="inset-0 size-full ring-0" code="USD" />
+      </span>
+    );
+  }
+  const logo = stockLogoSrc(symbol);
+  if (logo) {
+    return (
+      <span
+        aria-hidden="true"
+        className={cn(
+          box,
+          "overflow-hidden rounded-full bg-muted ring-1 ring-border"
+        )}
+      >
+        {/* biome-ignore lint/performance/noImgElement: static SVG logo */}
+        <img
+          alt=""
+          className="size-full"
+          decoding="async"
+          height={56}
+          loading="lazy"
+          src={logo}
+          width={56}
+        />
       </span>
     );
   }

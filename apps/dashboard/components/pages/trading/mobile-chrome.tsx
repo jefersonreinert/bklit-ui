@@ -1,18 +1,25 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { FloatingButton } from "@/components/dashboard/floating-button";
 import { Icon, type IconName } from "@/lib/icons";
 import { TIMEFRAMES, type Timeframe } from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 
 /**
- * Phone chrome like TradingView's app: the bottom tab bar (Watchlist,
- * Chart, Explore) and the chart toolbar with symbol and timeframe wheels.
+ * Phone chrome like TradingView's app: the tabs (Watchlist, Chart,
+ * Explore…) in a floating button and the chart toolbar with symbol and timeframe wheels.
  */
 
 export type MobileView = "list" | "chart" | "explore" | "trade" | "journal";
 
-const TABS: { view: MobileView; label: string; icon: IconName }[] = [
+interface Tab {
+  view: MobileView;
+  label: string;
+  icon: IconName;
+}
+
+const TABS: Tab[] = [
   { view: "list", label: "Watchlist", icon: "IconListBullets" },
   { view: "chart", label: "Gráfico", icon: "IconTradingViewCandles" },
   { view: "explore", label: "Explorar", icon: "IconCompassRound" },
@@ -20,6 +27,11 @@ const TABS: { view: MobileView; label: string; icon: IconName }[] = [
   { view: "journal", label: "Diário", icon: "IconNotebook" },
 ];
 
+/**
+ * Phone: the tabs live in one floating button (drag it anywhere) showing
+ * the current tab's icon; tapping it opens the five tabs around it. The
+ * spacer keeps content clear of the iPhone home indicator.
+ */
 export function TabBar({
   view,
   onView,
@@ -27,26 +39,67 @@ export function TabBar({
   view: MobileView;
   onView: (v: MobileView) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const current = TABS.find((t) => t.view === view) ?? (TABS[0] as Tab);
   return (
-    <nav className="grid shrink-0 grid-cols-5 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
-      {TABS.map((t) => (
-        <button
-          aria-current={t.view === view ? "page" : undefined}
-          className={cn(
-            "flex flex-col items-center gap-0.5 py-1.5 text-[11px] active:bg-muted",
-            t.view === view
-              ? "font-semibold text-foreground"
-              : "text-muted-foreground"
-          )}
-          key={t.view}
-          onClick={() => onView(t.view)}
-          type="button"
+    <>
+      <div className="h-[env(safe-area-inset-bottom)] shrink-0 md:hidden" />
+      <div className="md:hidden">
+        {open ? (
+          <button
+            aria-label="Fechar abas"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+            type="button"
+          />
+        ) : null}
+        <FloatingButton
+          expanded={open}
+          fallback={{ fx: 1, fy: 0.62 }}
+          label={`Abas · ${current.label}`}
+          onTap={() => setOpen((o) => !o)}
+          panel={({ below, right }) =>
+            open ? (
+              <div
+                className={cn(
+                  "absolute flex w-44 flex-col rounded-2xl border bg-popover/95 p-1 shadow-black/30 shadow-xl backdrop-blur-xl",
+                  below ? "top-full mt-2" : "bottom-full mb-2",
+                  right ? "left-0" : "right-0"
+                )}
+              >
+                {TABS.map((t) => (
+                  <button
+                    aria-current={t.view === view ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm active:bg-muted",
+                      t.view === view
+                        ? "bg-muted font-semibold text-foreground"
+                        : "text-muted-foreground"
+                    )}
+                    key={t.view}
+                    onClick={() => {
+                      setOpen(false);
+                      onView(t.view);
+                    }}
+                    type="button"
+                  >
+                    <Icon className="size-5" name={t.icon} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            ) : null
+          }
+          size={48}
+          storageKey="cb:fab:trading-tabs"
         >
-          <Icon className="size-6" name={t.icon} />
-          {t.label}
-        </button>
-      ))}
-    </nav>
+          <Icon
+            className="pointer-events-none size-6"
+            name={open ? "IconCrossSmall" : current.icon}
+          />
+        </FloatingButton>
+      </div>
+    </>
   );
 }
 
