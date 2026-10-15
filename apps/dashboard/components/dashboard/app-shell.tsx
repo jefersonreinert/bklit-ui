@@ -2,11 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import { type ReactNode, useSyncExternalStore } from "react";
-import { AppHeader } from "@/components/dashboard/app-header";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ClientOnly } from "@/components/dashboard/client-only";
+import { FloatingMenu } from "@/components/dashboard/floating-menu";
 import { InstallHint } from "@/components/dashboard/install-hint";
-import { normalizePath } from "@/lib/nav";
+import { navItemFor, normalizePath } from "@/lib/nav";
 
 const noop = () => () => undefined;
 
@@ -20,9 +20,10 @@ function useEmbedded() {
 }
 
 /**
- * The panel's frame (sidebar, header). The home screen (/) is full screen
- * with its own wallpaper, and pages embedded in a widget show only their
- * content.
+ * The panel's frame: the sidebar, which on phones is a floating menu
+ * button you can drag anywhere. There is no header bar, so pages get the
+ * whole screen. The home screen (/) is full screen with its own wallpaper,
+ * and pages embedded in a widget show only their content.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const path = normalizePath(usePathname());
@@ -47,8 +48,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col pb-[env(safe-area-inset-bottom)]">
         <InstallHint />
-        <AppHeader />
-        <main className="flex-1 p-4 md:p-6">
+        <FloatingMenu />
+        <h1 className="sr-only">{navItemFor(path)?.label ?? "Painel"}</h1>
+        <main className="flex-1 p-4 pt-[calc(1rem+env(safe-area-inset-top))] md:p-6 md:pt-[calc(1.5rem+env(safe-area-inset-top))]">
           <ClientOnly>{children}</ClientOnly>
         </main>
       </div>
