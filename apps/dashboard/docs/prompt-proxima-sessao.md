@@ -1,112 +1,136 @@
-# Prompt para a próxima sessão (copie tudo abaixo da linha)
+# Prompt para o próximo Claude Code (copie tudo abaixo da linha)
+
+Estado de referência: commit `4197ca4` no `main` (PRs #36 e #37).
 
 ---
 
-Você vai continuar o trabalho no meu app (painel "Casa Brasa"), no
-repositório GitHub `jefersonreinert/bklit-ui`. O app fica em
-`apps/dashboard`: Next.js 16 com pnpm, Biome, Convex e deploy no Vercel
-(projeto `dashboard-4p9r`). Fale comigo sempre em **português**.
+Você vai continuar o desenvolvimento do meu app **Casa Brasa**. É um painel
+pessoal e do meu restaurante que uso principalmente no **iPhone**, instalado
+na Tela de Início. Fale comigo sempre em **português**, de forma simples e
+direta. Eu não sou programador.
 
-## Antes de começar
+## Onde está o projeto
 
-1. Leia `AGENTS.md` (raiz) e `apps/dashboard/docs/layout-minimalista.md`.
-   Esse segundo arquivo explica o que já foi feito e por quê.
-2. Veja se o PR #36 (branch `claude/tela-cheia`) já foi mergeado:
-   - **Se não foi**, trabalhe a partir dessa branch.
-   - **Se já foi**, crie uma branch nova a partir do `main`.
-3. Rode o app com `pnpm dev` dentro de `apps/dashboard` (porta 3004).
-   Confira cada mudança no Playwright com o iPhone 13
-   (`devices["iPhone 13"]`) e tire prints antes de me mostrar.
-4. Antes de abrir o PR, rode `npx tsc --noEmit -p .` e
-   `npx biome check <arquivos alterados>` em `apps/dashboard`.
-   Rode também os testes que existirem para o que você mexeu
-   (`pnpm vitest run <arquivo>`).
+- Repositório GitHub: `jefersonreinert/bklit-ui`, branch **`main`**.
+- Comece pelo commit `4197ca4`: "Gráficos: logos das 50 maiores empresas +
+  tela cheia com botões flutuantes (#37, #36)". Esse é o estado aprovado.
+- O app fica em **`apps/dashboard`**. O resto do monorepo (`apps/web`,
+  `packages/ui`) é a biblioteca de gráficos bklit-ui, que eu não estou
+  mexendo agora.
+- Stack:
+  - Next.js 16 (turbopack, `trailingSlash`), React 19 e Tailwind 4;
+  - pnpm (monorepo) e Biome/ultracite (lint; o pre-commit roda
+    `npx ultracite fix`);
+  - Convex (banco e tempo real; pasta `apps/dashboard/convex`);
+  - `motion` (framer-motion).
+- Testes:
+  - `pnpm test` dentro de `apps/dashboard`: `node --test` com tsx em
+    `lib/**/__tests__` e vitest com convex-test em `convex/*.test.ts`.
+  - Typecheck: `npx tsc --noEmit -p .`.
+- Rodar local: `pnpm dev` em `apps/dashboard`, na porta **3004**.
+  - Teste no Playwright simulando o iPhone 13 (`devices["iPhone 13"]`) e
+    mostre prints antes de me pedir para aprovar.
+  - Para esconder o aviso "Instale o app", use
+    `localStorage.setItem("casa-brasa-install-hint","1")`.
+  - Para trocar de tema, use `localStorage.theme`, com `"dark"`, `"beige"` ou
+    `"light"`.
 
-## Regras que já combinamos
+## Deploy
 
-- **Só faça merge quando eu disser explicitamente** ("faça o merge").
-- Nunca me peça para colar tokens, senhas ou chaves no chat.
-- Antes de codar uma tela nova, resuma o que entendeu do meu pedido e
-  espere eu confirmar.
-- O deploy "Vercel – bklit-ui" falha em todo PR e não é deste app. Os que
-  importam são `dashboard` e `dashboard-4p9r`.
-- Abra um PR por tarefa e me mande o link da prévia, no formato
-  `https://dashboard-4p9r-git-<branch>-iamthereinerts-projects.vercel.app`.
+- **Vercel**: o projeto que eu uso é **`dashboard-4p9r`**. Existe também o
+  `dashboard`.
+  - Cada PR gera uma prévia em
+    `https://dashboard-4p9r-git-<branch>-iamthereinerts-projects.vercel.app`.
+    Quando o nome da branch é longo, o Vercel encurta. Pegue o link no
+    comentário do bot do Vercel no PR.
+  - O deploy **"Vercel – bklit-ui" falha em todo PR**. Ele não é deste app;
+    ignore (só deixe um comentário no PR dizendo isso).
+- **Cloudflare**: um workflow do GitHub roda `npx convex deploy` (Convex
+  `first-elk-379`) e publica o worker em
+  `https://casa-brasa.casabrasa.workers.dev`.
 
-## Tarefa 1 — Logos das empresas e mais ações (fazer primeiro)
+## Regras combinadas (siga sempre)
 
-Hoje, na página **Gráficos** (`/graficos`), as ações aparecem só com uma
-bolinha colorida com a letra inicial. Quero o **logo de verdade** de cada
-empresa, como no app do TradingView. Quero também **pelo menos as 50
-maiores e mais conhecidas empresas** do Nasdaq, Dow Jones e S&P 500
-disponíveis no app.
+1. **Merge só quando eu disser explicitamente** ("faça o merge").
+2. Nunca me peça para colar tokens, senhas ou chaves no chat.
+3. Antes de codar uma tela nova, **resuma o que entendeu e espere eu
+   confirmar**.
+4. **Um PR por tarefa**, com o link da prévia.
+   - Se um PR anterior ainda não foi mergeado, comece o próximo **em cima
+     dele**, e não do `main`. Senão a prévia parece "voltar atrás".
+   - Esse erro já aconteceu uma vez e eu não gostei.
+5. Não reimplemente o que já existe; reaproveite os componentes.
+6. Mantenha o padrão do código: comentários curtos em inglês, textos da
+   interface em português.
 
-Onde está o código:
+## Como o app está hoje (o que já foi feito)
 
-- `components/pages/trading/symbol-icon.tsx`: `SymbolIcon` desenha os ícones
-  redondos.
-  - Bandeiras para pares de moedas.
-  - `BADGES` para índices, cripto e metais.
-  - Para ações, cai em `hashColor` com a letra inicial. É aqui que entram os
-    logos.
-- `lib/markets/sections.ts`: `DEFAULT_ITEMS` é a watchlist padrão. Hoje tem
-  só AAPL, NVDA e TSLA na seção "Ações".
-- `lib/markets/explore.ts`: as listas da aba Explorar, incluindo "stocks".
-- `components/dashboard/service-logos.tsx`: exemplo de como o projeto já
-  guarda logos como SVG inline (vindos do svgl.app). Siga o mesmo padrão.
-- Os símbolos seguem o padrão do Yahoo Finance (ex.: `BRK-B`, não `BRK.B`).
+**Layout tela cheia, para usar o máximo da tela do celular:**
+- Não existe mais a barra do topo nem o título da página. O nome fica só num
+  `h1` invisível (`sr-only`) em `components/dashboard/app-shell.tsx`.
+- Temas (escuro, bege, claro), sino de notificações e perfil ficam **dentro
+  da sidebar**: `SidebarTools` em `components/dashboard/app-sidebar.tsx`.
+- No celular, o menu é um **botão redondo flutuante com o logo**, que eu
+  arrasto para qualquer lugar e que fica onde eu soltar.
+  - Fica em `components/dashboard/floating-menu.tsx`.
+  - Usa `FloatingButton` / `useFloatingPosition`
+    (`components/dashboard/floating-button.tsx`): a posição é salva no
+    `localStorage` como fração da tela.
+- Na página **Gráficos** (`/graficos`), as abas Watchlist, Gráfico, Explorar,
+  Operar e Diário viraram **um botão flutuante expansível**, que também se
+  arrasta (`TabBar` em `components/pages/trading/mobile-chrome.tsx`).
+- `--header-h` em `app/globals.css` agora é só `env(safe-area-inset-top)`.
 
-O que fazer:
+**Logos das ações:**
+- 50 SVGs em `public/logos/stocks/<TICKER>.svg`.
+- Usados por `SymbolIcon` (`components/pages/trading/symbol-icon.tsx`) através
+  de `STOCK_LOGOS` / `stockLogoSrc`.
+- A aba Explorar tem "Ações EUA" (50 empresas) e "Brasil"
+  (`lib/markets/explore.ts`).
 
-1. Crie um mapa `ticker → logo` com SVG inline. Fonte sugerida: o pacote
-   `simple-icons` (licença CC0) ou o svgl.app.
-   - Mostre o logo dentro do mesmo círculo de 40 px, com a cor da marca no
-     fundo e o logo branco, ou fundo branco com o logo colorido. Escolha o
-     que ficar mais legível e mantenha um padrão.
-   - Se uma empresa não tiver logo disponível, mantenha a letra colorida
-     atual como reserva.
-   - Os logos precisam ficar bons nos 3 temas (escuro, bege, claro).
-2. Adicione as empresas abaixo na aba Explorar / busca de ações, com nome em
-   português quando fizer sentido. Não encha a watchlist padrão: deixe ali
-   umas 8 a 10 das maiores e o resto disponível para eu adicionar.
-3. Lista (50, símbolos do Yahoo):
-   AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AVGO, BRK-B, JPM,
-   LLY, V, MA, UNH, XOM, WMT, JNJ, PG, HD, COST,
-   ORCL, NFLX, ABBV, BAC, KO, PEP, CVX, MRK, ADBE, CRM,
-   AMD, INTC, CSCO, MCD, DIS, NKE, IBM, QCOM, TXN, GS,
-   CAT, BA, PFE, T, VZ, WFC, AXP, SBUX, PYPL, UBER.
-4. Garanta que o mesmo logo apareça em todos os lugares que usam
-   `SymbolIcon`:
-   - watchlist (`trading-watchlist.tsx`);
-   - Explorar (`explore-view.tsx`);
-   - visão geral do ativo (`symbol-overview.tsx`);
-   - cabeçalho do gráfico (`trading-page.tsx`).
-5. Tire prints no iPhone simulado nos 3 temas e me mostre antes de abrir o
-   PR.
+**Outras coisas que já existem:**
+- **Início** (`/`): tela com widgets, papel de parede (foto ou vídeo) e Dock
+  (Magic UI, em `components/ui/dock.tsx`).
+- **POS**: só com PIN por usuário.
+- Escala de trabalho, Ferry, Telegram, ICT, Diário de trading, MetaTrader,
+  WhatsApp, E-mail, IA, Notas, Finanças, Cardápio, Documentos e outras páginas.
+  A lista completa está em `lib/nav.ts`.
 
-## Tarefa 2 — Continuar o layout minimalista (depois da Tarefa 1)
+## Próximas tarefas (nesta ordem)
 
-O objetivo é usar o máximo da tela do celular em **todas as páginas**,
-principalmente para ver os gráficos. Já foi feito, no PR #36:
+1. **Barra de desenho do gráfico** (Gráficos → Gráfico, quando eu toco no
+   lápis para desenhar no canvas dos candlesticks).
+   - Hoje ela é **branca** e o contorno/destaque é **azul** (`#2962ff`). Eu
+     não gosto de azul.
+   - Ela deve seguir o **tema**. No tema **bege**, um bege mais forte e as
+     cores da Anthropic: terracota `#d97757`, preto `#141413`, creme
+     `#faf9f5`, cinzas `#b0aea5` e `#e8e6dc`.
+   - Ícones com contorno **preto** no tema claro/bege e **branco** no escuro.
+   - Comece procurando `#2962ff` e as barras de ferramenta em
+     `components/pages/trading/` (`mobile-chrome.tsx`, `trading-page.tsx`, `trading-watchlist.tsx`,
+     `trading-tools.tsx` e `mt5/tv/drawing-engine.ts`).
+2. Depois, levar essas **mesmas cores e ícones para todas as páginas**,
+   para o app ficar com um design único.
+3. Continuar o **layout minimalista tela por tela**. Eu mando fotos com
+   marcações do que mover, remover ou adicionar. Use os mesmos botões
+   flutuantes; todas as páginas devem aproveitar o máximo da tela.
 
-- A barra do topo saiu.
-- Temas, sino e perfil estão dentro da sidebar.
-- O logo virou um botão flutuante que eu arrasto para qualquer lugar.
-- A barra de baixo do Gráficos (Watchlist, Gráfico, Explorar, Operar,
-  Diário) virou um botão flutuante expansível que também se arrasta.
+## Pendências (só se eu pedir)
 
-Os componentes reutilizáveis são `FloatingButton` / `useFloatingPosition`
-(`components/dashboard/floating-button.tsx`) e `FloatingMenu`. Para as
-próximas telas, eu vou te mandar fotos com marcações dizendo o que mover,
-remover ou adicionar. Faça uma tela de cada vez, sempre confirmando comigo
-antes.
+- **Telegram/ICT continuam bloqueados mesmo com o código certo.** O
+  `WHATSAPP_ACCESS_CODE` está certo, mas o Convex recusa a chave do painel.
+  Para resolver:
+  - No Convex (`first-elk-379`): definir `PANEL_AUTH_ISSUER` = endereço de
+    produção, sem barra final, e `PANEL_AUTH_JWKS_URL` = endereço +
+    `/api/convex/jwks/`.
+  - No Vercel `dashboard-4p9r`: definir `PANEL_JWT_PRIVATE_KEY` (JWK EC P-256)
+    e `PANEL_AUTH_ISSUER`, e fazer Redeploy.
+  - O card `components/dashboard/panel-unlock.tsx` e a rota
+    `/api/convex/check` mostram o motivo exato do bloqueio.
+  - Se a chave privada não existir, faça uma página que gera a chave no meu
+    próprio aparelho, sem passar pelo chat.
+- **Ferry**: falta eu mandar a foto da tabela de horários de inverno.
 
-## Pendências que não são para agora (só se eu pedir)
-
-- **Telegram/ICT bloqueados mesmo com o código certo.** É preciso
-  configurar `PANEL_AUTH_ISSUER` e `PANEL_AUTH_JWKS_URL` no Convex
-  (deployment `first-elk-379`), e `PANEL_JWT_PRIVATE_KEY` +
-  `PANEL_AUTH_ISSUER` no Vercel (`dashboard-4p9r`). Os detalhes estão no
-  `layout-minimalista.md`. Se a chave privada não existir, faça uma página
-  que gera a chave no meu próprio aparelho, sem passar pelo chat.
-- **Ferry:** ainda falta eu mandar a foto da tabela de horários de inverno.
+Mais detalhes em `apps/dashboard/docs/layout-minimalista.md` e
+`AGENTS.md` (raiz). Leia esses arquivos antes de
+começar.
