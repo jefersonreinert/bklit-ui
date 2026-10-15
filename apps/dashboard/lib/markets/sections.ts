@@ -59,7 +59,11 @@ export const DEFAULT_ITEMS: SectionedItem[] = [
   it("BTC-USD", "BTCUSD", "Bitcoin", SECTION_CRYPTO),
   it("ETH-USD", "ETHUSD", "Ethereum", SECTION_CRYPTO),
   it("AAPL", "AAPL", "Apple", SECTION_STOCKS),
+  it("MSFT", "MSFT", "Microsoft", SECTION_STOCKS),
   it("NVDA", "NVDA", "NVIDIA", SECTION_STOCKS),
+  it("AMZN", "AMZN", "Amazon", SECTION_STOCKS),
+  it("GOOGL", "GOOGL", "Alphabet (Google)", SECTION_STOCKS),
+  it("META", "META", "Meta", SECTION_STOCKS),
   it("TSLA", "TSLA", "Tesla", SECTION_STOCKS),
 ];
 
