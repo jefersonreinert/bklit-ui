@@ -61,9 +61,9 @@ export function ToolRail({
   return (
     <div
       className={cn(
-        "no-scrollbar w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto py-1.5",
+        "no-scrollbar w-11 shrink-0 flex-col items-center gap-0.5 overflow-y-auto border-draw-border bg-draw-bar py-1.5 text-draw-icon",
         floating
-          ? "absolute top-2 bottom-2 left-2 z-30 flex rounded-xl border bg-card/95 shadow-lg backdrop-blur md:hidden"
+          ? "absolute top-2 bottom-2 left-2 z-30 flex rounded-xl border shadow-lg md:hidden"
           : "hidden border-r md:flex"
       )}
     >
@@ -74,7 +74,7 @@ export function ToolRail({
       >
         <Icon className="size-[18px]" name="IconCursor1" />
       </RailButton>
-      <span className="my-1 h-px w-6 bg-border" />
+      <span className="my-1 h-px w-6 bg-draw-border" />
       {TOOLS.map((t) => (
         <RailButton
           active={active === t.type}
@@ -85,7 +85,7 @@ export function ToolRail({
           {DRAWING_ICONS[t.icon]}
         </RailButton>
       ))}
-      <span className="my-1 h-px w-6 bg-border" />
+      <span className="my-1 h-px w-6 bg-draw-border" />
       <RailButton
         active={hidden}
         disabled={count === 0}
@@ -126,9 +126,9 @@ function RailButton({
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 [&>svg]:size-[18px]",
+        "flex size-8 shrink-0 items-center justify-center rounded-md text-draw-icon transition-colors hover:bg-draw-border/60 disabled:opacity-30 [&>svg]:size-[18px]",
         active &&
-          "bg-[#2962ff]/12 text-[#2962ff] hover:bg-[#2962ff]/18 hover:text-[#2962ff]"
+          "bg-draw-accent/20 ring-1 ring-draw-accent ring-inset hover:bg-draw-accent/25"
       )}
       disabled={disabled}
       onClick={onClick}
@@ -164,7 +164,8 @@ export function ToolsSheet({
             <button
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-center text-[11px] text-muted-foreground leading-tight active:bg-muted [&>span>svg]:size-6",
-                actions.active === t.type && "bg-[#2962ff]/12 text-[#2962ff]"
+                actions.active === t.type &&
+                  "bg-draw-accent/20 text-draw-icon ring-1 ring-draw-accent ring-inset"
               )}
               key={t.type}
               onClick={() => pick(t.type)}
