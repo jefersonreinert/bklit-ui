@@ -13,7 +13,10 @@
     },
     {
       // Static marketing/chart SVG exports — not hand-edited React components
-      "includes": ["apps/web/public/**/*.svg", "apps/dashboard/public/**/*.svg"],
+      "includes": [
+        "apps/web/public/**/*.svg",
+        "apps/dashboard/public/**/*.svg"
+      ],
       "formatter": { "enabled": false },
       "linter": { "enabled": false },
       "assist": { "enabled": false }
