@@ -6,9 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { documentStats, RESTAURANT_NAME } from "@/lib/data";
 import { Icon } from "@/lib/icons";
 import { navItemFor, navItems, normalizePath } from "@/lib/nav";
+import { usePreferences } from "@/lib/preferences";
 import { useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
+import { ProfileAvatar } from "./profile-avatar";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SidebarBrand() {
   return (
@@ -20,6 +23,33 @@ export function SidebarBrand() {
           Gestão do restaurante
         </span>
       </div>
+    </div>
+  );
+}
+
+/** Theme, notifications and profile (they used to be in the top bar). */
+export function SidebarTools({ onNavigate }: { onNavigate?: () => void }) {
+  const prefs = usePreferences();
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <ThemeToggle className="flex-1 justify-between [&>button]:flex-1 [&>button]:justify-center [&_span]:hidden" />
+      <button
+        aria-label="Notificações"
+        className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        type="button"
+      >
+        <Icon className="size-4" name="IconBell" />
+        <span className="absolute top-2 right-2 size-2 rounded-full bg-foreground" />
+      </button>
+      <Link
+        aria-label={`Configurações de ${prefs.name}`}
+        className="flex shrink-0 rounded-full transition-opacity hover:opacity-80"
+        href="/configuracoes"
+        onClick={onNavigate}
+        title={`${prefs.name} · Configurações`}
+      >
+        <ProfileAvatar fallbackClassName="text-xs" />
+      </Link>
     </div>
   );
 }
@@ -108,6 +138,7 @@ export function AppSidebar() {
   return (
     <aside className="acrylic sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r bg-sidebar p-4 lg:flex print:hidden">
       <SidebarBrand />
+      <SidebarTools />
       <SidebarNav />
       <div className="shrink-0">
         <SidebarFooterCard />

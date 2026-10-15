@@ -397,8 +397,9 @@
 }
 
 :root {
-  /* Header height including the iPhone status bar in Home Screen mode */
-  --header-h: calc(4rem + env(safe-area-inset-top));
+  /* Space above the pages: there is no header bar, only the iPhone status
+     bar in Home Screen mode (full-height pages subtract it) */
+  --header-h: env(safe-area-inset-top);
 }
 
 @layer base {
