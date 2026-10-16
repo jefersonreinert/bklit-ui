@@ -13,6 +13,7 @@ import type * as crons from "../crons.js";
 import type * as designs from "../designs.js";
 import type * as eatrade from "../eatrade.js";
 import type * as files from "../files.js";
+import type * as guardian from "../guardian.js";
 import type * as home from "../home.js";
 import type * as http from "../http.js";
 import type * as ict from "../ict.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   designs: typeof designs;
   eatrade: typeof eatrade;
   files: typeof files;
+  guardian: typeof guardian;
   home: typeof home;
   http: typeof http;
   ict: typeof ict;

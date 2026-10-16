@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
 import { ExploreView } from "./explore-view";
 import { FloatingTimeframes } from "./floating-timeframes";
+import { GuardianPanel } from "./guardian/guardian-panel";
 import { JournalPanel, type JournalTab } from "./journal/journal-panel";
 import {
   ChartToolbar,
@@ -61,9 +62,16 @@ type View = MobileView;
 
 const VIEW_KEY = "cb:trading:view";
 /** Full-width views that replace the chart. */
-const SIDE_VIEWS = new Set<string>(["explore", "journal", "trade"]);
+const SIDE_VIEWS = new Set<string>(["explore", "journal", "trade", "guard"]);
 
-const VIEWS = new Set<string>(["list", "chart", "explore", "trade", "journal"]);
+const VIEWS = new Set<string>([
+  "list",
+  "chart",
+  "explore",
+  "trade",
+  "journal",
+  "guard",
+]);
 
 function initialView(): View {
   try {
@@ -340,6 +348,47 @@ function TradeView({
   );
 }
 
+/** Protection (all sizes): the FTMO Risk Guardian of the EA v4.20. */
+function GuardView({ onView }: { onView: (v: View) => void }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden border-b px-3 py-2 md:block">
+        <button
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted"
+          onClick={() => onView("chart")}
+          type="button"
+        >
+          <Icon className="size-4" name="IconChevronLeft" />
+          Voltar ao gráfico
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <GuardianPanel />
+      </div>
+      <TabBar onView={onView} view="guard" />
+    </div>
+  );
+}
+
+/** The MT5 screens: "Operar" (orders) and "Proteção" (FTMO Risk Guardian). */
+function MetaTraderView({
+  view,
+  onView,
+  symbol,
+}: {
+  view: View;
+  onView: (v: View) => void;
+  symbol: string;
+}) {
+  if (view === "trade") {
+    return <TradeView onView={onView} symbol={symbol} />;
+  }
+  if (view === "guard") {
+    return <GuardView onView={onView} />;
+  }
+  return null;
+}
+
 /** Explore (all sizes): market cards, shortcuts and top stories. */
 function ExplorePanel({
   onView,
@@ -454,7 +503,7 @@ export function TradingPage() {
       {view === "journal" ? (
         <JournalView onView={setView} tab={journalTab} />
       ) : null}
-      {view === "trade" ? <TradeView onView={setView} symbol={symbol} /> : null}
+      <MetaTraderView onView={setView} symbol={symbol} view={view} />
       {view === "explore" ? (
         <ExplorePanel
           onPick={setOverview}
@@ -478,6 +527,7 @@ export function TradingPage() {
             name={item?.name ?? quote?.name ?? symbol}
             onCycle={nav.cycle}
             onExplore={() => setView("explore")}
+            onGuard={() => setView("guard")}
             onJournal={(tab) => {
               setJournalTab(tab);
               setView("journal");
@@ -614,11 +664,13 @@ function TopBar({
   onOverview,
   onExplore,
   onTrade,
+  onGuard,
   onJournal,
 }: {
   onJournal: (tab: JournalTab) => void;
   onExplore: () => void;
   onTrade: () => void;
+  onGuard: () => void;
   onCycle: (dir: -1 | 1) => void;
   onOverview: () => void;
   label: string;
@@ -705,6 +757,11 @@ function TopBar({
             icon="IconNotebook"
             label="Diário de trading"
             onClick={() => onJournal("summary")}
+          />
+          <BarButton
+            icon="IconShieldCheck"
+            label="Proteção FTMO: robô de gerenciamento de risco"
+            onClick={onGuard}
           />
           <BarButton
             icon="IconArrowsRepeat"

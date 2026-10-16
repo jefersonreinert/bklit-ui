@@ -127,6 +127,76 @@ export const eaSessionFields = {
   ),
 };
 
+/** FTMO Risk Guardian state sent by the EA v4.20 (optional `guardian`). */
+const guardianLevel = v.number();
+export const guardianStatusFields = {
+  enabled: v.boolean(),
+  version: v.string(),
+  mode: v.union(v.literal("protect"), v.literal("monitor")),
+  product: v.string(),
+  state: guardianLevel,
+  reason: v.string(),
+  initialCapital: v.number(),
+  dailyPct: v.number(),
+  maxPct: v.number(),
+  maxKind: v.union(
+    v.literal("static"),
+    v.literal("eod"),
+    v.literal("intraday")
+  ),
+  balance: v.number(),
+  equity: v.number(),
+  estEquity: v.number(),
+  exitCost: v.number(),
+  dayStartBalance: v.number(),
+  dailyLoss: v.number(),
+  dailyLimit: v.number(),
+  dailyUsePct: v.number(),
+  nextDayLoss: v.number(),
+  nextDayUsePct: v.number(),
+  preReset: v.boolean(),
+  nextResetAt: v.number(),
+  maxRef: v.number(),
+  maxLoss: v.number(),
+  maxLimit: v.number(),
+  maxUsePct: v.number(),
+  worstDailyUsePct: v.number(),
+  worstMaxUsePct: v.number(),
+  warnPct: v.number(),
+  blockPct: v.number(),
+  emergencyPct: v.number(),
+  dayLocked: guardianLevel,
+  dayReason: v.string(),
+  permLocked: guardianLevel,
+  permReason: v.string(),
+  permSince: v.number(),
+  configProblem: v.string(),
+  manualLock: v.boolean(),
+  scope: v.union(v.literal("account"), v.literal("managed")),
+  closeOnEmergency: v.boolean(),
+  cancelPendingOnBlock: v.boolean(),
+  worstCaseCheck: v.boolean(),
+  requestsToday: v.number(),
+  maxRequests: v.number(),
+  positions: v.number(),
+  pragueDay: v.string(),
+};
+
+export const guardianEventFields = {
+  eid: v.string(),
+  time: v.number(),
+  kind: v.string(),
+  state: guardianLevel,
+  reason: v.string(),
+  symbol: v.string(),
+  ticket: v.string(),
+  request: v.string(),
+  result: v.string(),
+  dailyUsePct: v.number(),
+  maxUsePct: v.number(),
+  estEquity: v.number(),
+};
+
 export const symbolSpecFields = {
   account: v.string(),
   symbol: v.string(),
@@ -823,6 +893,40 @@ export default defineSchema({
   eaCommands: defineTable(commandFields)
     .index("by_account_status", ["account", "status"])
     .index("by_account_created", ["account", "createdAt"]),
+
+  /** FTMO Risk Guardian: latest state of each account (EA v4.20). */
+  eaGuardian: defineTable({
+    account: v.string(),
+    updatedAt: v.number(),
+    ...guardianStatusFields,
+  }).index("by_account", ["account"]),
+
+  /** FTMO Risk Guardian: one row per account per FTMO day (00:00 Prague). */
+  eaGuardianDays: defineTable({
+    account: v.string(),
+    /** FTMO day, YYYY-MM-DD (Prague). */
+    day: v.string(),
+    dayStartBalance: v.number(),
+    dailyLimit: v.number(),
+    minEstEquity: v.number(),
+    maxDailyUsePct: v.number(),
+    maxMaxUsePct: v.number(),
+    maxState: v.number(),
+    emergencies: v.number(),
+    blocks: v.number(),
+    refused: v.number(),
+    closed: v.number(),
+    updatedAt: v.number(),
+  }).index("by_account_day", ["account", "day"]),
+
+  /** FTMO Risk Guardian events (blocks, refused orders, closes…). */
+  eaGuardianEvents: defineTable({
+    account: v.string(),
+    receivedAt: v.number(),
+    ...guardianEventFields,
+  })
+    .index("by_account_eid", ["account", "eid"])
+    .index("by_account_time", ["account", "time"]),
 
   /** Latest statistics of each account (TradingJournal Complete EA). */
   jrnAccountStats: defineTable(accountStatsFields).index("by_account", [
