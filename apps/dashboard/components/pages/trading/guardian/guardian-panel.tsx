@@ -22,30 +22,33 @@ import { money } from "../journal/journal-summary";
 const ONLINE_MS = 30_000;
 const HEARTBEAT_MS = 30_000;
 
-/** Status palette (good / warning / serious / critical), always with icon + label. */
+/**
+ * Status palette (good / warning / serious / critical) in the journal's brand
+ * tones (--guard-* in .journal-palette), always with icon + label.
+ */
 const STATES: { label: string; color: string; icon: IconName; text: string }[] =
   [
     {
       label: "Normal",
-      color: "#0ca30c",
+      color: "var(--guard-0)",
       icon: "IconShieldCheck",
       text: "Dentro dos limites da FTMO.",
     },
     {
       label: "Alerta",
-      color: "#fab219",
+      color: "var(--guard-1)",
       icon: "IconShield",
       text: "Perto do limite: atenção ao risco.",
     },
     {
       label: "Bloqueado",
-      color: "#ec835a",
+      color: "var(--guard-2)",
       icon: "IconShieldCrossed",
       text: "Novas ordens recusadas pelo robô.",
     },
     {
       label: "Emergência",
-      color: "#d03b3b",
+      color: "var(--guard-3)",
       icon: "IconShieldCrossed",
       text: "O robô está a fechar as posições.",
     },

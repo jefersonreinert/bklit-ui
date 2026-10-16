@@ -478,10 +478,17 @@
 .journal-palette {
   --up: #b5835a;
   --down: #a8987a;
+  /* Proteção FTMO: normal (Kraft) → alerta (Manilla) → bloqueado → emergência */
+  --guard-0: var(--up);
+  --guard-1: var(--down);
+  --guard-2: #b0603f;
+  --guard-3: #8f3a22;
 }
 .dark .journal-palette {
   --up: #d4a27f;
   --down: #ebdbbc;
+  --guard-2: #cc785c;
+  --guard-3: #c15f3c;
 }
 
 /* Charting platform (vendored mt5-chart-platform) — scoped tokens */
