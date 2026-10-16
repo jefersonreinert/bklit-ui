@@ -16,7 +16,13 @@ import {
   type QueryCtx,
   query,
 } from "./_generated/server";
-import { eaSessionFields, symbolSpecFields } from "./schema";
+import { saveGuardian } from "./guardian";
+import {
+  eaSessionFields,
+  guardianEventFields,
+  guardianStatusFields,
+  symbolSpecFields,
+} from "./schema";
 
 /**
  * Trading from the panel through the TradingJournal Complete EA (v4.10):
@@ -406,6 +412,13 @@ const syncValue = v.object({
     })
   ),
   hasSymbols: v.boolean(),
+  /** FTMO Risk Guardian (EA v4.20 only). */
+  guardian: v.optional(
+    v.object({
+      status: v.object(guardianStatusFields),
+      events: v.array(v.object(guardianEventFields)),
+    })
+  ),
 });
 
 /** Payload of the sync mutation, built in http.ts from syncFromBody. */
@@ -425,6 +438,7 @@ export function syncArgs(p: SyncPayload, now: number): SyncArgs {
     plans: p.plans,
     specs: p.specs,
     results: p.results,
+    ...(p.guardian ? { guardian: p.guardian } : {}),
   };
 }
 
@@ -579,6 +593,9 @@ export const sync = internalMutation({
     await applyResults(ctx, a.account, a.results, now);
     await upsertSpecs(ctx, a.account, a.specs, now);
     const row = await upsertSession(ctx, a);
+    if (a.guardian) {
+      await saveGuardian(ctx, a.account, a.guardian, now);
+    }
     const commands = await takePending(ctx, a.account, now);
     const inFlight = await countInFlight(ctx, a.account, now);
     return {

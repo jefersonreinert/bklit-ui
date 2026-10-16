@@ -16,6 +16,7 @@
  * command that arrived late without trusting either clock.
  */
 
+import { type GuardianPayload, guardianFromBody } from "./guardian";
 import type { SymbolSpec } from "./lot";
 
 export const MAX_WATCH = 20;
@@ -141,6 +142,8 @@ export interface SyncPayload {
   symbols: string[] | null;
   plans: PartialPlan[];
   results: CommandResult[];
+  /** FTMO Risk Guardian (EA v4.20); null when the EA does not send it. */
+  guardian: GuardianPayload | null;
 }
 
 const side = (v: unknown): "buy" | "sell" =>
@@ -251,6 +254,7 @@ export function syncFromBody(body: unknown): SyncPayload | null {
         volume: num(r.volume),
       }))
       .filter((r) => r.id),
+    guardian: guardianFromBody(b.guardian),
   };
 }
 

@@ -11,7 +11,13 @@ import { cn } from "@/lib/utils";
  * Explore…) in a floating button and the chart toolbar with symbol and timeframe wheels.
  */
 
-export type MobileView = "list" | "chart" | "explore" | "trade" | "journal";
+export type MobileView =
+  | "list"
+  | "chart"
+  | "explore"
+  | "trade"
+  | "journal"
+  | "guard";
 
 interface Tab {
   view: MobileView;
@@ -25,11 +31,12 @@ const TABS: Tab[] = [
   { view: "explore", label: "Explorar", icon: "IconCompassRound" },
   { view: "trade", label: "Operar", icon: "IconCalculator" },
   { view: "journal", label: "Diário", icon: "IconNotebook" },
+  { view: "guard", label: "Proteção", icon: "IconShieldCheck" },
 ];
 
 /**
  * Phone: the tabs live in one floating button (drag it anywhere) showing
- * the current tab's icon; tapping it opens the five tabs around it. The
+ * the current tab's icon; tapping it opens the tabs around it. The
  * spacer keeps content clear of the iPhone home indicator.
  */
 export function TabBar({
