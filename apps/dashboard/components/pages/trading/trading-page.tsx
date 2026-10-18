@@ -1,5 +1,6 @@
 "use client";
 
+import { ConvexProvider } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,11 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { Icon, type IconName } from "@/lib/icons";
-import { type ChartFeed, useChartCandles } from "@/lib/markets/chart-feed";
+import {
+  type ChartFeed,
+  useChartCandles,
+  useWebChartCandles,
+} from "@/lib/markets/chart-feed";
 import {
   autoDigits,
   type FeedSource,
@@ -25,6 +30,7 @@ import {
   useTrading,
   type WatchItem,
 } from "@/lib/markets/trading";
+import { convexClient, useSyncStatus } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 import { UnlockCard } from "../browser/unlock-card";
 import { ExploreView } from "./explore-view";
@@ -416,13 +422,48 @@ function ExplorePanel({
   );
 }
 
-/** Charting platform (MT5 / TradingView style), mobile first. */
+function useFeedArgs() {
+  const { symbol, tf, watchlist, tfAlignUtc } = useTrading();
+  const label =
+    watchlist.find((w) => w.symbol === symbol)?.label ?? labelOf(symbol);
+  return { symbol, tf, label, alignUtc: tfAlignUtc };
+}
+
+/** Candles from the MT5 EA when it sends the symbol (needs Convex). */
+function TradingWithEa() {
+  const a = useFeedArgs();
+  const feed = useChartCandles(a.symbol, a.label, a.tf, a.alignUtc);
+  return <TradingScreen feed={feed} />;
+}
+
+function TradingWeb() {
+  const a = useFeedArgs();
+  const feed = useWebChartCandles(a.symbol, a.tf);
+  return <TradingScreen feed={feed} />;
+}
+
+/**
+ * Charting platform (MT5 / TradingView style), mobile first. The EA feed
+ * reads Convex, so the screen runs under its provider when there is one.
+ */
 export function TradingPage() {
+  const status = useSyncStatus();
+  const client = convexClient();
+  if (!client || status === "off") {
+    return <TradingWeb />;
+  }
+  return (
+    <ConvexProvider client={client}>
+      <TradingWithEa />
+    </ConvexProvider>
+  );
+}
+
+function TradingScreen({ feed }: { feed: ChartFeed }) {
   const data = useTrading();
   const { symbol, tf, settings, watchlist } = data;
   const label =
     watchlist.find((w) => w.symbol === symbol)?.label ?? labelOf(symbol);
-  const feed = useChartCandles(symbol, label, tf, data.tfAlignUtc);
   const symbols = useMemo(() => {
     const list = watchlist.map((w) => w.symbol);
     return list.includes(symbol) ? list : [...list, symbol];

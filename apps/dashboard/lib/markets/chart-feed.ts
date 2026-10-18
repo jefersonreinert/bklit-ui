@@ -58,18 +58,20 @@ export interface ChartFeed {
   loadOlder: () => void;
 }
 
-export function useChartCandles(
+/**
+ * Yahoo/Binance candles for a timeframe (custom whole minutes/hours/days
+ * built from the standard ones). `eaPending`: still checking the EA.
+ */
+function useWebFeed(
   symbol: string,
-  label: string,
   tfId: string,
-  alignUtc = false
+  enabled: boolean,
+  eaPending: boolean
 ): ChartFeed {
-  const ea = useMt5Candles(label, tfId, alignUtc);
   const tf = useMemo(() => parseTimeframe(tfId), [tfId]);
-  const fromEa = ea.available === true;
-  const base = !fromEa && tf ? webBaseFor(tf) : null;
+  const base = tf ? webBaseFor(tf) : null;
   const preset = isPresetTf(tfId) ? tfId : base;
-  const web = useCandles(symbol, preset ?? "1m", !fromEa && preset !== null);
+  const web = useCandles(symbol, preset ?? "1m", enabled && preset !== null);
 
   const webCandles = useMemo(() => {
     if (!(web.candles && tf) || isPresetTf(tfId)) {
@@ -81,17 +83,6 @@ export function useChartCandles(
     return aggregateCandles(src, tf, UTC);
   }, [web.candles, tf, tfId]);
 
-  if (fromEa) {
-    return {
-      candles: ea.candles,
-      error: ea.candles?.length ? null : ea.error,
-      digits: ea.digits,
-      source: "mt5",
-      reload: noop,
-      ea,
-      loadOlder: ea.loadOlder,
-    };
-  }
   if (!tf) {
     return {
       ...web,
@@ -102,11 +93,10 @@ export function useChartCandles(
   }
   if (preset === null) {
     return {
-      candles: ea.available === undefined ? null : [],
-      error:
-        ea.available === undefined
-          ? null
-          : "Tempos em segundos e por ticks precisam do EA MT5 (CasaBrasaOHLCExport) enviando este ativo.",
+      candles: eaPending ? null : [],
+      error: eaPending
+        ? null
+        : "Tempos em segundos e por ticks precisam do EA MT5 (CasaBrasaOHLCExport) enviando este ativo.",
       digits: undefined,
       source: "mt5",
       reload: noop,
@@ -115,4 +105,33 @@ export function useChartCandles(
     };
   }
   return { ...web, candles: webCandles, ea: null, loadOlder: noop };
+}
+
+/** Without the panel database (Convex): Yahoo/Binance only. */
+export function useWebChartCandles(symbol: string, tfId: string): ChartFeed {
+  return useWebFeed(symbol, tfId, true, false);
+}
+
+/** EA first, Yahoo/Binance otherwise. Must run under a ConvexProvider. */
+export function useChartCandles(
+  symbol: string,
+  label: string,
+  tfId: string,
+  alignUtc = false
+): ChartFeed {
+  const ea = useMt5Candles(label, tfId, alignUtc);
+  const fromEa = ea.available === true;
+  const web = useWebFeed(symbol, tfId, !fromEa, ea.available === undefined);
+  if (!fromEa) {
+    return web;
+  }
+  return {
+    candles: ea.candles,
+    error: ea.candles?.length ? null : ea.error,
+    digits: ea.digits,
+    source: "mt5",
+    reload: noop,
+    ea,
+    loadOlder: ea.loadOlder,
+  };
 }
