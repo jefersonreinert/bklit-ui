@@ -1,13 +1,28 @@
 "use client";
 
-import { type PointerEvent, useEffect, useRef, useState } from "react";
-import { TIMEFRAMES, type Timeframe } from "@/lib/markets/trading";
+import {
+  type FormEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { parseTimeframe } from "@/lib/markets/timeframe";
+import {
+  addTfFavorite,
+  removeTfFavorite,
+  setTfAlignUtc,
+  tfDisplay,
+  tfOptions,
+  useTrading,
+} from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 
 /**
  * Minimal timeframe picker floating over the chart: a small chip with the
  * current timeframe that expands into the full list. Drag it anywhere on
- * the chart; the spot is remembered on this device.
+ * the chart; the spot is remembered on this device. "+" creates a custom
+ * timeframe ("2s", "90s", "7m", "3h", "100T"), saved as a favorite.
  */
 
 const POS_KEY = "cb:trading:tf-pos";
@@ -49,9 +64,11 @@ export function FloatingTimeframes({
   tf,
   onTf,
 }: {
-  tf: Timeframe;
-  onTf: (tf: Timeframe) => void;
+  tf: string;
+  onTf: (tf: string) => void;
 }) {
+  const { tfFavorites, tfAlignUtc } = useTrading();
+  const options = tfOptions(tfFavorites);
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<{
     startX: number;
@@ -121,7 +138,7 @@ export function FloatingTimeframes({
     }
   };
 
-  const current = TIMEFRAMES.find((t) => t.id === tf);
+  const current = options.find((t) => t.id === tf);
   // Open the list towards the free side of the chart.
   const right = pos.x > 0.5;
 
@@ -147,29 +164,110 @@ export function FloatingTimeframes({
         onPointerUp={onUp}
         type="button"
       >
-        {current?.label ?? tf}
+        {current?.label ?? tfDisplay(tf)}
       </button>
       {open ? (
         <div className="no-scrollbar flex max-w-[calc(100vw-6rem)] overflow-x-auto border bg-background/85 shadow-sm backdrop-blur">
-          {TIMEFRAMES.map((t) => (
-            <button
-              className={cn(
-                "h-[26px] shrink-0 px-2 text-[12px] text-muted-foreground hover:text-foreground",
-                t.id === tf && "font-semibold text-foreground"
-              )}
-              key={t.id}
-              onClick={() => {
-                onTf(t.id);
-                setOpen(false);
-              }}
-              title={t.name}
-              type="button"
-            >
-              {t.label}
-            </button>
+          {options.map((t) => (
+            <span className="flex shrink-0 items-center" key={t.id}>
+              <button
+                className={cn(
+                  "h-[26px] shrink-0 px-2 text-[12px] text-muted-foreground hover:text-foreground",
+                  t.id === tf && "font-semibold text-foreground"
+                )}
+                onClick={() => {
+                  onTf(t.id);
+                  setOpen(false);
+                }}
+                title={t.name}
+                type="button"
+              >
+                {t.label}
+              </button>
+              {t.custom ? (
+                <button
+                  aria-label={`Remover ${t.name} dos favoritos`}
+                  className="-ml-1.5 h-[26px] pr-1.5 text-[10px] text-muted-foreground/60 hover:text-destructive"
+                  onClick={() => removeTfFavorite(t.id)}
+                  type="button"
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
           ))}
+          <CustomTfInput
+            onPick={(id) => {
+              addTfFavorite(id);
+              onTf(id);
+              setOpen(false);
+            }}
+          />
+          <button
+            className="h-[26px] shrink-0 border-l px-2 text-[11px] text-muted-foreground hover:text-foreground"
+            onClick={() => setTfAlignUtc(!tfAlignUtc)}
+            title="Início das velas intradiárias personalizadas: meia-noite da corretora (como o MT5) ou de UTC"
+            type="button"
+          >
+            {tfAlignUtc ? "UTC" : "Corretora"}
+          </button>
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** "+": type a custom timeframe, validated with parseTimeframe. */
+function CustomTfInput({ onPick }: { onPick: (id: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const parsed = text.trim() ? parseTimeframe(text) : null;
+  const invalid = text.trim() !== "" && !parsed;
+  if (!editing) {
+    return (
+      <button
+        aria-label="Novo tempo gráfico personalizado"
+        className="h-[26px] shrink-0 border-l px-2 text-[12px] text-muted-foreground hover:text-foreground"
+        onClick={() => setEditing(true)}
+        title="Novo tempo gráfico: 2s, 90s, 7m, 3h, 2D, 100T…"
+        type="button"
+      >
+        +
+      </button>
+    );
+  }
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (parsed) {
+      onPick(parsed.id);
+      setText("");
+      setEditing(false);
+    }
+  };
+  return (
+    <form className="flex shrink-0 items-center border-l" onSubmit={submit}>
+      <input
+        aria-invalid={invalid}
+        aria-label="Tempo gráfico personalizado"
+        autoFocus
+        className={cn(
+          "h-[26px] w-16 bg-transparent px-2 text-[12px] outline-none",
+          invalid && "text-destructive"
+        )}
+        onBlur={() => {
+          if (!text.trim()) {
+            setEditing(false);
+          }
+        }}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="2s, 7m…"
+        title={
+          invalid
+            ? "Use número + unidade: 2s, 90s, 7m, 3h, 2D, 1W, 1M, 100T"
+            : undefined
+        }
+        value={text}
+      />
+    </form>
   );
 }

@@ -24,6 +24,8 @@ interface SVGChartProps {
   goToDate?: Date | null;
   /** When true, auto-scroll follows the last candle (replay mode) */
   followLast?: boolean;
+  /** Called when the view reaches the oldest candle (load more history). */
+  onReachStart?: () => void;
 }
 
 /** Phones: one line of OHLC at the top instead of the floating tooltip. */
@@ -51,7 +53,7 @@ function OhlcLegend({ precision }: { precision: number }) {
   );
 }
 
-export function SVGChart({ data, settings, drawingProps, goToDate, followLast }: SVGChartProps) {
+export function SVGChart({ data, settings, drawingProps, goToDate, followLast, onReachStart }: SVGChartProps) {
   const [ref, bounds] = useMeasure();
   // Convert MT5 Candle[] to OHLCDataPoint[]
   const ohlcData = useMemo(() =>
@@ -98,6 +100,7 @@ export function SVGChart({ data, settings, drawingProps, goToDate, followLast }:
         margin={{ top: compact ? 18 : 20, right, bottom: 30, left: compact ? 4 : 10 }}
         goToDate={goToDate}
         followLast={followLast}
+        onReachStart={onReachStart}
       >
         {settings.gridEnabled ? (
           <Grid stroke={settings.gridColor} strokeOpacity={0.3} vertical horizontal />

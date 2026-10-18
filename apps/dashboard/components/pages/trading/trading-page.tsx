@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { Icon, type IconName } from "@/lib/icons";
+import { type ChartFeed, useChartCandles } from "@/lib/markets/chart-feed";
 import {
   autoDigits,
   type FeedSource,
@@ -19,9 +20,7 @@ import {
   setDrawings,
   setSymbol,
   setTimeframe,
-  type Timeframe,
   updateSettings,
-  useCandles,
   useQuotes,
   useTrading,
   type WatchItem,
@@ -421,7 +420,9 @@ function ExplorePanel({
 export function TradingPage() {
   const data = useTrading();
   const { symbol, tf, settings, watchlist } = data;
-  const feed = useCandles(symbol, tf);
+  const label =
+    watchlist.find((w) => w.symbol === symbol)?.label ?? labelOf(symbol);
+  const feed = useChartCandles(symbol, label, tf, data.tfAlignUtc);
   const symbols = useMemo(() => {
     const list = watchlist.map((w) => w.symbol);
     return list.includes(symbol) ? list : [...list, symbol];
@@ -442,7 +443,6 @@ export function TradingPage() {
   const { tool, selected } = draw;
 
   const item = watchlist.find((w) => w.symbol === symbol);
-  const label = item?.label ?? labelOf(symbol);
   const quote = quotes[symbol];
   const price = candles.at(-1)?.close ?? quote?.price;
   const digits = chartDigits(
@@ -881,9 +881,9 @@ function ChartViewport({
   onDrawSettings,
 }: {
   symbol: string;
-  tf: Timeframe;
+  tf: string;
   candles: Candle[];
-  feed: ReturnType<typeof useCandles>;
+  feed: ChartFeed;
   replay: ReturnType<typeof useReplay>;
   draw: ReturnType<typeof useDrawingState>;
   drawings: Drawing[];
@@ -918,12 +918,14 @@ function ChartViewport({
           followLast={replay.active && replay.playing}
           goToDate={replay.active ? undefined : goTo}
           key={`${symbol}-${tf}`}
+          onReachStart={replay.active ? undefined : feed.loadOlder}
           settings={{ ...settings, precision: digits }}
         />
       ) : null}
       <FloatingTimeframes onTf={setTimeframe} tf={tf} />
       <ChartStatus
         candles={candles}
+        ea={feed.ea}
         error={feed.error}
         loading={feed.candles === null}
         onRetry={feed.reload}
@@ -1059,16 +1061,62 @@ function DrawHint({
 const SOURCE_LABEL: Record<FeedSource, string> = {
   binance: "Binance · tempo real",
   yahoo: "Yahoo Finance",
+  mt5: "MT5 (EA)",
 };
+
+function historyNote(ea: NonNullable<ChartFeed["ea"]>) {
+  if (ea.loadingHistory) {
+    return "Carregando histórico…";
+  }
+  if (!ea.historyStart) {
+    return null;
+  }
+  return ea.ticksEnd
+    ? "Fim do histórico de ticks da corretora"
+    : "Início do histórico da corretora";
+}
+
+/** Online/offline dot and history notes when the candles come from the EA. */
+function EaStatus({ ea }: { ea: NonNullable<ChartFeed["ea"]> }) {
+  const silent = Math.round(ea.silentSec ?? 0);
+  const note = historyNote(ea);
+  return (
+    <>
+      <span
+        className="pointer-events-none absolute bottom-9 left-2 flex items-center gap-1 text-[10px] text-muted-foreground/80"
+        title={
+          ea.online
+            ? "O EA enviou dados nos últimos 30 s"
+            : `Sem dados do EA há ${silent} s`
+        }
+      >
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            ea.online ? "bg-emerald-500" : "bg-muted-foreground/60"
+          )}
+        />
+        MT5 (EA) · {ea.online ? "online · tempo real" : "offline"}
+      </span>
+      {note ? (
+        <span className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 rounded-full border bg-card/90 px-2.5 py-0.5 text-[11px] text-muted-foreground shadow-sm">
+          {note}
+        </span>
+      ) : null}
+    </>
+  );
+}
 
 function ChartStatus({
   candles,
+  ea,
   error,
   loading,
   source,
   onRetry,
 }: {
   candles: Candle[];
+  ea: ChartFeed["ea"];
   error: string | null;
   loading: boolean;
   source: FeedSource;
@@ -1093,6 +1141,9 @@ function ChartStatus({
   }
   if (candles.length === 0) {
     return null;
+  }
+  if (ea) {
+    return <EaStatus ea={ea} />;
   }
   return (
     <span className="pointer-events-none absolute bottom-9 left-2 text-[10px] text-muted-foreground/70">

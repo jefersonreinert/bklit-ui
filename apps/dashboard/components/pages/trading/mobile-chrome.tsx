@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { FloatingButton } from "@/components/dashboard/floating-button";
 import { Icon, type IconName } from "@/lib/icons";
-import { TIMEFRAMES, type Timeframe } from "@/lib/markets/trading";
+import { tfDisplay, tfOptions, useTrading } from "@/lib/markets/trading";
 import { cn } from "@/lib/utils";
 
 /**
@@ -293,8 +293,8 @@ export function ChartToolbar({
   symbol: string;
   labelOf: (s: string) => string;
   onSymbol: (s: string) => void;
-  tf: Timeframe;
-  onTf: (tf: Timeframe) => void;
+  tf: string;
+  onTf: (tf: string) => void;
   drawing: boolean;
   onDraw: () => void;
   replay: boolean;
@@ -305,6 +305,8 @@ export function ChartToolbar({
 }) {
   const [menu, setMenu] = useState(false);
   const list = symbols.includes(symbol) ? symbols : [...symbols, symbol];
+  const { tfFavorites } = useTrading();
+  const tfIds = tfOptions(tfFavorites).map((t) => t.id);
   return (
     <div className="relative flex shrink-0 items-center gap-1 border-t px-3 md:hidden">
       <Wheel
@@ -317,10 +319,10 @@ export function ChartToolbar({
       />
       <Wheel
         className="w-14 shrink-0"
-        items={TIMEFRAMES.map((t) => t.id)}
+        items={tfIds.includes(tf) ? tfIds : [...tfIds, tf]}
         label="Tempo gráfico"
         onChange={onTf}
-        render={(id) => TIMEFRAMES.find((t) => t.id === id)?.label ?? id}
+        render={tfDisplay}
         value={tf}
       />
       <div className="ml-auto flex items-center">

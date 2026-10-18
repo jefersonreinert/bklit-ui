@@ -35,6 +35,8 @@ export interface CandlestickChartProps {
   goToDate?: Date | null;
   /** Auto-scroll to keep the latest candle visible (for replay mode) */
   followLast?: boolean;
+  /** Called when the view reaches the oldest candle (load more history). */
+  onReachStart?: () => void;
   children: ReactNode;
 }
 
@@ -53,6 +55,7 @@ function ChartInner({
   zoomSpeed,
   goToDate,
   followLast,
+  onReachStart,
   children,
   containerRef,
 }: any) {
@@ -74,7 +77,27 @@ function ChartInner({
 
   // Sync viewRange when data changes
   const prevLength = useRef(fullData.length);
+  const prevFirst = useRef<number | null>(fullData[0]?.date.getTime() ?? null);
   useEffect(() => {
+    const first = fullData[0]?.date.getTime() ?? null;
+    const added = fullData.length - prevLength.current;
+    // Older history prepended: keep the same candles in view
+    if (
+      !followLast &&
+      added > 0 &&
+      prevLength.current > 0 &&
+      first !== null &&
+      prevFirst.current !== null &&
+      first < prevFirst.current
+    ) {
+      let shift = 0;
+      while (shift < fullData.length && fullData[shift].date.getTime() < prevFirst.current) shift++;
+      setViewRange(([start, end]) => [start + shift, end + shift]);
+      prevFirst.current = first;
+      prevLength.current = fullData.length;
+      return;
+    }
+    prevFirst.current = first;
     if (fullData.length !== prevLength.current) {
       if (followLast) {
         // Replay mode: always keep the last candle visible, show last DEFAULT_VISIBLE
@@ -119,6 +142,15 @@ function ChartInner({
     const end = Math.min(fullData.length - 1, start + DEFAULT_VISIBLE);
     setViewRange([start, end]);
   }, [goToDate, fullData.length]);
+
+  // Scrolled to the oldest candle: ask for more history
+  const reachRef = useRef(onReachStart);
+  reachRef.current = onReachStart;
+  useEffect(() => {
+    if (fullData.length > 0 && viewRange[0] <= 5) {
+      reachRef.current?.();
+    }
+  }, [viewRange[0] <= 5, fullData.length]);
 
   const data = useMemo(() => {
     const [start, end] = viewRange;
@@ -318,6 +350,7 @@ export function CandlestickChart({
   zoomSpeed = 0.1,
   goToDate,
   followLast,
+  onReachStart,
   children,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -343,6 +376,7 @@ export function CandlestickChart({
             zoomSpeed={zoomSpeed}
             goToDate={goToDate}
             followLast={followLast}
+            onReachStart={onReachStart}
             containerRef={containerRef}
           >
             {children}
