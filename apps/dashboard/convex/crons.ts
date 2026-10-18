@@ -10,4 +10,10 @@ const crons = cronJobs();
  */
 crons.interval("ict monitor", { minutes: 5 }, internal.ict.tick, {});
 
+/**
+ * OHLC feed (convex/ohlc.ts): candles beyond OHLC_KEEP_BARS and ticks older
+ * than OHLC_TICK_WINDOW_MS move to the gzip history files.
+ */
+crons.interval("ohlc compact", { minutes: 10 }, internal.ohlc.compact, {});
+
 export default crons;
