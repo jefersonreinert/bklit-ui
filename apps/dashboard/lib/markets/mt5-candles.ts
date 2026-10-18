@@ -44,21 +44,55 @@ const TICKS_WINDOW_MS = 2 * 3_600_000;
 /** The live tick subscription starts this far back and rolls every minute. */
 const LIVE_TICKS_MS = 30_000;
 
-/** EA symbol for a platform label: "EURUSD" → "EURUSD", "EURUSD.m", "EURUSDm"… */
+/** Platform labels whose broker symbol has another name. */
+const ALIASES: Record<string, string[]> = {
+  SPX500: ["US500", "SPX500", "US500.CASH", "SP500"],
+  NAS100: ["USTEC", "NAS100", "US100", "NDX100"],
+  US30: ["US30", "DJ30", "WS30"],
+  DXY: ["DXY", "USDX", "DX"],
+  USOIL: ["XTIUSD", "USOIL", "WTI", "CL"],
+  UKOIL: ["XBRUSD", "UKOIL", "BRENT"],
+  XAUUSD: ["XAUUSD", "GOLD"],
+  XAGUSD: ["XAGUSD", "SILVER"],
+  GER40: ["DE40", "GER40", "DAX40"],
+  GOOGL: ["GOOGL", "GOOG"],
+};
+
+const SEPARATOR = /^[._-]/;
+
+/** "EURUSD" matches "EURUSD", "EURUSD.m", "EURUSDm", "AAPL" matches "AAPL.NAS", "DXY" matches "DXY_Z6". */
+const matches = (symbol: string, want: string) => {
+  if (!symbol.startsWith(want)) {
+    return false;
+  }
+  const rest = symbol.slice(want.length);
+  return rest.length <= 4 || SEPARATOR.test(rest);
+};
+
+/** EA symbol for a platform label (exact name first, then the shortest variant). */
 export function matchFeedSymbol(label: string, symbols: string[]) {
   const want = label.toUpperCase();
-  const exact = symbols.find((s) => s.toUpperCase() === want);
-  if (exact) {
-    return exact;
+  const upper = symbols.map((s) => s.toUpperCase());
+  for (const cand of [want, ...(ALIASES[want] ?? [])]) {
+    const exact = upper.indexOf(cand);
+    if (exact >= 0) {
+      return symbols[exact] ?? null;
+    }
   }
-  const suffixed = symbols
-    .filter((s) => {
-      const up = s.toUpperCase();
-      return up.startsWith(want) && up.length - want.length <= 4;
-    })
-    .sort((a, b) => a.length - b.length);
-  return suffixed[0] ?? null;
+  for (const cand of [want, ...(ALIASES[want] ?? [])]) {
+    const found = symbols
+      .filter((_, i) => matches(upper[i] ?? "", cand))
+      .sort((a, b) => a.length - b.length)[0];
+    if (found) {
+      return found;
+    }
+  }
+  return null;
 }
+
+/** Watchlist symbols of MT5-only items ("mt5:US2000"). */
+export const MT5_PREFIX = "mt5:";
+export const MT5_SECTION = "MT5 (EA)";
 
 export const rowCandle = (r: Row): OhlcCandle => ({
   time: r[0] ?? 0,

@@ -134,6 +134,54 @@ describe("POST /ohlc/mt5", () => {
   });
 });
 
+describe("live prices", () => {
+  it("keeps the M1 per tick apart and composes the other timeframes", async () => {
+    const { t, post } = await setup();
+    const h1 = [T, 1.1, 1.2, 1.05, 1.15, 40, 0, 5];
+    const m1 = [T + 300_000, 1.15, 1.16, 1.14, 1.15, 2, 0, 5];
+    await post(
+      envelope({
+        type: "snapshot",
+        series: [
+          { symbol: "EURUSD", tf: "H1", bars: [h1] },
+          { symbol: "EURUSD", tf: "M1", bars: [m1] },
+        ],
+      })
+    );
+    const before = await t.run((ctx) => ctx.db.query("ohlcLive").first());
+    // A tick: only the M1 and the tick arrive
+    await post(
+      envelope({
+        type: "update",
+        seq: 9,
+        series: [
+          {
+            symbol: "EURUSD",
+            tf: "M1",
+            bars: [[T + 300_000, 1.15, 1.25, 1.14, 1.22, 9, 0, 4]],
+          },
+        ],
+        ticks: [
+          {
+            symbol: "EURUSD",
+            chart: "bid",
+            rows: [[T + 330_000, 1.22, 1.2202, 0, 0, 6]],
+          },
+        ],
+      })
+    );
+    const after = await t.run((ctx) => ctx.db.query("ohlcLive").first());
+    expect(after?.updatedAt).toBe(before?.updatedAt);
+    const live = await t.query(api.ohlc.live, { symbol: "EURUSD" });
+    expect(live?.bars.H1).toEqual([T, 1.1, 1.25, 1.05, 1.22, 47, 0, 4]);
+    expect(live?.bid).toBe(1.22);
+    const quotes = await t.query(api.ohlc.quotes, {});
+    expect(quotes?.quotes.map((q) => [q.symbol, q.bid, q.ask])).toEqual([
+      ["EURUSD", 1.22, 1.2202],
+    ]);
+  });
+});
+
 describe("history requests", () => {
   it("hands each request once, archives the answer and closes it", async () => {
     const { t, post } = await setup();

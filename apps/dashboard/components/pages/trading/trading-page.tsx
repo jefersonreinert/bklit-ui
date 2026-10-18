@@ -16,6 +16,12 @@ import {
   useChartCandles,
   useWebChartCandles,
 } from "@/lib/markets/chart-feed";
+import { MT5_PREFIX, MT5_SECTION } from "@/lib/markets/mt5-candles";
+import {
+  type EaQuote,
+  mergeEaQuotes,
+  useEaQuotes,
+} from "@/lib/markets/mt5-quotes";
 import {
   autoDigits,
   type FeedSource,
@@ -422,6 +428,8 @@ function ExplorePanel({
   );
 }
 
+const NO_EA_QUOTES: EaQuote[] = [];
+
 function useFeedArgs() {
   const { symbol, tf, watchlist, tfAlignUtc } = useTrading();
   const label =
@@ -433,7 +441,8 @@ function useFeedArgs() {
 function TradingWithEa() {
   const a = useFeedArgs();
   const feed = useChartCandles(a.symbol, a.label, a.tf, a.alignUtc);
-  return <TradingScreen feed={feed} />;
+  const eaQuotes = useEaQuotes();
+  return <TradingScreen eaQuotes={eaQuotes} feed={feed} />;
 }
 
 function TradingWeb() {
@@ -459,16 +468,40 @@ export function TradingPage() {
   );
 }
 
-function TradingScreen({ feed }: { feed: ChartFeed }) {
+function TradingScreen({
+  feed,
+  eaQuotes = NO_EA_QUOTES,
+}: {
+  feed: ChartFeed;
+  eaQuotes?: EaQuote[];
+}) {
   const data = useTrading();
-  const { symbol, tf, settings, watchlist } = data;
+  const { symbol, tf, settings } = data;
+  const symbols = useMemo(() => {
+    const list = data.watchlist
+      .map((w) => w.symbol)
+      .filter((s) => !s.startsWith(MT5_PREFIX));
+    return list.includes(symbol) || symbol.startsWith(MT5_PREFIX)
+      ? list
+      : [...list, symbol];
+  }, [data.watchlist, symbol]);
+  const web = useQuotes(symbols);
+  const { locked, reload: reloadQuotes } = web;
+  // MT5 prices over Yahoo's, and the EA symbols missing from the watchlist
+  const { quotes, extra } = useMemo(
+    () => mergeEaQuotes(data.watchlist, web.quotes, eaQuotes),
+    [data.watchlist, web.quotes, eaQuotes]
+  );
+  const watchlist = useMemo(
+    () => (extra.length > 0 ? [...data.watchlist, ...extra] : data.watchlist),
+    [data.watchlist, extra]
+  );
+  const sections = useMemo(
+    () => (extra.length > 0 ? [...data.sections, MT5_SECTION] : data.sections),
+    [data.sections, extra.length]
+  );
   const label =
     watchlist.find((w) => w.symbol === symbol)?.label ?? labelOf(symbol);
-  const symbols = useMemo(() => {
-    const list = watchlist.map((w) => w.symbol);
-    return list.includes(symbol) ? list : [...list, symbol];
-  }, [watchlist, symbol]);
-  const { quotes, locked, reload: reloadQuotes } = useQuotes(symbols);
   const [panel, setPanel] = useState<Panel>(null);
   const { view, setView } = useMobileView();
   const [journalTab, setJournalTab] = useState<JournalTab>("summary");
@@ -538,7 +571,7 @@ function TradingScreen({ feed }: { feed: ChartFeed }) {
           onSearch={() => setPanel("search")}
           onView={setView}
           quotes={quotes}
-          sections={data.sections}
+          sections={sections}
         />
       ) : null}
       {view === "journal" ? (
@@ -638,7 +671,7 @@ function TradingScreen({ feed }: { feed: ChartFeed }) {
           onPick={pickSymbol}
           onSearch={() => setPanel("search")}
           quotes={quotes}
-          sections={data.sections}
+          sections={sections}
         />
       </aside>
 
@@ -652,7 +685,7 @@ function TradingScreen({ feed }: { feed: ChartFeed }) {
         onSearch={() => setPanel("search")}
         open={panel === "watchlist"}
         quotes={quotes}
-        sections={data.sections}
+        sections={sections}
       />
       <SymbolSearch
         onClose={() => setPanel(null)}

@@ -399,6 +399,9 @@ export function moveInWatchlist(symbol: string, dir: -1 | 1) {
 
 /** Short ticker from a Yahoo symbol ("EURUSD=X" → "EURUSD", "BTC-USD" → "BTCUSD"). */
 export function labelOf(symbol: string) {
+  if (symbol.startsWith("mt5:")) {
+    return symbol.slice(4);
+  }
   const known = DEFAULT_ITEMS.find((i) => i.symbol === symbol);
   if (known) {
     return known.label;

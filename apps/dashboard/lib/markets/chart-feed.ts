@@ -45,6 +45,11 @@ export function webBaseFor(tf: CustomTf): Timeframe | null {
 }
 
 const UTC = { offsetMs: 0, brokerOffsetMs: 0 };
+
+const noWebMessage = (mt5Only: boolean) =>
+  mt5Only
+    ? "Este ativo vem só do MT5: o EA está offline."
+    : "Tempos em segundos e por ticks precisam do EA MT5 (CasaBrasaOHLCExport) enviando este ativo.";
 const noop = () => undefined;
 
 export interface ChartFeed {
@@ -71,7 +76,13 @@ function useWebFeed(
   const tf = useMemo(() => parseTimeframe(tfId), [tfId]);
   const base = tf ? webBaseFor(tf) : null;
   const preset = isPresetTf(tfId) ? tfId : base;
-  const web = useCandles(symbol, preset ?? "1m", enabled && preset !== null);
+  // "mt5:US2000" exists only in the EA: no Yahoo/Binance fallback
+  const mt5Only = symbol.startsWith("mt5:");
+  const web = useCandles(
+    symbol,
+    preset ?? "1m",
+    enabled && preset !== null && !mt5Only
+  );
 
   const webCandles = useMemo(() => {
     if (!(web.candles && tf) || isPresetTf(tfId)) {
@@ -91,12 +102,10 @@ function useWebFeed(
       loadOlder: noop,
     };
   }
-  if (preset === null) {
+  if (preset === null || mt5Only) {
     return {
       candles: eaPending ? null : [],
-      error: eaPending
-        ? null
-        : "Tempos em segundos e por ticks precisam do EA MT5 (CasaBrasaOHLCExport) enviando este ativo.",
+      error: eaPending ? null : noWebMessage(mt5Only),
       digits: undefined,
       source: "mt5",
       reload: noop,

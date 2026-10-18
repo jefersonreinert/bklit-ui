@@ -593,6 +593,8 @@ struct OhlcSymbol
    bool              tickInit;
    long              tLastMsc;     // último tick enviado
    int               tSentAtLast;  // ticks já enviados com esse time_msc
+   datetime          fullM1;       // vela M1 em que os outros tempos gráficos foram enviados
+   ulong             fullAt;       // GetTickCount64 desse envio
   };
 
 /** Trabalho em segundo plano: pedido da plataforma ou recuperação após queda. */
@@ -646,6 +648,7 @@ ulong      g_lastCycle = 0;
 ulong      g_pollUntil = 0;    // a plataforma pediu verificação mais frequente até aqui
 long       g_pollMs = 0;
 bool       g_dirty = false;
+bool       g_flushComplete = true;  // o último Flush enviou todos os pedaços
 ulong      g_lastSave = 0;
 int        g_failures = 0;
 datetime   g_backfillFrom = 0;
@@ -1412,10 +1415,12 @@ bool Flush()
    int n = ArraySize(g_parts);
    int i = 0;
    int envelopes = 0;
+   g_flushComplete = true;
    while(i < n)
      {
       if(envelopes >= 8)
         {
+         g_flushComplete = false;
          // O resto vai no próximo ciclo (o estado não avançou)
          for(int s = 0; s < ArraySize(g_syms); s++)
             g_syms[s].seenMsc = 0;
@@ -1469,9 +1474,23 @@ void Cycle()
       if(changed[s])
          g_syms[s].seenMsc = tk.time_msc;
      }
+   // A cada tick só vai a M1 (e os ticks). Os outros tempos gráficos vão quando
+   // abre uma nova M1 (ou a cada 60 s): a plataforma completa a vela em formação
+   // deles com a M1 ao vivo, que é como o MT5 monta os tempos maiores.
+   bool full[];
+   datetime m1[];
+   ArrayResize(full, ArraySize(g_syms));
+   ArrayResize(m1, ArraySize(g_syms));
+   ulong nowTick = GetTickCount64();
+   for(int s = 0; s < ArraySize(g_syms); s++)
+     {
+      m1[s] = iTime(g_syms[s].symbol, PERIOD_M1, 0);
+      full[s] = changed[s] && (m1[s] != g_syms[s].fullM1 || nowTick - g_syms[s].fullAt >= 60000);
+     }
    ulong t0 = GetTickCount64();
    for(int i = 0; i < ArraySize(g_series); i++)
-      if(!g_series[i].has || changed[g_series[i].sym])
+      if(!g_series[i].has ||
+         (changed[g_series[i].sym] && (g_series[i].tf == PERIOD_M1 || full[g_series[i].sym])))
          CollectSeries(i);
    ulong t1 = GetTickCount64();
    for(int s = 0; s < ArraySize(g_syms); s++)
@@ -1483,6 +1502,13 @@ void Cycle()
    ulong t3 = GetTickCount64();
    if(t3 - t0 > 1000)
       Log(StringFormat("ciclo lento: velas %I64u ms, ticks %I64u ms, envio %I64u ms", t1 - t0, t2 - t1, t3 - t2));
+   if(flushed && g_flushComplete)
+      for(int s = 0; s < ArraySize(g_syms); s++)
+         if(full[s])
+           {
+            g_syms[s].fullM1 = m1[s];
+            g_syms[s].fullAt = nowTick;
+           }
    if(!flushed)
      {
       // Falhou: o próximo ciclo recalcula tudo o que falta (velas e ticks)
@@ -1524,6 +1550,8 @@ bool AddSymbol(const string symbol, const bool ticks)
    g_syms[k].tickInit = false;
    g_syms[k].tLastMsc = 0;
    g_syms[k].tSentAtLast = 0;
+   g_syms[k].fullM1 = 0;
+   g_syms[k].fullAt = 0;
    return true;
   }
 
