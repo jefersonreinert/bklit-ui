@@ -22,6 +22,7 @@ import type * as lib from "../lib.js";
 import type * as metatrader from "../metatrader.js";
 import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
+import type * as ohlc from "../ohlc.js";
 import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   metatrader: typeof metatrader;
   mtproto: typeof mtproto;
   notes: typeof notes;
+  ohlc: typeof ohlc;
   pos: typeof pos;
   staff: typeof staff;
   stores: typeof stores;

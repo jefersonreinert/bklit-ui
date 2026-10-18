@@ -968,6 +968,123 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  /**
+   * OHLC feed of the CasaBrasaOHLCExport EA (POST /ohlc/mt5, convex/ohlc.ts).
+   * Latest state of each sending terminal (EA online/offline).
+   */
+  ohlcFeeds: defineTable({
+    account: v.string(),
+    server: v.string(),
+    broker: v.string(),
+    /** Broker clock − UTC (s). */
+    offsetSec: v.number(),
+    seq: v.number(),
+    /** EA clock of the last envelope (UTC ms). */
+    sentMs: v.number(),
+    receivedAt: v.number(),
+    symbols: v.array(
+      v.object({
+        symbol: v.string(),
+        digits: v.number(),
+        chart: v.union(v.literal("bid"), v.literal("last")),
+      })
+    ),
+  }).index("by_account", ["account"]),
+
+  /** Forming candle of every timeframe of a symbol (rewritten on each tick). */
+  ohlcLive: defineTable({
+    account: v.string(),
+    symbol: v.string(),
+    digits: v.number(),
+    chart: v.union(v.literal("bid"), v.literal("last")),
+    /** The broker has no ticks before this time (on-demand requests). */
+    ticksEndMs: v.optional(v.number()),
+    updatedAt: v.number(),
+    /** [t, o, h, l, c, tick_volume, real_volume, spread] by timeframe. */
+    bars: v.record(v.string(), v.array(v.number())),
+  }).index("by_account_symbol", ["account", "symbol"]),
+
+  /** Each candle series: how many closed candles the table keeps. */
+  ohlcSeries: defineTable({
+    account: v.string(),
+    symbol: v.string(),
+    tf: v.string(),
+    count: v.number(),
+    oldest: v.number(),
+    newest: v.number(),
+    /** Start of the broker's history. */
+    firstMs: v.optional(v.number()),
+  })
+    .index("by_series", ["account", "symbol", "tf"])
+    .index("by_count", ["count"]),
+
+  /** Recent closed candles (the newest OHLC_KEEP_BARS of each series). */
+  ohlcBars: defineTable({
+    account: v.string(),
+    symbol: v.string(),
+    tf: v.string(),
+    time: v.number(),
+    o: v.number(),
+    h: v.number(),
+    l: v.number(),
+    c: v.number(),
+    tv: v.number(),
+    rv: v.number(),
+    sp: v.number(),
+  }).index("by_series_time", ["account", "symbol", "tf", "time"]),
+
+  /** Recent ticks in 10-second blocks ([t, bid, ask, last, volume, flags]). */
+  ohlcTicks: defineTable({
+    account: v.string(),
+    symbol: v.string(),
+    /** Block start (UTC ms, multiple of 10 s). */
+    time: v.number(),
+    first: v.number(),
+    last: v.number(),
+    rows: v.array(v.array(v.number())),
+  })
+    .index("by_symbol_time", ["account", "symbol", "time"])
+    .index("by_time", ["time"]),
+
+  /** Deep history files (gzip in File Storage) and the ranges they cover. */
+  ohlcArchive: defineTable({
+    account: v.string(),
+    kind: v.union(v.literal("bars"), v.literal("ticks")),
+    symbol: v.string(),
+    /** Timeframe of candle files; "" for ticks. */
+    tf: v.string(),
+    /** UTC month (candles) or day (ticks) start. */
+    period: v.number(),
+    file: v.optional(v.id("_storage")),
+    count: v.number(),
+    /** Covered ranges [from, to] (UTC ms, inclusive). */
+    cover: v.array(v.array(v.number())),
+    version: v.number(),
+  }).index("by_key", ["account", "kind", "symbol", "tf", "period"]),
+
+  /** History the chart asked the EA for (delivered in the webhook answer). */
+  ohlcRequests: defineTable({
+    account: v.string(),
+    kind: v.union(v.literal("bars"), v.literal("ticks")),
+    symbol: v.string(),
+    tf: v.string(),
+    fromMs: v.number(),
+    toMs: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("taken"),
+      v.literal("done"),
+      v.literal("failed")
+    ),
+    createdAt: v.number(),
+    /** Last sign of life (taken or a block received). */
+    activeAt: v.number(),
+    chunks: v.number(),
+    error: v.optional(v.string()),
+  })
+    .index("by_account_status", ["account", "status"])
+    .index("by_series", ["account", "kind", "symbol", "tf", "status"]),
+
   /** The home screen's wallpaper file (photo or video); at most one. */
   homeWallpapers: defineTable({
     storageId: v.id("_storage"),

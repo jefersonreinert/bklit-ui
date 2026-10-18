@@ -9,9 +9,11 @@ import {
   statsFromBody,
 } from "../lib/journal/ingest";
 import { syncFromBody, syncResponse } from "../lib/journal/sync";
+import { parseOhlcFeed } from "../lib/metatrader/ohlc-feed";
 import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction } from "./_generated/server";
 import { syncArgs } from "./eatrade";
+import { ingestOhlc } from "./ohlc";
 
 /**
  * Always-on webhooks of the trading journal (https://<deployment>.convex.site):
@@ -23,6 +25,8 @@ import { syncArgs } from "./eatrade";
  * - POST /journal/mt5/sync?token=…     terminal state in, queued orders out
  *                                       (EA v4.10, trading from the panel)
  * - POST /journal/tradingview?token=…  TradingView alert messages
+ * - POST /ohlc/mt5?token=…             candles and ticks from the
+ *                                       CasaBrasaOHLCExport EA (convex/ohlc.ts)
  *
  * TradingView cannot send headers, so the token goes in the URL; the EA
  * may also send it as X-Journal-Token.
@@ -176,6 +180,37 @@ http.route({
     }
     await ctx.runMutation(internal.journal.ingestSignal, parseSignal(text));
     return json({ ok: true });
+  }),
+});
+
+/** Same journal token, sent as ?token= or X-Feed-Token (OHLC export EA). */
+async function feedAuthorized(ctx: ActionCtx, request: Request) {
+  const expected = await ctx.runQuery(internal.journal.tokenFor, {});
+  const given =
+    new URL(request.url).searchParams.get("token") ??
+    request.headers.get("x-feed-token") ??
+    "";
+  return Boolean(expected) && sameToken(given, expected ?? "");
+}
+
+http.route({
+  path: "/ohlc/mt5",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!(await feedAuthorized(ctx, request))) {
+      return json({ ok: false, error: "unauthorized" }, 401);
+    }
+    const read = await readJson(request);
+    if ("error" in read) {
+      return read.error;
+    }
+    const feed = parseOhlcFeed(read.body);
+    if (!feed) {
+      return json({ ok: false, error: "bad_feed" }, 400);
+    }
+    // Answers only after storing: the EA advances its state on a 2xx
+    const out = await ingestOhlc(ctx, feed, Date.now());
+    return json({ ok: true, ...out });
   }),
 });
 

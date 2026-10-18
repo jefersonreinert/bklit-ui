@@ -19,6 +19,7 @@ import {
   normalizeSections,
   SECTION_OTHER,
 } from "./sections";
+import { parseTimeframe, tfLabel, tfName } from "./timeframe";
 
 /**
  * Charting platform: watchlist, chart settings and drawings (saved on the
@@ -42,7 +43,12 @@ export interface TradingData {
   /** Section order of the watchlist. */
   sections: string[];
   symbol: string;
-  tf: Timeframe;
+  /** A Timeframe or a custom one ("2s", "7m", "100T"; see timeframe.ts). */
+  tf: string;
+  /** Custom timeframes saved next to the standard ones. */
+  tfFavorites?: string[];
+  /** Custom intraday candles start at UTC midnight instead of the broker's. */
+  tfAlignUtc?: boolean;
   settings: ChartSettings;
   drawings: Record<string, Drawing[]>;
   /** Candle palette the saved colors belong to (see CANDLE_PALETTE). */
@@ -71,6 +77,43 @@ export const TIMEFRAMES: { id: Timeframe; label: string; name: string }[] = [
   { id: "W", label: "1S", name: "Semanal" },
   { id: "M", label: "1M", name: "Mensal" },
 ];
+
+export const isPresetTf = (tf: string): tf is Timeframe =>
+  TIMEFRAMES.some((t) => t.id === tf);
+
+export interface TfOption {
+  id: string;
+  label: string;
+  name: string;
+  custom: boolean;
+}
+
+/** Standard timeframes followed by the saved custom ones. */
+export function tfOptions(favorites: string[] = []): TfOption[] {
+  const out: TfOption[] = TIMEFRAMES.map((t) => ({ ...t, custom: false }));
+  for (const id of favorites) {
+    const tf = parseTimeframe(id);
+    if (tf && !out.some((o) => o.id === tf.id)) {
+      out.push({
+        id: tf.id,
+        label: tfLabel(tf),
+        name: tfName(tf),
+        custom: true,
+      });
+    }
+  }
+  return out;
+}
+
+/** Label of any timeframe id (standard or custom). */
+export function tfDisplay(id: string) {
+  const preset = TIMEFRAMES.find((t) => t.id === id);
+  if (preset) {
+    return preset.label;
+  }
+  const tf = parseTimeframe(id);
+  return tf ? tfLabel(tf) : id;
+}
 
 export const TRADING_KEY = "cb:trading:v1";
 
@@ -186,7 +229,26 @@ export function setSymbol(symbol: string) {
   updateTrading((d) => ({ ...d, symbol }));
 }
 
-export function setTimeframe(tf: Timeframe) {
+export function addTfFavorite(id: string) {
+  updateTrading((d) => {
+    const list = d.tfFavorites ?? [];
+    return list.includes(id) ? d : { ...d, tfFavorites: [...list, id] };
+  });
+}
+
+export function removeTfFavorite(id: string) {
+  updateTrading((d) => ({
+    ...d,
+    tfFavorites: (d.tfFavorites ?? []).filter((f) => f !== id),
+    tf: d.tf === id ? "15m" : d.tf,
+  }));
+}
+
+export function setTfAlignUtc(utc: boolean) {
+  updateTrading((d) => ({ ...d, tfAlignUtc: utc }));
+}
+
+export function setTimeframe(tf: string) {
   updateTrading((d) => ({ ...d, tf }));
 }
 
@@ -457,10 +519,10 @@ export function autoDigits(symbol: string, price: number, hint?: number) {
   return Math.max(2, hint ?? 2);
 }
 
-export type FeedSource = "binance" | "yahoo";
+export type FeedSource = "binance" | "yahoo" | "mt5";
 
 /** Candle series with live updates. */
-export function useCandles(symbol: string, tf: Timeframe) {
+export function useCandles(symbol: string, tf: Timeframe, enabled = true) {
   const [candles, setCandles] = useState<Candle[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [digits, setDigits] = useState<number | undefined>(undefined);
@@ -468,12 +530,16 @@ export function useCandles(symbol: string, tf: Timeframe) {
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nonce re-runs the load (reload)
   useEffect(() => {
     let alive = true;
     let ws: WebSocket | null = null;
     let poll: ReturnType<typeof setInterval> | null = null;
     setCandles(null);
     setError(null);
+    if (!enabled) {
+      return;
+    }
 
     const startYahooPoll = () => {
       const intraday = !(tf === "D" || tf === "W" || tf === "M");
@@ -563,7 +629,7 @@ export function useCandles(symbol: string, tf: Timeframe) {
         clearInterval(poll);
       }
     };
-  }, [symbol, tf, nonce]);
+  }, [symbol, tf, nonce, enabled]);
 
   return { candles, error, digits, source, reload };
 }
