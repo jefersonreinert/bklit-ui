@@ -53,6 +53,22 @@ a plataforma cair, o EA reenvia o que faltou (velas e ticks) quando voltar.
 - Rolar para trás carrega o histórico. Quando o trecho ainda não está na
   plataforma, aparece "Carregando histórico…" enquanto o EA envia.
 
+## Vários ativos e tempo real
+
+- Em `InpSymbols` use `*` (toda a Observação do Mercado) ou uma lista. A
+  corretora tem milhares de ativos (a maioria ações): exporte só os que você
+  usa, porque cada ativo custa escritas no Convex.
+- `InpIntervalMs=100` dá o menor atraso (mediana ~0,1–0,2 s do tick no MT5 até
+  o app); o próprio WebRequest leva ~0,1–0,2 s por envio.
+- A cada tick o EA manda só os ticks e a vela M1. Os outros 20 tempos gráficos
+  vão quando abre uma nova M1. A plataforma completa a vela em formação deles
+  com a M1 ao vivo, como o MT5 faz (convex `ohlc.live`). Isso evita regravar as
+  21 velas a cada tick.
+- A lista de ativos do app usa as cotações do MT5 (bid ao vivo e variação
+  sobre o fechamento do D1 anterior). Os nomes da corretora são ligados aos do
+  app (SPX500 → US500, NAS100 → USTEC, USOIL → XTIUSD, AAPL → AAPL.NAS…). Os
+  ativos do EA que não estão na lista aparecem na seção **MT5 (EA)**.
+
 ## Horários
 
 Tudo em UTC (`InpTimeUtc`). As velas D1/W1/MN1 começam na meia-noite da
@@ -63,7 +79,8 @@ envia `offset_sec` (corretora − UTC) em cada envio.
 
 | Dado | Onde | Por quê |
 |---|---|---|
-| Vela em formação dos 21 tf | `ohlcLive`, 1 linha por ativo | É reescrita a cada envio (até 2/s), por isso é pequena |
+| Preço ao vivo (bid/ask, M1 em formação) | `ohlcQuotes`, 1 linha pequena por ativo | Reescrita a cada tick |
+| Velas em formação dos outros tf | `ohlcLive`, 1 linha por ativo | Uma vez por minuto; completadas com a M1 |
 | Velas fechadas recentes | `ohlcBars`, as 5000 mais novas por série (`OHLC_KEEP_BARS`) | Uma escrita por vela fechada |
 | Ticks recentes | `ohlcTicks`, blocos de 10 s, por 2 h (`OHLC_TICK_WINDOW_MS`) | Um POST acrescenta a 1–2 linhas pequenas |
 | Histórico profundo | Arquivos gzip no Convex File Storage (velas por mês, ticks por dia) + índice `ohlcArchive` | 1 ano de M1 ≈ 370 mil velas por ativo: não cabe barato em tabelas |
