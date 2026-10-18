@@ -14,10 +14,12 @@ import {
 import {
   isOhlcTf,
   OHLC_TF_SEC,
+  OHLC_TFS,
   type OhlcCandle,
   type OhlcFeed,
   type OhlcTick,
 } from "../lib/metatrader/ohlc-feed";
+import { composeForming } from "../lib/metatrader/ohlc-live";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -532,7 +534,110 @@ export function splitForming(bars: Row[], prev: Row | undefined) {
   return { closed: prevClosed ? [prev, ...closed] : closed, forming: lastBar };
 }
 
-/** Forming candles of each symbol, written once per envelope. */
+async function quoteOf(ctx: QueryCtx, account: string, symbol: string) {
+  return await ctx.db
+    .query("ohlcQuotes")
+    .withIndex("by_account_symbol", (q) =>
+      q.eq("account", account).eq("symbol", symbol)
+    )
+    .unique();
+}
+
+/** Close of the last closed D1 candle (for the daily change). */
+async function prevDayClose(ctx: QueryCtx, account: string, symbol: string) {
+  const d1 = await ctx.db
+    .query("ohlcBars")
+    .withIndex("by_series_time", (q) =>
+      q.eq("account", account).eq("symbol", symbol).eq("tf", "D1")
+    )
+    .order("desc")
+    .first();
+  return d1?.c;
+}
+
+/**
+ * Forming candles. Every send carries the M1 (→ ohlcQuotes, a small row);
+ * the other timeframes come once a minute (→ ohlcLive, with the M1 of that
+ * moment), so a tick never rewrites the 21 forming candles.
+ */
+type Quote = Doc<"ohlcQuotes"> | null;
+
+/** Upserts the closed candles; returns the forming M1 and higher candles. */
+async function applySeries(
+  ctx: MutationCtx,
+  account: string,
+  symbol: string,
+  list: IngestArgs["series"],
+  m1Before: Row | undefined,
+  map: Record<string, Row>
+) {
+  let m1 = m1Before;
+  for (const s of list) {
+    const { closed, forming } = splitForming(
+      s.bars,
+      s.tf === "M1" ? m1 : map[s.tf]
+    );
+    if (forming && s.tf === "M1") {
+      m1 = forming;
+    } else if (forming) {
+      map[s.tf] = forming;
+    }
+    await upsertBars(ctx, { account, symbol, tf: s.tf }, closed, s.firstMs);
+  }
+  return m1;
+}
+
+async function writeLive(
+  ctx: MutationCtx,
+  key: { account: string; symbol: string },
+  doc: Doc<"ohlcLive"> | null,
+  fields: {
+    bars: Record<string, Row>;
+    sampleM1?: Row;
+    updatedAt: number;
+    digits: number;
+    chart: "bid" | "last";
+  }
+) {
+  if (doc) {
+    await ctx.db.patch(doc._id, fields);
+  } else {
+    await ctx.db.insert("ohlcLive", { ...key, ...fields });
+  }
+}
+
+async function writeQuote(
+  ctx: MutationCtx,
+  key: { account: string; symbol: string },
+  quote: Quote,
+  o: { digits: number; tick?: Row; m1?: Row; refresh: boolean; now: number }
+) {
+  const { tick, m1 } = o;
+  const price = tick?.[1] || tick?.[3] || m1?.[4] || quote?.bid || 0;
+  const fields = {
+    digits: o.digits,
+    bid: price,
+    ask: tick?.[2] || quote?.ask || price,
+    tickMs: tick?.[0] ?? quote?.tickMs ?? m1?.[0] ?? o.now,
+    ...(m1 ? { m1 } : {}),
+    // Refreshed once a minute, with the other timeframes
+    ...(o.refresh || !quote
+      ? { prevClose: await prevDayClose(ctx, key.account, key.symbol) }
+      : {}),
+    updatedAt: o.now,
+  };
+  if (quote) {
+    await ctx.db.patch(quote._id, fields);
+  } else {
+    await ctx.db.insert("ohlcQuotes", { ...key, ...fields });
+  }
+}
+
+/**
+ * Forming candles. Every send carries the M1 (→ ohlcQuotes, a small row);
+ * the other timeframes come once a minute (→ ohlcLive, with the M1 of that
+ * moment), so a tick never rewrites the 21 forming candles.
+ */
 async function saveLive(
   ctx: MutationCtx,
   a: IngestArgs,
@@ -542,36 +647,39 @@ async function saveLive(
   for (const s of a.series) {
     bySymbol.set(s.symbol, [...(bySymbol.get(s.symbol) ?? []), s]);
   }
-  for (const [symbol, list] of bySymbol) {
-    const doc = await liveOf(ctx, a.account, symbol);
+  const lastTick = new Map<string, Row>();
+  for (const t of a.ticks) {
+    const row = t.rows.at(-1);
+    if (row) {
+      lastTick.set(t.symbol, row);
+    }
+  }
+  for (const symbol of new Set([...bySymbol.keys(), ...lastTick.keys()])) {
+    const key = { account: a.account, symbol };
+    const list = bySymbol.get(symbol) ?? [];
+    const quote = await quoteOf(ctx, a.account, symbol);
+    const higher = list.some((s) => s.tf !== "M1" && s.bars.length > 0);
+    const doc = higher ? await liveOf(ctx, a.account, symbol) : null;
     const map: Record<string, Row> = { ...(doc?.bars ?? {}) };
-    for (const s of list) {
-      const { closed, forming } = splitForming(s.bars, map[s.tf]);
-      if (forming) {
-        map[s.tf] = forming;
-      }
-      const key = { account: a.account, symbol, tf: s.tf };
-      await upsertBars(ctx, key, closed, s.firstMs);
-    }
-    if (!list.some((s) => s.bars.length > 0)) {
-      continue;
-    }
+    const m1 = await applySeries(ctx, a.account, symbol, list, quote?.m1, map);
     const info = symbols.get(symbol);
-    const fields = {
-      bars: map,
-      updatedAt: a.now,
-      digits: info?.digits ?? doc?.digits ?? 5,
-      chart: info?.chart ?? doc?.chart ?? "bid",
-    };
-    if (doc) {
-      await ctx.db.patch(doc._id, fields);
-    } else {
-      await ctx.db.insert("ohlcLive", {
-        account: a.account,
-        symbol,
-        ...fields,
+    const digits = info?.digits ?? quote?.digits ?? 5;
+    if (higher) {
+      await writeLive(ctx, key, doc, {
+        bars: map,
+        ...(m1 ? { sampleM1: m1 } : {}),
+        updatedAt: a.now,
+        digits,
+        chart: info?.chart ?? doc?.chart ?? "bid",
       });
     }
+    await writeQuote(ctx, key, quote, {
+      digits,
+      tick: lastTick.get(symbol),
+      m1,
+      refresh: higher,
+      now: a.now,
+    });
   }
 }
 
@@ -978,15 +1086,62 @@ export const live = query({
       return null;
     }
     const row = await liveOf(ctx, feed.account, a.symbol);
+    const quote = await quoteOf(ctx, feed.account, a.symbol);
+    const offsetMs = feed.offsetSec * 1000;
+    const bars: Record<string, Row> = {};
+    for (const tf of OHLC_TFS) {
+      const bar = composeForming(
+        tf,
+        row?.bars[tf],
+        row?.sampleM1,
+        quote?.m1,
+        offsetMs
+      );
+      if (bar) {
+        bars[tf] = bar;
+      }
+    }
     return {
       account: feed.account,
       offsetSec: feed.offsetSec,
       sentMs: feed.sentMs,
       receivedAt: feed.receivedAt,
-      digits: row?.digits ?? null,
+      digits: row?.digits ?? quote?.digits ?? null,
       chart: row?.chart ?? "bid",
       ticksEndMs: row?.ticksEndMs ?? null,
-      bars: row?.bars ?? {},
+      bid: quote?.bid ?? null,
+      ask: quote?.ask ?? null,
+      bars,
+    };
+  },
+});
+
+/**
+ * Live prices of every symbol the terminal sends (watchlist): bid, ask and
+ * the previous D1 close for the daily change.
+ */
+export const quotes = query({
+  args: { account: v.optional(v.string()) },
+  handler: async (ctx, a) => {
+    const feed = await feedFor(ctx, a.account);
+    if (!feed) {
+      return null;
+    }
+    const rows = await ctx.db
+      .query("ohlcQuotes")
+      .withIndex("by_account_symbol", (q) => q.eq("account", feed.account))
+      .take(500);
+    return {
+      account: feed.account,
+      receivedAt: feed.receivedAt,
+      quotes: rows.map((r) => ({
+        symbol: r.symbol,
+        digits: r.digits,
+        bid: r.bid,
+        ask: r.ask,
+        tickMs: r.tickMs,
+        prevClose: r.prevClose ?? null,
+      })),
     };
   },
 });

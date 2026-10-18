@@ -1000,8 +1000,29 @@ export default defineSchema({
     /** The broker has no ticks before this time (on-demand requests). */
     ticksEndMs: v.optional(v.number()),
     updatedAt: v.number(),
-    /** [t, o, h, l, c, tick_volume, real_volume, spread] by timeframe. */
+    /**
+     * [t, o, h, l, c, tick_volume, real_volume, spread] by timeframe, as of
+     * `sampleM1` (the EA sends the timeframes above M1 once a minute; the
+     * chart adds the live M1 from ohlcQuotes, like MT5 builds them).
+     */
     bars: v.record(v.string(), v.array(v.number())),
+    /** The M1 candle when `bars` was taken. */
+    sampleM1: v.optional(v.array(v.number())),
+  }).index("by_account_symbol", ["account", "symbol"]),
+
+  /** Live price of a symbol: last bid/ask and forming M1 (every EA send). */
+  ohlcQuotes: defineTable({
+    account: v.string(),
+    symbol: v.string(),
+    digits: v.number(),
+    bid: v.number(),
+    ask: v.number(),
+    /** Last tick time (UTC ms). */
+    tickMs: v.number(),
+    m1: v.optional(v.array(v.number())),
+    /** Close of the previous D1 candle (daily change). */
+    prevClose: v.optional(v.number()),
+    updatedAt: v.number(),
   }).index("by_account_symbol", ["account", "symbol"]),
 
   /** Each candle series: how many closed candles the table keeps. */
