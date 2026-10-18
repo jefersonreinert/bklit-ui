@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "type": "heartbeat",
+  "source": "mt5-ohlc",
+  "account": "12345",
+  "server": "Demo-Server",
+  "broker": "Casa Brasa Test",
+  "offset_sec": 10800,
+  "time_utc": true,
+  "sent_ms": 1791968540000,
+  "seq": 4
+}
