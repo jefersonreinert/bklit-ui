@@ -16,6 +16,6 @@
   // Non-secret settings; secrets are set in the Cloudflare dashboard
   "vars": {
     "WHATSAPP_BRIDGE_URL": "https://casa-brasa-wa.onrender.com",
-    "CONVEX_URL": "https://first-elk-379.eu-west-1.convex.cloud"
+    "CONVEX_URL": "https://api.reinert1996.duckdns.org"
   }
 }

@@ -22,10 +22,17 @@ import { BASE_PATH } from "../../telegram/telegram-shared";
 
 type Settings = NonNullable<FunctionReturnType<typeof api.journal.settings>>;
 
-/** https://x.convex.cloud → https://x.convex.site (HTTP actions). */
+/**
+ * HTTP actions URL: NEXT_PUBLIC_CONVEX_SITE_URL (self-hosted) or, on Convex
+ * Cloud, https://x.convex.cloud → https://x.convex.site.
+ */
 const TRAILING_SLASH = /\/$/;
 
 export function siteUrl() {
+  const site = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
+  if (site) {
+    return site.replace(TRAILING_SLASH, "");
+  }
   const url = process.env.NEXT_PUBLIC_CONVEX_URL ?? "";
   return url
     .replace(".convex.cloud", ".convex.site")
