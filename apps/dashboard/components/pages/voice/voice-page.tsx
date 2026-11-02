@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { CHAT_MODELS } from "@/lib/ai-models";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Markdown } from "../ai/markdown";
@@ -54,7 +55,7 @@ const STATUS_LABEL: Record<VoiceStatus, string> = {
 };
 
 const time = (ms: number) =>
-  new Date(ms).toLocaleTimeString("pt-BR", {
+  new Date(ms).toLocaleTimeString(appLocale(), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -197,7 +198,7 @@ function History({ currentId }: { currentId: string }) {
               type="button"
             >
               <p className="truncate font-medium text-sm">
-                {new Date(s.startedAt).toLocaleString("pt-BR")}
+                {new Date(s.startedAt).toLocaleString(appLocale())}
               </p>
               <p className="truncate text-muted-foreground text-xs">
                 {s.mode === "notas" ? "Anotações" : "Conversa"} ·{" "}

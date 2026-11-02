@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 import {
   beverageSnapshot,
   financeSnapshot,
@@ -15,7 +16,7 @@ import { dishCmv } from "./menu-data";
  */
 
 const brl = (v: number) =>
-  new Intl.NumberFormat("pt-BR", {
+  new Intl.NumberFormat(appLocale(), {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 0,

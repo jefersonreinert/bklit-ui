@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import type { IconName } from "@/lib/icons";
 import type {
   CodePhase,
@@ -170,7 +171,7 @@ export function timeAgo(iso: string) {
   if (s < 86_400) {
     return `${Math.floor(s / 3600)} h`;
   }
-  return new Date(iso).toLocaleDateString("pt-BR", {
+  return new Date(iso).toLocaleDateString(appLocale(), {
     day: "numeric",
     month: "short",
   });

@@ -6,6 +6,7 @@ import type {
   RadarMetric,
   RingData,
 } from "@bklitui/ui/charts";
+import { appLocale } from "@/lib/i18n/locale";
 import { palette, TODAY } from "./data";
 
 /** HR mock data for the Recursos Humanos page (deterministic). */
@@ -25,7 +26,7 @@ function addDays(base: Date, n: number) {
 }
 
 const monthLabel = (date: Date) =>
-  date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  date.toLocaleDateString(appLocale(), { month: "short" }).replace(".", "");
 
 /* -------------------------------------------------------------------------- */
 /* Colaboradores                                                              */
@@ -915,7 +916,7 @@ export const timeClock = employees
       clockIn:
         status === "Ausente" || status === "Aguardando"
           ? null
-          : t.toLocaleTimeString("pt-BR", {
+          : t.toLocaleTimeString(appLocale(), {
               hour: "2-digit",
               minute: "2-digit",
             }),

@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { appLocale } from "@/lib/i18n/locale";
 import { readDriveFile, searchDrive } from "./drive";
 import { createDraft, getThread, listMessages } from "./gmail";
 
@@ -196,7 +197,7 @@ function required(input: Record<string, unknown>, key: string) {
 }
 
 const dateBr = (ms: number) =>
-  new Date(ms).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  new Date(ms).toLocaleString(appLocale(), { timeZone: "America/Sao_Paulo" });
 
 async function gmailSearch(token: string, input: Record<string, unknown>) {
   const list = await listMessages(token, {

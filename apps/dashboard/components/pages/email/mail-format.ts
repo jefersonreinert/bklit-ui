@@ -1,3 +1,5 @@
+import { appLocale } from "@/lib/i18n/locale";
+
 const DAY = 24 * 60 * 60 * 1000;
 const WORDS = /\s+/;
 const NON_LETTERS = /[^\p{L}\s]/gu;
@@ -5,19 +7,22 @@ const NON_LETTERS = /[^\p{L}\s]/gu;
 export function listDate(ms: number, now = Date.now()) {
   const d = new Date(ms);
   if (now - ms < DAY && new Date(now).getDate() === d.getDate()) {
-    return d.toLocaleTimeString("pt-BR", {
+    return d.toLocaleTimeString(appLocale(), {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
   if (d.getFullYear() === new Date(now).getFullYear()) {
-    return d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
+    return d.toLocaleDateString(appLocale(), {
+      day: "numeric",
+      month: "short",
+    });
   }
-  return d.toLocaleDateString("pt-BR");
+  return d.toLocaleDateString(appLocale());
 }
 
 export const fullDate = (ms: number) =>
-  new Date(ms).toLocaleString("pt-BR", {
+  new Date(ms).toLocaleString(appLocale(), {
     weekday: "short",
     day: "numeric",
     month: "short",

@@ -9,6 +9,7 @@ import {
   useNewsFeeds,
   type WidgetId,
 } from "@/lib/browser/store";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -49,16 +50,19 @@ function Clock() {
   return (
     <Card className="bg-gradient-to-br from-[#2b2622] to-[#5c3d2e] text-white">
       <span className="font-medium text-white/70 text-xs uppercase tracking-wide">
-        {now?.toLocaleDateString("pt-BR", { weekday: "long" })}
+        {now?.toLocaleDateString(appLocale(), { weekday: "long" })}
       </span>
       <span className="font-semibold text-5xl tabular-nums tracking-tight">
-        {now?.toLocaleTimeString("pt-BR", {
+        {now?.toLocaleTimeString(appLocale(), {
           hour: "2-digit",
           minute: "2-digit",
         })}
       </span>
       <span className="text-sm text-white/80">
-        {now?.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+        {now?.toLocaleDateString(appLocale(), {
+          day: "numeric",
+          month: "long",
+        })}
       </span>
     </Card>
   );

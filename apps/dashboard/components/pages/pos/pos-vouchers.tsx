@@ -12,6 +12,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { imagePdf, printImage, sharePdf } from "@/lib/pos/print";
 import { sendPos, usePos, usePosQuery } from "@/lib/pos/store";
@@ -39,7 +40,7 @@ type Voucher = VoucherInfo & {
 };
 
 const dateText = (t: number) =>
-  new Date(t).toLocaleString("pt-BR", {
+  new Date(t).toLocaleString(appLocale(), {
     dateStyle: "short",
     timeStyle: "short",
   });

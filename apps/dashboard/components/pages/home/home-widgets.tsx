@@ -31,6 +31,7 @@ import {
   type WidgetInfo,
   widgetInfo,
 } from "@/lib/home";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { useQuotes, useTrading } from "@/lib/markets/trading";
 import { navItemFor, navItems } from "@/lib/nav";
@@ -71,7 +72,7 @@ export function useNow(ms = 30_000) {
   return now;
 }
 
-const longDay = new Intl.DateTimeFormat("pt-BR", {
+const longDay = new Intl.DateTimeFormat(appLocale(), {
   weekday: "long",
   day: "numeric",
   month: "short",

@@ -5,6 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { type ReactNode, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import {
   type Cell,
   formatMoney,
@@ -13,7 +14,6 @@ import {
   toTable,
 } from "@/lib/metatrader/data";
 import { cn } from "@/lib/utils";
-
 import {
   TelegramProvider,
   Notice as TgNotice,
@@ -253,7 +253,7 @@ export function ConfirmButton({
 
 export const when = (ms: number | null) =>
   ms
-    ? new Date(ms).toLocaleString("pt-BR", {
+    ? new Date(ms).toLocaleString(appLocale(), {
         dateStyle: "short",
         timeStyle: "medium",
       })

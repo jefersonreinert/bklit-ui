@@ -1,3 +1,5 @@
+import { appLocale } from "@/lib/i18n/locale";
+
 const formatters = new Map<string, Intl.NumberFormat>();
 
 /** Money in any currency (the menu, cellar and invoices use EUR, BRL…). */
@@ -6,14 +8,14 @@ export function formatMoney(value: number, currency = "EUR", digits = 2) {
   let f = formatters.get(key);
   if (!f) {
     try {
-      f = new Intl.NumberFormat("pt-BR", {
+      f = new Intl.NumberFormat(appLocale(), {
         style: "currency",
         currency: currency || "EUR",
         minimumFractionDigits: digits,
         maximumFractionDigits: digits,
       });
     } catch {
-      f = new Intl.NumberFormat("pt-BR", {
+      f = new Intl.NumberFormat(appLocale(), {
         style: "currency",
         currency: "EUR",
         minimumFractionDigits: digits,

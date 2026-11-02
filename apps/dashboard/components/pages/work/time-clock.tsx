@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   clockTime,
@@ -32,11 +33,11 @@ import {
 } from "@/lib/work-schedule";
 import { PlaceMark, PlaceSelect } from "./place-ui";
 
-const monthLabel = new Intl.DateTimeFormat("pt-BR", {
+const monthLabel = new Intl.DateTimeFormat(appLocale(), {
   month: "long",
   year: "numeric",
 });
-const dayLabel = new Intl.DateTimeFormat("pt-BR", {
+const dayLabel = new Intl.DateTimeFormat(appLocale(), {
   weekday: "short",
   day: "2-digit",
   month: "2-digit",

@@ -2,6 +2,7 @@
 
 import createGlobe from "cobe";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import { type EconEvent, flag, IMPACT_LABEL } from "@/lib/markets/calendar";
 import { cn } from "@/lib/utils";
 
@@ -256,11 +257,11 @@ function GlobeCanvas({
 
 const when = (e: EconEvent) =>
   e.allDay
-    ? new Date(e.time).toLocaleDateString("pt-BR", {
+    ? new Date(e.time).toLocaleDateString(appLocale(), {
         weekday: "short",
         day: "numeric",
       })
-    : new Date(e.time).toLocaleString("pt-BR", {
+    : new Date(e.time).toLocaleString(appLocale(), {
         weekday: "short",
         hour: "2-digit",
         minute: "2-digit",

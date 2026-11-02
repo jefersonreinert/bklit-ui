@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatStreamEvent } from "@/lib/ai-events";
+import { appLocale } from "@/lib/i18n/locale";
 import { BASE_PATH } from "@/lib/use-connectors";
 
 /**
@@ -94,7 +95,7 @@ export class Listener {
 
   private spawn(Ctor: RecognitionCtor) {
     const rec = new Ctor();
-    rec.lang = "pt-BR";
+    rec.lang = appLocale();
     rec.continuous = true;
     rec.interimResults = true;
     rec.onresult = (e) => {
@@ -298,8 +299,8 @@ export const speakable = (text: string) =>
 function ptVoice() {
   const voices = window.speechSynthesis.getVoices();
   return (
-    voices.find((v) => v.lang === "pt-BR" && v.localService) ??
-    voices.find((v) => v.lang === "pt-BR") ??
+    voices.find((v) => v.lang === appLocale() && v.localService) ??
+    voices.find((v) => v.lang === appLocale()) ??
     voices.find((v) => v.lang.startsWith("pt")) ??
     null
   );
@@ -314,7 +315,7 @@ export function speak(text: string, rate = 1.05): Promise<void> {
     }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(speakable(text));
-    u.lang = "pt-BR";
+    u.lang = appLocale();
     u.rate = rate;
     const voice = ptVoice();
     if (voice) {

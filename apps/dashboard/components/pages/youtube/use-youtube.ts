@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import { BASE_PATH } from "@/lib/use-connectors";
 import type { YtTranscript } from "@/lib/youtube-types";
 
@@ -114,7 +115,7 @@ export function useTranscript(videoId: string) {
   return { transcript, loading, error, run };
 }
 
-const compact = new Intl.NumberFormat("pt-BR", {
+const compact = new Intl.NumberFormat(appLocale(), {
   notation: "compact",
   maximumFractionDigits: 1,
 });

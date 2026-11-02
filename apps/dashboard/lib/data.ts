@@ -9,6 +9,7 @@ import type {
   SankeyData,
   SunburstNode,
 } from "@bklitui/ui/charts";
+import { appLocale } from "@/lib/i18n/locale";
 
 /**
  * Mock data for the "Casa Brasa" restaurant dashboard.
@@ -201,7 +202,7 @@ export const financeStats = (() => {
 /** Receita por canal (empilhado). */
 export const revenueByChannel = monthlyFinance.slice(-6).map((m, i) => ({
   month: m.date
-    .toLocaleDateString("pt-BR", { month: "short" })
+    .toLocaleDateString(appLocale(), { month: "short" })
     .replace(".", ""),
   salao: Math.round(m.revenue * (0.58 - i * 0.006)),
   delivery: Math.round(m.revenue * (0.27 + i * 0.008)),
@@ -381,7 +382,7 @@ export const teamPerformance: RadarData[] = [
 
 export const overtimeBySector = monthlyFinance.slice(-6).map((m, i) => ({
   month: m.date
-    .toLocaleDateString("pt-BR", { month: "short" })
+    .toLocaleDateString(appLocale(), { month: "short" })
     .replace(".", ""),
   cozinha: 62 + ((i * 17) % 30),
   salao: 40 + ((i * 11) % 24),
@@ -775,7 +776,7 @@ export const storageByType: RingData[] = [
 
 export const uploadsByMonth = monthlyFinance.slice(-6).map((m, i) => ({
   month: m.date
-    .toLocaleDateString("pt-BR", { month: "short" })
+    .toLocaleDateString(appLocale(), { month: "short" })
     .replace(".", ""),
   enviados: 14 + ((i * 13) % 17),
   assinados: 6 + ((i * 7) % 9),

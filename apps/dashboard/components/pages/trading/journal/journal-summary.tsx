@@ -12,6 +12,7 @@ import {
 import { curveMonotoneX } from "@visx/curve";
 import { useId, useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
+import { appLocale } from "@/lib/i18n/locale";
 import {
   type Bucket,
   dayKey,
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 /** Journal overview: KPIs, equity curve, P&L calendar and breakdowns. */
 
 export const money = (n: number, signed = false) => {
-  const text = Math.abs(n).toLocaleString("pt-BR", {
+  const text = Math.abs(n).toLocaleString(appLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -68,13 +69,13 @@ function Kpi({
   );
 }
 
-const compact = new Intl.NumberFormat("pt-BR", {
+const compact = new Intl.NumberFormat(appLocale(), {
   notation: "compact",
   maximumFractionDigits: 1,
 });
 const axisMoney = (n: number) => compact.format(n);
 
-const shortDate = new Intl.DateTimeFormat("pt-BR", {
+const shortDate = new Intl.DateTimeFormat(appLocale(), {
   day: "2-digit",
   month: "short",
 });
@@ -189,7 +190,7 @@ function Calendar({ daily }: { daily: Stats["daily"] }) {
           ‹
         </button>
         <p className="font-medium text-sm capitalize">
-          {month.toLocaleDateString("pt-BR", {
+          {month.toLocaleDateString(appLocale(), {
             month: "long",
             year: "numeric",
           })}

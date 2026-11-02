@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCellar } from "@/lib/cellar/store";
 import type { CellarWine } from "@/lib/cellar/types";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   blankMenu,
@@ -124,7 +125,7 @@ function MenuCard({
           <span className="block text-muted-foreground text-xs">
             {doc.sections.length} seções · {items} itens
             {auto ? " · vinhos da Adega" : ""} ·{" "}
-            {new Date(doc.updatedAt).toLocaleDateString("pt-BR")}
+            {new Date(doc.updatedAt).toLocaleDateString(appLocale())}
           </span>
         </span>
       </button>

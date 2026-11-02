@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import { getPreferences } from "@/lib/preferences";
 import {
   askAssistant,
@@ -86,7 +87,7 @@ export function deleteSession(id: string) {
 
 export function sessionText(s: VoiceSession) {
   const time = (ms: number) =>
-    new Date(ms).toLocaleTimeString("pt-BR", {
+    new Date(ms).toLocaleTimeString(appLocale(), {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -96,7 +97,7 @@ export function sessionText(s: VoiceSession) {
   const sums = s.summaries.map(
     (x) => `\n--- Resumo ${time(x.at)} ---\n${x.text}`
   );
-  return `Sessão de voz — ${new Date(s.startedAt).toLocaleString("pt-BR")}\n\n${lines.join("\n")}${sums.join("\n")}`;
+  return `Sessão de voz — ${new Date(s.startedAt).toLocaleString(appLocale())}\n\n${lines.join("\n")}${sums.join("\n")}`;
 }
 
 const SUMMARY_PROMPT =

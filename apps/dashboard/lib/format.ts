@@ -1,21 +1,23 @@
-const brl = new Intl.NumberFormat("pt-BR", {
+import { appLocale } from "@/lib/i18n/locale";
+
+const brl = new Intl.NumberFormat(appLocale(), {
   style: "currency",
   currency: "BRL",
   maximumFractionDigits: 0,
 });
 
-const brlCents = new Intl.NumberFormat("pt-BR", {
+const brlCents = new Intl.NumberFormat(appLocale(), {
   style: "currency",
   currency: "BRL",
   minimumFractionDigits: 2,
 });
 
-const compact = new Intl.NumberFormat("pt-BR", {
+const compact = new Intl.NumberFormat(appLocale(), {
   notation: "compact",
   maximumFractionDigits: 1,
 });
 
-const integer = new Intl.NumberFormat("pt-BR");
+const integer = new Intl.NumberFormat(appLocale());
 
 export const formatBRL = (value: number) => brl.format(value);
 export const formatBRLCents = (value: number) => brlCents.format(value);
@@ -25,13 +27,13 @@ export const formatPercent = (value: number, digits = 1) =>
   `${value.toFixed(digits).replace(".", ",")}%`;
 
 export const formatMonth = (date: Date) =>
-  date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  date.toLocaleDateString(appLocale(), { month: "short" }).replace(".", "");
 
 export const formatDay = (date: Date) =>
-  date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  date.toLocaleDateString(appLocale(), { day: "2-digit", month: "short" });
 
 export const formatDate = (date: Date) =>
-  date.toLocaleDateString("pt-BR", {
+  date.toLocaleDateString(appLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

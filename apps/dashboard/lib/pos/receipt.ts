@@ -1,6 +1,7 @@
 "use client";
 
 import { encode } from "uqr";
+import { appLocale } from "@/lib/i18n/locale";
 import { money, orderTotals } from "./store";
 import type {
   OrderItem,
@@ -316,7 +317,7 @@ function header(x: Ctx, doc: ReceiptDoc) {
 }
 
 function meta(x: Ctx, doc: ReceiptDoc) {
-  const when = doc.date.toLocaleString("pt-BR", {
+  const when = doc.date.toLocaleString(appLocale(), {
     dateStyle: "short",
     timeStyle: "short",
   });
@@ -519,7 +520,7 @@ function ticketLayout(x: Ctx, t: TicketDoc) {
     [
       t.table ? `Pedido #${t.number}` : "",
       t.customer,
-      t.date.toLocaleTimeString("pt-BR", {
+      t.date.toLocaleTimeString(appLocale(), {
         hour: "2-digit",
         minute: "2-digit",
       }),

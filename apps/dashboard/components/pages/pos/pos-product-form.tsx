@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { periodFor, productStats, usePosDaily } from "@/lib/pos/analytics";
 import { TILE_COLORS } from "@/lib/pos/seed";
@@ -194,7 +195,7 @@ function StockPanel({ product }: { product: PosProduct }) {
                 <span className="text-muted-foreground text-xs">
                   {" "}
                   ·{" "}
-                  {new Date(m.at).toLocaleString("pt-BR", {
+                  {new Date(m.at).toLocaleString(appLocale(), {
                     dateStyle: "short",
                     timeStyle: "short",
                   })}

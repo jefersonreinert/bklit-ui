@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import {
@@ -36,16 +37,16 @@ import { PlaceMark } from "./place-ui";
 import { ClockCard, MonthReportCard } from "./time-clock";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-const longDate = new Intl.DateTimeFormat("pt-BR", {
+const longDate = new Intl.DateTimeFormat(appLocale(), {
   weekday: "long",
   day: "numeric",
   month: "long",
 });
-const monthLabel = new Intl.DateTimeFormat("pt-BR", {
+const monthLabel = new Intl.DateTimeFormat(appLocale(), {
   month: "long",
   year: "numeric",
 });
-const shortDate = new Intl.DateTimeFormat("pt-BR", {
+const shortDate = new Intl.DateTimeFormat(appLocale(), {
   weekday: "short",
   day: "2-digit",
   month: "2-digit",
