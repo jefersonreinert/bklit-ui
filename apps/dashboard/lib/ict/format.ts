@@ -1,4 +1,6 @@
-const dateTime = new Intl.DateTimeFormat("pt-BR", {
+import { appLocale } from "@/lib/i18n/locale";
+
+const dateTime = new Intl.DateTimeFormat(appLocale(), {
   day: "2-digit",
   month: "short",
   year: "numeric",

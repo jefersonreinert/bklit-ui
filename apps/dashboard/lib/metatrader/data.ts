@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 /**
  * Shapes the server's answers for tables: most tools return pandas
  * `DataFrame.to_csv()` text (first column is the unnamed index), some a
@@ -128,7 +129,7 @@ export function formatMoney(value: unknown, currency = "") {
   if (!Number.isFinite(n)) {
     return "—";
   }
-  const text = n.toLocaleString("pt-BR", {
+  const text = n.toLocaleString(appLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

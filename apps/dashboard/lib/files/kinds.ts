@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 /** File kinds of Documentos → Arquivos, from MIME type and name. */
 
 export type FileKind = "image" | "video" | "pdf" | "audio" | "sheet" | "other";
@@ -60,7 +61,7 @@ export function formatBytes(n: number) {
     v /= 1024;
     i++;
   }
-  return `${v.toLocaleString("pt-BR", { maximumFractionDigits: v < 10 ? 1 : 0 })} ${units[i]}`;
+  return `${v.toLocaleString(appLocale(), { maximumFractionDigits: v < 10 ? 1 : 0 })} ${units[i]}`;
 }
 
 /** Name without extension, for sheets made from a file. */

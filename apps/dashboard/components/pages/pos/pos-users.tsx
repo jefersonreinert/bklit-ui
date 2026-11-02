@@ -12,6 +12,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { TILE_COLORS } from "@/lib/pos/seed";
 import {
@@ -414,7 +415,7 @@ function Activity() {
               ) : null}
             </span>
             <span className="shrink-0 text-muted-foreground text-xs">
-              {new Date(a.at).toLocaleString("pt-BR", {
+              {new Date(a.at).toLocaleString(appLocale(), {
                 dateStyle: "short",
                 timeStyle: "short",
               })}

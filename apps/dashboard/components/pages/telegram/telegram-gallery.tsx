@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon, type IconName } from "@/lib/icons";
 import { downloadUrl, downloadZip } from "@/lib/telegram/download";
 import {
@@ -366,7 +367,7 @@ function Viewer({
               <SheetDescription>
                 {item.chatName}
                 {item.sender ? ` · ${item.sender}` : ""} ·{" "}
-                {new Date(item.date).toLocaleString("pt-BR", {
+                {new Date(item.date).toLocaleString(appLocale(), {
                   dateStyle: "long",
                   timeStyle: "short",
                 })}{" "}

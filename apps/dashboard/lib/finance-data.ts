@@ -6,6 +6,7 @@ import type {
   RingData,
   SankeyData,
 } from "@bklitui/ui/charts";
+import { appLocale } from "@/lib/i18n/locale";
 import { palette, TODAY } from "./data";
 
 /**
@@ -26,7 +27,7 @@ function monthStart(offset: number) {
 }
 
 export const monthLabel = (date: Date) =>
-  date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  date.toLocaleDateString(appLocale(), { month: "short" }).replace(".", "");
 
 /* -------------------------------------------------------------------------- */
 /* Série mensal (12 meses)                                                    */
@@ -301,9 +302,9 @@ export function fundamentalIndicators() {
 export function dreFunnel(period: FinancePeriod): FunnelStage[] {
   const s = summarize(period);
   const k = (v: number) =>
-    `R$ ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(
-      Math.round(v / 1000)
-    )} mil`;
+    `R$ ${new Intl.NumberFormat(appLocale(), {
+      maximumFractionDigits: 0,
+    }).format(Math.round(v / 1000))} mil`;
   return [
     {
       label: "Receita bruta",

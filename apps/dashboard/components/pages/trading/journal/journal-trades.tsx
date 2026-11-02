@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { MARKET_LABEL } from "@/lib/journal/account";
 import { macroOf } from "@/lib/journal/analytics";
 import { formatDuration, type Trade } from "@/lib/journal/metrics";
@@ -34,7 +35,7 @@ const MATCH_MS = 10 * 60_000;
 const COMMA = /\s*,\s*/;
 
 const when = (ms: number) =>
-  new Date(ms).toLocaleString("pt-BR", {
+  new Date(ms).toLocaleString(appLocale(), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -198,7 +199,7 @@ const fieldsOf = (note: Note | undefined): Fields =>
   Object.fromEntries(NOTE_FIELDS.map((f) => [f, note?.[f] ?? ""])) as Fields;
 
 const hm = (iso: string) =>
-  new Date(iso).toLocaleTimeString("pt-BR", {
+  new Date(iso).toLocaleTimeString(appLocale(), {
     hour: "2-digit",
     minute: "2-digit",
   });

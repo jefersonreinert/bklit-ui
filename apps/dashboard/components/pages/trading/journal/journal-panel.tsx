@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { modelResolver, type TimeZoneId } from "@/lib/journal/analytics";
 import {
   buildTrades,
@@ -135,7 +136,7 @@ function Signals({ signals }: { signals: SignalRow[] }) {
             <span className="text-muted-foreground text-xs">{s.interval}</span>
           ) : null}
           <span className="ml-auto text-muted-foreground text-xs">
-            {new Date(s.receivedAt).toLocaleString("pt-BR", {
+            {new Date(s.receivedAt).toLocaleString(appLocale(), {
               dateStyle: "short",
               timeStyle: "medium",
             })}

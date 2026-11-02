@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   addDays,
@@ -26,7 +27,7 @@ import {
 } from "@/lib/work-schedule";
 import { PlaceSelect } from "./place-ui";
 
-const longDate = new Intl.DateTimeFormat("pt-BR", {
+const longDate = new Intl.DateTimeFormat(appLocale(), {
   weekday: "long",
   day: "numeric",
   month: "long",

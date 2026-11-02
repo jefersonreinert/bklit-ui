@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import type { ConnectorsStatus } from "@/lib/use-connectors";
 
@@ -98,7 +99,7 @@ export function GithubCard({
 }) {
   const connected = status?.github?.connected ?? false;
   const since = status?.github?.connectedAt
-    ? new Date(status.github.connectedAt).toLocaleDateString("pt-BR")
+    ? new Date(status.github.connectedAt).toLocaleDateString(appLocale())
     : null;
   const ready = Boolean(status?.available && status.configured);
 

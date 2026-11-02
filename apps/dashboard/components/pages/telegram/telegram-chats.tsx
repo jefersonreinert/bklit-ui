@@ -7,6 +7,7 @@ import {
 } from "@/components/pages/beverages/bev-shared";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   type ChatRow,
@@ -46,7 +47,7 @@ const time = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    : d.toLocaleString(appLocale(), { dateStyle: "short", timeStyle: "short" });
 };
 
 function ChatList({

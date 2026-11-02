@@ -39,6 +39,7 @@ import {
   parseChartSpec,
 } from "@/lib/ai-chart-spec";
 import { resolveDataset } from "@/lib/ai-datasets";
+import { appLocale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 const MONTH = /^(\d{4})-(\d{2})$/;
@@ -55,19 +56,19 @@ const PALETTE = [1, 4, 3, 5, 2].map(
 const color = (i: number) => PALETTE[i % PALETTE.length] ?? "var(--chart-1)";
 let gradientSeq = 0;
 
-const brl = new Intl.NumberFormat("pt-BR", {
+const brl = new Intl.NumberFormat(appLocale(), {
   style: "currency",
   currency: "BRL",
   maximumFractionDigits: 0,
 });
-const brlCompact = new Intl.NumberFormat("pt-BR", {
+const brlCompact = new Intl.NumberFormat(appLocale(), {
   style: "currency",
   currency: "BRL",
   notation: "compact",
   maximumFractionDigits: 1,
 });
-const plain = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-const compact = new Intl.NumberFormat("pt-BR", {
+const plain = new Intl.NumberFormat(appLocale(), { maximumFractionDigits: 1 });
+const compact = new Intl.NumberFormat(appLocale(), {
   notation: "compact",
   maximumFractionDigits: 1,
 });

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { browserHref } from "@/lib/browser/news";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   addDays,
@@ -88,7 +89,7 @@ function ImpactBars({ impact }: { impact: Impact }) {
 const timeText = (e: EconEvent) =>
   e.allDay
     ? "Dia todo"
-    : new Date(e.time).toLocaleTimeString("pt-BR", {
+    : new Date(e.time).toLocaleTimeString(appLocale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -205,7 +206,7 @@ function EventSheet({
             </SheetHeader>
             <div className="flex flex-col gap-4 p-5">
               <p className="text-sm">
-                {new Date(e.time).toLocaleString("pt-BR", {
+                {new Date(e.time).toLocaleString(appLocale(), {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
@@ -499,7 +500,7 @@ export function CalendarPage() {
       {days.map(([day, list]) => (
         <section className="flex flex-col gap-2" key={day}>
           <h3 className="sticky top-0 z-10 bg-background/80 py-1 font-semibold text-sm backdrop-blur">
-            {new Date(`${day}T12:00:00`).toLocaleDateString("pt-BR", {
+            {new Date(`${day}T12:00:00`).toLocaleDateString(appLocale(), {
               weekday: "long",
               day: "numeric",
               month: "long",
