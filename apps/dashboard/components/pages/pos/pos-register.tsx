@@ -7,6 +7,7 @@ import { Icon } from "@/lib/icons";
 import {
   addCustomAmount,
   addProduct,
+  addWine,
   createOrder,
   itemCount,
   money,
@@ -21,6 +22,7 @@ import { useCan } from "./pos-auth";
 import { CartPanel, orderLabel } from "./pos-cart";
 import { CheckoutSheet } from "./pos-checkout";
 import { activeGroups, ModifierSheet } from "./pos-modifiers";
+import { WineSheet } from "./pos-wine";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "0", "back"];
 const MAX_CENTS = 9_999_999;
@@ -113,7 +115,9 @@ function ProductGrid({
               {p.name}
             </span>
             <span className="text-muted-foreground text-sm tabular-nums">
-              {money(p.price, currency)}
+              {p.wine?.pours.length
+                ? `${money(Math.min(...p.wine.pours.map((x) => x.price)), currency)} – ${money(p.price, currency)}`
+                : money(p.price, currency)}
             </span>
           </button>
         ))}
@@ -201,6 +205,7 @@ export function RegisterView({
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [choosing, setChoosing] = useState<PosProduct | null>(null);
+  const [pouring, setPouring] = useState<PosProduct | null>(null);
   const currency = data.settings.currency;
 
   const addTyped = () => {
@@ -305,11 +310,15 @@ export function RegisterView({
         ) : (
           <ProductGrid
             currency={currency}
-            onPick={(p) =>
-              activeGroups(p).length
-                ? setChoosing(p)
-                : addProduct(ensureOrder(), p)
-            }
+            onPick={(p) => {
+              if (p.wine) {
+                setPouring(p);
+              } else if (activeGroups(p).length) {
+                setChoosing(p);
+              } else {
+                addProduct(ensureOrder(), p);
+              }
+            }}
             products={data.products}
           />
         )}
@@ -357,6 +366,16 @@ export function RegisterView({
           {cart}
         </SheetContent>
       </Sheet>
+      <WineSheet
+        currency={currency}
+        onClose={() => setPouring(null)}
+        onPick={(serve) => {
+          if (pouring) {
+            addWine(ensureOrder(), pouring, serve);
+          }
+        }}
+        product={pouring}
+      />
       <ModifierSheet
         currency={currency}
         onAdd={(extra) => {

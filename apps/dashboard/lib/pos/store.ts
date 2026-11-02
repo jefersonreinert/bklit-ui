@@ -30,8 +30,14 @@ import type {
 
 type Catalog = NonNullable<typeof api.pos.catalog._returnType>;
 type ServerOrder = NonNullable<typeof api.pos.openOrders._returnType>[number];
+export type PosCompany = NonNullable<
+  typeof api.pos.companies._returnType
+>[number];
 
 const SESSION_KEY = "cb:pos:session";
+const COMPANY_KEY = "cb:pos:company";
+/** The first business (documents saved before companies existed). */
+export const MAIN_COMPANY = "main";
 const PRINTERS_KEY = "cb:pos:printers";
 const LEGACY_KEY = "cb:pos:v1";
 
@@ -41,6 +47,7 @@ export const uid = () =>
 /* --------------------------------- state --------------------------------- */
 
 interface State {
+  companies: PosCompany[] | null | undefined;
   catalog: Catalog | null | undefined;
   open: ServerOrder[] | null | undefined;
   closed: ServerOrder[] | null | undefined;
@@ -51,6 +58,7 @@ interface State {
 }
 
 const state: State = {
+  companies: undefined,
   catalog: undefined,
   open: undefined,
   closed: undefined,
@@ -121,11 +129,74 @@ let started = false;
 let closedRefs = 0;
 let stopClosed: (() => void) | null = null;
 let stopLists: (() => void) | null = null;
+let stopCompanies: (() => void) | null = null;
 
-/** Args of the live POS lists: this device's PIN session. */
-function listArgs(): { session?: string } {
+/** Args of the live POS lists: this device's PIN session and business. */
+function listArgs(): { session?: string; company: string } {
   const token = getSession();
-  return token ? { session: token } : {};
+  const company = getCompany();
+  return token ? { session: token, company } : { company };
+}
+
+/* -------------------------------- business ------------------------------- */
+// Each device works in one business at a time (picked in the POS header).
+
+let company: string | undefined;
+const companyListeners = new Set<() => void>();
+
+export function getCompany() {
+  if (company === undefined) {
+    try {
+      company = localStorage.getItem(COMPANY_KEY) ?? MAIN_COMPANY;
+    } catch {
+      company = MAIN_COMPANY;
+    }
+  }
+  return company;
+}
+
+export function setCompany(key: string) {
+  if (key === getCompany()) {
+    return;
+  }
+  company = key;
+  try {
+    localStorage.setItem(COMPANY_KEY, key);
+  } catch {
+    // private mode
+  }
+  for (const l of companyListeners) {
+    l();
+  }
+}
+
+export function useCompany() {
+  return useSyncExternalStore(
+    (l) => {
+      companyListeners.add(l);
+      return () => {
+        companyListeners.delete(l);
+      };
+    },
+    getCompany,
+    () => MAIN_COMPANY
+  );
+}
+
+/** Businesses this device may open (undefined while loading). */
+export function useCompanies() {
+  return useSyncExternalStore(
+    subscribe,
+    () => state.companies,
+    () => undefined
+  );
+}
+
+/** Profile of the current business. */
+export function useCurrentCompany() {
+  const key = useCompany();
+  const list = useCompanies();
+  return list?.find((c) => c.key === key) ?? null;
 }
 
 function watch<Q extends FunctionReference<"query">>(
@@ -164,17 +235,43 @@ function start() {
     state.printers = [];
   }
   watchLists();
-  // Signing in or out with a PIN changes what the server lets us read
-  sessionListeners.add(() => {
+  watchCompanies();
+  const reload = () => {
     state.catalog = undefined;
     state.open = undefined;
+    state.closed = undefined;
+    state.paidHere.clear();
     watchLists();
     if (stopClosed) {
       stopClosed();
       watchClosed();
     }
     emit();
+  };
+  // Signing in or out with a PIN changes what the server lets us read
+  sessionListeners.add(() => {
+    watchCompanies();
+    reload();
   });
+  companyListeners.add(reload);
+}
+
+function watchCompanies() {
+  stopCompanies?.();
+  const token = getSession();
+  stopCompanies = watch(
+    api.pos.companies,
+    token ? { session: token } : {},
+    (v) => {
+      state.companies = v;
+      // A user who can't open this device's business goes to the first one
+      const key = getCompany();
+      const first = v?.[0];
+      if (first && !v.some((c) => c.key === key)) {
+        setCompany(first.key);
+      }
+    }
+  );
 }
 
 function watchLists() {
@@ -473,7 +570,12 @@ export function createOrder(init: { tableId?: string | null; name?: string }) {
   };
   send(
     api.pos.createOrder,
-    { cid: order.id, tableId: order.tableId, name: order.name },
+    {
+      cid: order.id,
+      tableId: order.tableId,
+      name: order.name,
+      company: getCompany(),
+    },
     (store) => editOpen(store, (orders) => [order as ServerOrder, ...orders])
   );
   return order;
@@ -533,7 +635,11 @@ function addLine(orderId: string, line: OrderItem) {
       const same =
         line.productId && plain(line)
           ? o.items.find(
-              (i) => i.productId === line.productId && !i.sent && plain(i)
+              (i) =>
+                i.productId === line.productId &&
+                i.name === line.name &&
+                !i.sent &&
+                plain(i)
             )
           : undefined;
       return {
@@ -571,6 +677,47 @@ export function addProduct(
     note,
   });
 }
+
+/** How a wine is sold: a glass size (ml), the bottle at the table or to go. */
+export type WineServe = number | "bottle" | "takeaway";
+
+/** Line name, price and share of the bottle for a wine serve. */
+export function wineLine(p: PosProduct, serve: WineServe) {
+  const wine = p.wine;
+  if (!wine || serve === "bottle") {
+    return { name: `${p.name} · garrafa`, price: p.price, portion: 1 };
+  }
+  if (serve === "takeaway") {
+    return {
+      name: `${p.name} · garrafa p/ levar`,
+      price: wine.takeaway ?? p.price,
+      portion: 1,
+    };
+  }
+  const pour = wine.pours.find((x) => x.ml === serve);
+  return {
+    name: `${p.name} · ${serve} ml`,
+    price: pour?.price ?? 0,
+    portion: Math.round((serve / wine.bottleMl) * 10_000) / 10_000,
+  };
+}
+
+/** Adds a glass or bottle of a wine; stock counts bottles. */
+export function addWine(orderId: string, p: PosProduct, serve: WineServe) {
+  const line = wineLine(p, serve);
+  addLine(orderId, {
+    id: uid(),
+    productId: p.id,
+    name: line.name,
+    price: line.price,
+    cost: p.cost === undefined ? undefined : r2(p.cost * line.portion),
+    portion: line.portion === 1 ? undefined : line.portion,
+    qty: 1,
+    sent: false,
+  });
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 export function setItemNote(orderId: string, itemId: string, note: string) {
   send(api.pos.setItemNote, { orderId, itemId, note }, (store) =>
@@ -722,7 +869,7 @@ export function openOrderFor(d: PosData, tableId: string) {
 /* ------------------------------ catalog/meta ----------------------------- */
 
 export function saveProduct(p: PosProduct) {
-  send(api.pos.saveProduct, { product: p }, (store) =>
+  send(api.pos.saveProduct, { product: p, company: getCompany() }, (store) =>
     editCatalog(store, (c) => ({
       ...c,
       products: c.products.some((x) => x.id === p.id)
@@ -771,10 +918,13 @@ function saveMetaField(
   field: "areas" | "settings" | "receipt" | "printers",
   value: unknown
 ) {
-  return send(api.pos.saveMeta, { [field]: value }, (store) =>
-    editCatalog(store, (c) =>
-      c.meta ? { ...c, meta: { ...c.meta, [field]: value } } : c
-    )
+  return send(
+    api.pos.saveMeta,
+    { [field]: value, company: getCompany() },
+    (store) =>
+      editCatalog(store, (c) =>
+        c.meta ? { ...c, meta: { ...c.meta, [field]: value } } : c
+      )
   );
 }
 

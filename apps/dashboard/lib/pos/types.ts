@@ -22,6 +22,36 @@ export interface PosProduct {
   description?: string;
   /** Option groups ("steps"): ice, lemon, doneness… */
   modifiers?: ModifierGroup[];
+  /** Wine sold by the glass or bottle (stock in bottles). */
+  wine?: WineInfo;
+}
+
+export type WineColor =
+  | "red"
+  | "white"
+  | "rose"
+  | "orange"
+  | "sparkling"
+  | "dessert";
+
+export interface WinePour {
+  ml: number;
+  price: number;
+}
+
+export interface WineInfo {
+  color: WineColor | string;
+  country?: string;
+  region?: string;
+  grape?: string;
+  producer?: string;
+  vintage?: string;
+  /** Dispenser slot ("D2#10"). */
+  tap?: string;
+  bottleMl: number;
+  /** Bottle to take away (the product price is the bottle at the table). */
+  takeaway?: number;
+  pours: WinePour[];
 }
 
 export interface ModifierOption {
@@ -99,6 +129,8 @@ export interface OrderItem {
   note?: string;
   /** Already sent to the kitchen. */
   sent: boolean;
+  /** Stock units taken per qty (a glass is part of a bottle). */
+  portion?: number;
 }
 
 export type PaymentMethod = "card" | "qr" | "cash" | "link" | "other";

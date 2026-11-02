@@ -1,0 +1,4785 @@
+{
+ "company": "vinomad",
+ "currency": "EUR",
+ "profile": {
+  "name": "Vinomad",
+  "color": "#7b1e2b",
+  "tagline": "Wine · Grill · Gather",
+  "wine": true
+ },
+ "products": [
+  {
+   "id": "vin-wine-bites-mix-of-olives",
+   "name": "Mix of olives",
+   "category": "Wine Bites",
+   "price": 5.5,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-wine-bites-mix-of-nuts",
+   "name": "Mix of nuts",
+   "category": "Wine Bites",
+   "price": 4.5,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-starters-cantabrian-anchovy-toast",
+   "name": "Cantabrian anchovy toast",
+   "category": "Starters",
+   "price": 10,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tomato butter, chives, evoo"
+  },
+  {
+   "id": "vin-starters-pulled-pork-croquettes-4-pieces",
+   "name": "Pulled pork croquettes (4 pieces)",
+   "category": "Starters",
+   "price": 12,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-starters-padron-peppers-with-smoked-salt",
+   "name": "Padron peppers with smoked salt",
+   "category": "Starters",
+   "price": 11,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-starters-crispy-smelt-fish",
+   "name": "Crispy smelt fish",
+   "category": "Starters",
+   "price": 14,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Garlic aioli, lemon, fresh herbs"
+  },
+  {
+   "id": "vin-starters-octopus-tostada",
+   "name": "Octopus tostada",
+   "category": "Starters",
+   "price": 17,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Charred octopus, guacamole, lettuce, onion, jalapeño, lime, coriander"
+  },
+  {
+   "id": "vin-starters-beef-tostada",
+   "name": "Beef tostada",
+   "category": "Starters",
+   "price": 14,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beef, lettuce, onion, tomato, mexican crema, coriander"
+  },
+  {
+   "id": "vin-starters-spicy-beef-tartare-tostada",
+   "name": "Spicy beef tartare tostada",
+   "category": "Starters",
+   "price": 14,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-starters-josper-corn-ribs",
+   "name": "Josper corn ribs",
+   "category": "Starters",
+   "price": 12,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-cheese-specialties-4-types-of-parmesan-with-jam",
+   "name": "4 types of parmesan with jam",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-cheese-specialties-josper-grilled-provolone-cheese",
+   "name": "Josper-grilled provolone cheese",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Provoleta, oregano, chili, cherry tomatoes, chimichurri"
+  },
+  {
+   "id": "vin-cheese-specialties-baked-camembert-with-fig-jam-walnuts-honey",
+   "name": "Baked camembert with fig jam, walnuts & honey",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-cheese-specialties-josper-roasted-scamorza",
+   "name": "Josper-roasted scamorza",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Onion confit"
+  },
+  {
+   "id": "vin-cheese-specialties-baked-feta-with-olives-sun-dried-tomatoes",
+   "name": "Baked feta with olives & sun-dried tomatoes",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-cheese-specialties-baked-goat-cheese",
+   "name": "Baked goat cheese",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Honey, crushed red peppers"
+  },
+  {
+   "id": "vin-cheese-specialties-baked-feta-with-spicy-sausage",
+   "name": "Baked feta with spicy sausage",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pork spicy sausage, olive oil, thyme"
+  },
+  {
+   "id": "vin-cheese-specialties-crispy-garlic-herb-jalapeno-poppers",
+   "name": "Crispy garlic & herb jalapeño poppers",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Cream cheese, mozzarella, garlic, smoked paprika"
+  },
+  {
+   "id": "vin-cheese-specialties-croque-monsieur",
+   "name": "Croque monsieur",
+   "category": "Cheese Specialties",
+   "price": 20,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beef tartare, gruyère cheese, kimchi aioli, truffle oil"
+  },
+  {
+   "id": "vin-josper-patagonian-style-sea-bream",
+   "name": "Patagonian style sea bream",
+   "category": "Josper",
+   "price": 26,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Fresh sea bream marinated in ginger & garlic, house-made vegan mayonnaise, josper baked, homemade chimichurri"
+  },
+  {
+   "id": "vin-josper-josper-grilled-king-prawns",
+   "name": "Josper-grilled king prawns",
+   "category": "Josper",
+   "price": 26,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Garlic, chilli, evoo, parsley"
+  },
+  {
+   "id": "vin-josper-whole-roasted-cauliflower",
+   "name": "Whole roasted cauliflower",
+   "category": "Josper",
+   "price": 20,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mexican crema, red bell pepper sauce, feta cheese, parsley, walnuts"
+  },
+  {
+   "id": "vin-josper-grilled-pork-chop-with-melted-goat-cheese",
+   "name": "Grilled pork chop with melted goat cheese",
+   "category": "Josper",
+   "price": 26,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Chilli flakes, honey"
+  },
+  {
+   "id": "vin-josper-josper-grilled-octopus",
+   "name": "Josper-grilled octopus",
+   "category": "Josper",
+   "price": 26,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Roasted potatoes, chimichurri, charred lemon"
+  },
+  {
+   "id": "vin-josper-josper-pork-skewers",
+   "name": "Josper pork skewers",
+   "category": "Josper",
+   "price": 24,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Red bell pepper sauce, herbs"
+  },
+  {
+   "id": "vin-josper-josper-grilled-chicken-breast-with-garlic-cream-",
+   "name": "Josper grilled chicken breast with garlic cream sauce",
+   "category": "Josper",
+   "price": 24,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-josper-josper-roasted-bone-marrow-beef-tartare-blue-che",
+   "name": "Josper roasted bone marrow, beef tartare, blue cheese",
+   "category": "Josper",
+   "price": 28,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-more-meat-cheesy-smashed-burger",
+   "name": "Cheesy smashed burger",
+   "category": "More Meat",
+   "price": 20,
+   "color": "#7a4b2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Sesame seed bun, beef patty, cheddar, pickles, onions, ketchup, mustard"
+  },
+  {
+   "id": "vin-more-meat-classic-american-burger",
+   "name": "Classic American burger",
+   "category": "More Meat",
+   "price": 17,
+   "color": "#7a4b2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beef patty, lettuce, tomato, pickles, jay sauce, cheddar, sesame seed bun"
+  },
+  {
+   "id": "vin-more-meat-truffle-burger",
+   "name": "Truffle burger",
+   "category": "More Meat",
+   "price": 22,
+   "color": "#7a4b2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beef patty, lettuce, onion confit, truffle sauce, provolone cheese"
+  },
+  {
+   "id": "vin-more-meat-naked-burger",
+   "name": "Naked burger",
+   "category": "More Meat",
+   "price": 16,
+   "color": "#7a4b2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beef patty, lettuce, onion, tomato, pickles, cheddar, grilled zucchini"
+  },
+  {
+   "id": "vin-salads-vinomad-caesar-salad",
+   "name": "Vinomad Caesar salad",
+   "category": "Salads",
+   "price": 14,
+   "color": "#5c8a3a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Romaine hearts, anchovies, shaved parmesan, roasted tomatoes, croutons, housemade caesar dressing"
+  },
+  {
+   "id": "vin-salads-roasted-beet-salad",
+   "name": "Roasted beet salad",
+   "category": "Salads",
+   "price": 14,
+   "color": "#5c8a3a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Beet slices, rocket, walnuts, feta cheese, homemade greek yogurt"
+  },
+  {
+   "id": "vin-salads-wedge-salad",
+   "name": "Wedge salad",
+   "category": "Salads",
+   "price": 14,
+   "color": "#5c8a3a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Iceberg lettuce, blue cheese crumbs, red onions, cherry tomatoes, oven-roasted prosciutto, blue cheese dressing"
+  },
+  {
+   "id": "vin-kids-menu-vegetable-sticks",
+   "name": "Vegetable sticks",
+   "category": "Kids Menu",
+   "price": 4,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-kids-menu-cheese-quesadilla",
+   "name": "Cheese quesadilla",
+   "category": "Kids Menu",
+   "price": 8,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-kids-menu-four-mozzarella-sticks",
+   "name": "Four mozzarella sticks",
+   "category": "Kids Menu",
+   "price": 4,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-kids-menu-chicken-nuggets-with-fries",
+   "name": "Chicken nuggets with fries",
+   "category": "Kids Menu",
+   "price": 6,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-kids-menu-grilled-chicken-breast-with-fries",
+   "name": "Grilled chicken breast with fries",
+   "category": "Kids Menu",
+   "price": 8,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-sides-roasted-potato",
+   "name": "Roasted potato",
+   "category": "Sides",
+   "price": 4,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-sides-roasted-vegetables",
+   "name": "Roasted vegetables",
+   "category": "Sides",
+   "price": 4,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-sides-sweet-potato-fries",
+   "name": "Sweet potato fries",
+   "category": "Sides",
+   "price": 4,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-sides-green-salad",
+   "name": "Green salad",
+   "category": "Sides",
+   "price": 4,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-sharing-boards-cheese-board",
+   "name": "Cheese board",
+   "category": "Sharing Boards",
+   "price": 16,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "small",
+       "name": "Small",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "large",
+       "name": "Large",
+       "price": 16,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-sharing-boards-charcuterie-board",
+   "name": "Charcuterie board",
+   "category": "Sharing Boards",
+   "price": 16,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "small",
+       "name": "Small",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "large",
+       "name": "Large",
+       "price": 16,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-sharing-boards-cheese-charcuterie-board-large",
+   "name": "Cheese & charcuterie board (large)",
+   "category": "Sharing Boards",
+   "price": 32,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-starters-quesadilla",
+   "name": "Quesadilla",
+   "category": "Starters",
+   "price": 16,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tortilla, salsa, pico de gallo, mozzarella cheese",
+   "modifiers": [
+    {
+     "id": "filling",
+     "name": "Filling",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "beef",
+       "name": "Beef",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "chicken",
+       "name": "Chicken",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-starters-nachos",
+   "name": "Nachos",
+   "category": "Starters",
+   "price": 16,
+   "color": "#c96442",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pico de gallo, jalapeño, mozzarella cheese, guacamole",
+   "modifiers": [
+    {
+     "id": "filling",
+     "name": "Filling",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "beef",
+       "name": "Beef",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "chicken",
+       "name": "Chicken",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "veggie",
+       "name": "Veggie",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-cheese-specialties-josper-roasted-blend-of-our-finest-cheeses",
+   "name": "Josper-roasted blend of our finest cheeses",
+   "category": "Cheese Specialties",
+   "price": 14,
+   "color": "#d4a017",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "With your choice of infusion",
+   "modifiers": [
+    {
+     "id": "infusion",
+     "name": "Infusion",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "mushroom",
+       "name": "Mushroom",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "pepperoni",
+       "name": "Pepperoni",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "shrimp",
+       "name": "Shrimp",
+       "price": 1,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-desserts-dessert-of-the-day",
+   "name": "Dessert of the day",
+   "category": "Desserts",
+   "price": 0,
+   "color": "#b5838d",
+   "available": false,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Homemade desserts change regularly: set the price when selling"
+  },
+  {
+   "id": "vin-beer-helles-lager",
+   "name": "Helles Lager",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#d9a441",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5% ABV · 15 IBU · We make our Helles Lager using the classic European noble hops Hallertauer and Saaz, synonymos with traditional European style. Pale gold and clear in the glass, it opens with a soft, bready malt nose and gentle floral hop notes. The body is smooth and light, with low bitterness that lets the malt shine. Crisp, balanced and easy-drinking, it finishes clean and refreshing.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 2.25,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-beer-session-ipa",
+   "name": "Session IPA",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#d9a441",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "3.8% ABV · 25 IBU · A juicy, unfiltered and all-natural Session IPA bursting with fresh fruit aromas. Ripe mango and grapefruit lead the palate, delivering big hop flavour without the heaviness. A blended base of rolled oats, flaked wheat and malted barley gives a surprisingly full-bodied, smooth mouthfeel. Low in alcohol but full of character, it fnishes bight, refreshing and easy to come back to.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 2.25,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-beer-valletta",
+   "name": "Valletta",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#d9a441",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "4.8% ABV · 35 IBU · Valletta 2018 is a bright and pleasant bottom-fermented lager, named after Malta's capital. Golden and clear in the glass, it opens with a clean, gently malty nose. The body is light and smooth, letting the delicate bitterness of the hops come through without overpowering the malt. A subtle citrus note lingers on the aftertaste, making it an easy-drinking, refreshing lager that finishes crisp and clean.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 2.25,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-beer-ipa",
+   "name": "IPA",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#d9a441",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5.8% ABV · 50 IBU · Our Indian Pale Ale is brewed with four hop additions to create a powerfull hop profile. A solid malt base, however, tempers the bitter American hops, giving our IPA a balance not often found in this style. The end product is a well-balanced, malty beer with the crisp taste of hops and an exceptionally frity nose.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 2.25,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-classic-cocktails-kinnie-fizz",
+   "name": "Kinnie Fizz",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Gin, Elderflower, Lemon, Kinnie"
+  },
+  {
+   "id": "vin-classic-cocktails-strawberry-sour",
+   "name": "Strawberry Sour",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Strawberry Gin, Lemon, Strawberries"
+  },
+  {
+   "id": "vin-classic-cocktails-mai-tai",
+   "name": "Mai Tai",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Dark Rum, Triple Sec, Lime, Orgeat"
+  },
+  {
+   "id": "vin-classic-cocktails-negroni",
+   "name": "Negroni",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Campari, Gin, Sweet Vermouth"
+  },
+  {
+   "id": "vin-classic-cocktails-mojito",
+   "name": "Mojito",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Rum, lime, sugar, mint, soda",
+   "modifiers": [
+    {
+     "id": "flavour",
+     "name": "Flavour",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "classic",
+       "name": "Classic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "strawberry",
+       "name": "Strawberry",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "raspberry",
+       "name": "Raspberry",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "mango",
+       "name": "Mango",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "passion-fruit",
+       "name": "Passion Fruit",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-classic-cocktails-whisky-sour",
+   "name": "Whisky Sour",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Bourbon, Lime, Simple Syrup"
+  },
+  {
+   "id": "vin-classic-cocktails-london-moscow-mule",
+   "name": "London/Moscow Mule",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Lemon, Ginger Beer",
+   "modifiers": [
+    {
+     "id": "style",
+     "name": "Style",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "london-gin",
+       "name": "London (gin)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "moscow-vodka",
+       "name": "Moscow (vodka)",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vin-classic-cocktails-margarita",
+   "name": "Margarita",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tequila, Lime, Triple Sec"
+  },
+  {
+   "id": "vin-classic-cocktails-long-island-iced-tea",
+   "name": "Long Island Iced Tea",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Rum, Tequila, Triple Sec, Sweet & Sour Mix, Cola"
+  },
+  {
+   "id": "vin-classic-cocktails-cuba-libre",
+   "name": "Cuba Libre",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Lime, Cola"
+  },
+  {
+   "id": "vin-classic-cocktails-aperol-spritz",
+   "name": "Aperol Spritz",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Prosecco, Aperol, Soda Water"
+  },
+  {
+   "id": "vin-classic-cocktails-pina-colada",
+   "name": "Piña Colada",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Coconut, Pineapple Juice"
+  },
+  {
+   "id": "vin-classic-cocktails-bellini",
+   "name": "Bellini",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Peach Pure, Prosecco"
+  },
+  {
+   "id": "vin-classic-cocktails-tequila-sunrise",
+   "name": "Tequila Sunrise",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tequila, Orange Juice, Grenadine"
+  },
+  {
+   "id": "vin-signature-cocktails-espresso-martini",
+   "name": "Espresso Martini",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Coffee Liqueur, Espresso"
+  },
+  {
+   "id": "vin-signature-cocktails-tikimad",
+   "name": "Tikimad",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Dark Rum, Pineapple, Blackberries, Mango, Lime"
+  },
+  {
+   "id": "vin-signature-cocktails-hoppy-blueberry",
+   "name": "Hoppy Blueberry",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Blueberries, Strawberry, Gin, Lemon, Golden Ale"
+  },
+  {
+   "id": "vin-signature-cocktails-pornstar-martini",
+   "name": "Pornstar Martini",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vanilla Vodka, Passoã, Passion Fruit, Lime"
+  },
+  {
+   "id": "vin-signature-cocktails-passion-fruit-spritz",
+   "name": "Passion Fruit Spritz",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Prosecco, Aperol, Passion Fruit, Passoã"
+  },
+  {
+   "id": "vin-signature-cocktails-iparol-spritz",
+   "name": "Iparol Spritz",
+   "category": "Signature Cocktails",
+   "price": 7.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Aperol, Passion Fruit, Orange Bitters, Valletta Beer"
+  },
+  {
+   "id": "vin-signature-cocktails-wild-agave",
+   "name": "Wild Agave",
+   "category": "Signature Cocktails",
+   "price": 12.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mezcal, Agave, Passion Fruit, Lime, Orange Bitters, Sugar"
+  },
+  {
+   "id": "vin-signature-cocktails-don-coco",
+   "name": "Don Coco",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Don Papa Rum, Coconut, Lime, Rosemary, Ginger Beer"
+  },
+  {
+   "id": "vin-signature-cocktails-mezcal-old-fashioned",
+   "name": "Mezcal Old Fashioned",
+   "category": "Signature Cocktails",
+   "price": 12.0,
+   "color": "#c2457a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mezcal, Agave, Timur Berry"
+  },
+  {
+   "id": "vin-gin-tonic-bombay",
+   "name": "Bombay",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "40% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-tanqueray",
+   "name": "Tanqueray",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "43.10% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-ampersand-strawberry-gin",
+   "name": "Ampersand Strawberry Gin",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "37.5% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-gordon-s-pink",
+   "name": "Gordon's Pink",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "37.5% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-nordes-gin",
+   "name": "Nordes Gin",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "40% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-gin-mare",
+   "name": "Gin Mare",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "42.7% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-hendrick-s",
+   "name": "Hendrick's",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "44.00% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-gin-tonic-monkey-47",
+   "name": "Monkey 47",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "47% · 50 ml with premium tonic / mixer"
+  },
+  {
+   "id": "vin-vodka-smirnoff",
+   "name": "Smirnoff",
+   "category": "Vodka",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-vodka-absolut",
+   "name": "Absolut",
+   "category": "Vodka",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-vodka-grey-goose",
+   "name": "Grey Goose",
+   "category": "Vodka",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-vodka-belvedere",
+   "name": "Belvedere",
+   "category": "Vodka",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-tequila-jose-cuervo-silver",
+   "name": "Jose Cuervo Silver",
+   "category": "Tequila",
+   "price": 3.75,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-tequila-jose-cuervo-gold",
+   "name": "Jose Cuervo Gold",
+   "category": "Tequila",
+   "price": 4.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-don-papa",
+   "name": "Don Papa",
+   "category": "Rum",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-bacardi-white",
+   "name": "Bacardi White",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-captain-morgan-spiced",
+   "name": "Captain Morgan Spiced",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-captain-morgan-dark",
+   "name": "Captain Morgan Dark",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-bumbu",
+   "name": "Bumbu",
+   "category": "Rum",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-rum-kraken",
+   "name": "Kraken",
+   "category": "Rum",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-woodford-reserve",
+   "name": "Woodford Reserve",
+   "category": "Whiskey",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-johnnie-walker-red-label",
+   "name": "Johnnie Walker Red Label",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-johnnie-walker-black-label",
+   "name": "Johnnie Walker Black Label",
+   "category": "Whiskey",
+   "price": 4.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-jack-daniels",
+   "name": "Jack Daniels",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-jameson",
+   "name": "Jameson",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-jim-beam",
+   "name": "Jim Beam",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-whiskey-glenfiddich-12-y-o",
+   "name": "Glenfiddich 12 y.o",
+   "category": "Whiskey",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "vin-shots-baby-guinness",
+   "name": "Baby Guinness",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kahlua, Baileys"
+  },
+  {
+   "id": "vin-shots-b52",
+   "name": "B52",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kahlua, Baileys, Tripplesec"
+  },
+  {
+   "id": "vin-shots-buttery-nipple",
+   "name": "Buttery Nipple",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Peach Schnapps, Baileys"
+  },
+  {
+   "id": "vin-shots-amaretti",
+   "name": "Amaretti",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Amaretto, Jameson"
+  },
+  {
+   "id": "vin-white-wine-norton-semillion-altura",
+   "name": "Norton (Semillion Altura)",
+   "category": "White Wine",
+   "price": 37.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Argentina",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D2#10",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-white-wine-vasse-felix-sav-bl",
+   "name": "Vasse Felix (Sav.bl)",
+   "category": "White Wine",
+   "price": 32.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Australia",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D2#11",
+    "takeaway": 15.0
+   }
+  },
+  {
+   "id": "vin-white-wine-pewsey-vale-riesling",
+   "name": "Pewsey Vale (Riesling)",
+   "category": "White Wine",
+   "price": 41.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Australia",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D2#4",
+    "takeaway": 24.0
+   }
+  },
+  {
+   "id": "vin-red-wine-yalumba-samuel-s-collection-barossa-bush-vine-gr",
+   "name": "Yalumba Samuel's Collection Barossa Bush Vine Grenache 2020",
+   "category": "Red Wine",
+   "price": 52.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Australia",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.5
+     },
+     {
+      "ml": 125,
+      "price": 9.0
+     }
+    ],
+    "tap": "D4#8",
+    "takeaway": 32.5
+   }
+  },
+  {
+   "id": "vin-white-wine-mantlerhof-gruner-veltiner-weitgasse",
+   "name": "Mantlerhof (Gruner Veltiner Weitgasse)",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Austria",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D2#5",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-red-wine-miolo-touriga-single-vineyard",
+   "name": "Miolo (Touriga Single Vineyard)",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Brazil",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4#6",
+    "takeaway": 16.0
+   }
+  },
+  {
+   "id": "vin-white-wine-clos-jordanne-chardonnay",
+   "name": "Clos Jordanne (Chardonnay)",
+   "category": "White Wine",
+   "price": 54.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Canada",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.5
+     },
+     {
+      "ml": 125,
+      "price": 9.0
+     }
+    ],
+    "tap": "D3.1#9",
+    "takeaway": 36.0
+   }
+  },
+  {
+   "id": "vin-white-wine-talamanca-sav-blanc",
+   "name": "Talamanca Sav Blanc",
+   "category": "White Wine",
+   "price": 27.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Chile",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 4.5
+     }
+    ],
+    "tap": "D2#13",
+    "takeaway": 11.0
+   }
+  },
+  {
+   "id": "vin-red-wine-viu-manet-secret-carmenere",
+   "name": "Viu Manet Secret Carmenere",
+   "category": "Red Wine",
+   "price": 35.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Chile",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4#3",
+    "takeaway": 18.5
+   }
+  },
+  {
+   "id": "vin-red-wine-chateau-changyu-moser-xv-cab-sav-helan",
+   "name": "Chateau Changyu Moser Xv(cab Sav Helan)",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "China",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4#9",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-red-wine-vouni-panayia-alina",
+   "name": "Vouni Panayia (Alina)",
+   "category": "Red Wine",
+   "price": 36.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Cyprus",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3#9",
+    "takeaway": 20.0
+   }
+  },
+  {
+   "id": "vin-red-wine-vouni-panayia-barba-yiannis",
+   "name": "Vouni Panayia (Barba Yiannis)",
+   "category": "Red Wine",
+   "price": 46.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Cyprus",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D1#2",
+    "takeaway": 29.0
+   }
+  },
+  {
+   "id": "vin-red-wine-cotes-de-gascogne-classic-blan",
+   "name": "Cotes de Gascogne Classic Blan",
+   "category": "Red Wine",
+   "price": 29.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D3#4",
+    "takeaway": 13.0
+   }
+  },
+  {
+   "id": "vin-rose-wine-belleruche-cotes-du-rhone-rose",
+   "name": "Belleruche Cotes du Rhone Rose",
+   "category": "Rosé Wine",
+   "price": 30.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D4#13",
+    "takeaway": 14.5
+   }
+  },
+  {
+   "id": "vin-white-wine-moulin-de-gassac-picpoul-de-pinet",
+   "name": "Moulin de Gassac Picpoul de Pinet",
+   "category": "White Wine",
+   "price": 30.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#17",
+    "takeaway": 15.0
+   }
+  },
+  {
+   "id": "vin-white-wine-belleruche-du-rhone-blanc",
+   "name": "Belleruche du Rhone Blanc",
+   "category": "White Wine",
+   "price": 31.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#18",
+    "takeaway": 14.5
+   }
+  },
+  {
+   "id": "vin-red-wine-lqlc",
+   "name": "LQLC",
+   "category": "Red Wine",
+   "price": 32.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D1#10",
+    "takeaway": 15.0
+   }
+  },
+  {
+   "id": "vin-red-wine-les-hauts-de-guillaman",
+   "name": "Les Hauts de Guillaman",
+   "category": "Red Wine",
+   "price": 36.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D1#3",
+    "takeaway": 19.0
+   }
+  },
+  {
+   "id": "vin-white-wine-domaine-maire-fils-arbois-savagnin",
+   "name": "Domaine Maire &fils (Arbois Savagnin)",
+   "category": "White Wine",
+   "price": 37.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D4.1#17",
+    "takeaway": 22.0
+   }
+  },
+  {
+   "id": "vin-white-wine-chateau-guiraud-blanc",
+   "name": "Chateau Guiraud Blanc",
+   "category": "White Wine",
+   "price": 39.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D4.1#19",
+    "takeaway": 20.5
+   }
+  },
+  {
+   "id": "vin-rose-wine-chateau-des-ferrages-mon-plaisir",
+   "name": "Chateau des Ferrages Mon Plaisir",
+   "category": "Rosé Wine",
+   "price": 40.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D4#14",
+    "takeaway": 23.0
+   }
+  },
+  {
+   "id": "vin-white-wine-chateau-faut-monteils-sauternes-2009",
+   "name": "Château Faut Monteils Sauternes 2009",
+   "category": "White Wine",
+   "price": 42.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D3.1#2",
+    "takeaway": 24.0
+   }
+  },
+  {
+   "id": "vin-red-wine-mas-amiel-oiseau-rare",
+   "name": "Mas Amiel(oiseau Rare)",
+   "category": "Red Wine",
+   "price": 42.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D1#16",
+    "takeaway": 25.0
+   }
+  },
+  {
+   "id": "vin-white-wine-riesling-schiefferberg",
+   "name": "Riesling Schiefferberg",
+   "category": "White Wine",
+   "price": 42.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D2#3",
+    "takeaway": 23.0
+   }
+  },
+  {
+   "id": "vin-white-wine-d-de-malle-bordeaux-sec-blanc",
+   "name": "D de Malle Bordeaux Sec Blanc",
+   "category": "White Wine",
+   "price": 43.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D4.1#20",
+    "takeaway": 25.0
+   }
+  },
+  {
+   "id": "vin-red-wine-trenel-moulin-a-vent-rouge",
+   "name": "Trenel Moulin A Vent Rouge",
+   "category": "Red Wine",
+   "price": 43.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D1#8",
+    "takeaway": 24.0
+   }
+  },
+  {
+   "id": "vin-red-wine-chateau-de-la-gardine",
+   "name": "Chateau de la Gardine",
+   "category": "Red Wine",
+   "price": 45.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D1#7",
+    "takeaway": 25.0
+   }
+  },
+  {
+   "id": "vin-red-wine-henri-bourgeois-sancerre-rouge-les-baronnes",
+   "name": "Henri Bourgeois Sancerre Rouge \"les Baronnes\"",
+   "category": "Red Wine",
+   "price": 47.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D4.1#10",
+    "takeaway": 27.5
+   }
+  },
+  {
+   "id": "vin-red-wine-chateau-caillou-d-arthus-grand-cru",
+   "name": "Chateau Caillou D'arthus Grand Cru",
+   "category": "Red Wine",
+   "price": 48.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D1#15",
+    "takeaway": 29.0
+   }
+  },
+  {
+   "id": "vin-red-wine-domaine-de-thalabert",
+   "name": "Domaine de Thalabert",
+   "category": "Red Wine",
+   "price": 58.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 6.0
+     },
+     {
+      "ml": 125,
+      "price": 10.0
+     }
+    ],
+    "tap": "D1#4",
+    "takeaway": 34.0
+   }
+  },
+  {
+   "id": "vin-red-wine-chevalier-de-lascombes",
+   "name": "Chevalier de Lascombes",
+   "category": "Red Wine",
+   "price": 64.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.5
+     },
+     {
+      "ml": 75,
+      "price": 6.5
+     },
+     {
+      "ml": 125,
+      "price": 11.0
+     }
+    ],
+    "tap": "D1#6",
+    "takeaway": 42.0
+   }
+  },
+  {
+   "id": "vin-red-wine-brunel-cote-rotie-2016-arr",
+   "name": "Brunel Cote-rotie 2016 Arr",
+   "category": "Red Wine",
+   "price": 0,
+   "color": "#7b1e2b",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": []
+   }
+  },
+  {
+   "id": "vin-rose-wine-chateau-des-ferrages",
+   "name": "Chateau des Ferrages",
+   "category": "Rosé Wine",
+   "price": 0,
+   "color": "#e07a8f",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "France",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D4#14"
+   }
+  },
+  {
+   "id": "vin-white-wine-georgian-legend-tsinandali",
+   "name": "Georgian Legend Tsinandali",
+   "category": "White Wine",
+   "price": 28.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Georgia",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D2#9",
+    "takeaway": 12.0
+   }
+  },
+  {
+   "id": "vin-orange-wine-georgian-legend-qveri-kisi",
+   "name": "Georgian Legend Qveri Kisi",
+   "category": "Orange Wine",
+   "price": 33.5,
+   "color": "#d98b3a",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Georgia",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4#19",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-red-wine-georgian-legend-alazani-semi-sweet",
+   "name": "Georgian Legend Alazani Semi Sweet",
+   "category": "Red Wine",
+   "price": 0,
+   "color": "#7b1e2b",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Georgia",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D3.1#3"
+   }
+  },
+  {
+   "id": "vin-red-wine-fritz-warmer",
+   "name": "Fritz Warmer",
+   "category": "Red Wine",
+   "price": 50.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Germany",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.5
+     }
+    ],
+    "tap": "D1#1",
+    "takeaway": 32.0
+   }
+  },
+  {
+   "id": "vin-white-wine-donnhof-riesling-qualitatswein-trocken-2023",
+   "name": "Dönnhof Riesling Qualitätswein Trocken 2023",
+   "category": "White Wine",
+   "price": 0,
+   "color": "#c9b458",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Germany",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D2#1"
+   }
+  },
+  {
+   "id": "vin-red-wine-kir-yianni-naoussa-cuvee-villages",
+   "name": "Kir-yianni (Naoussa Cuvee Villages)",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Greece",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "takeaway": 16.0
+   }
+  },
+  {
+   "id": "vin-white-wine-matsa-estate-savvatiano",
+   "name": "Matsa Estate (Savvatiano)",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Greece",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D2#8",
+    "takeaway": 16.0
+   }
+  },
+  {
+   "id": "vin-red-wine-naoussa-xinomavro",
+   "name": "Naoussa Xinomavro",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Greece",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4#7",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-white-wine-royal-tokaji-dry-furmint",
+   "name": "Royal Tokaji (Dry Furmint)",
+   "category": "White Wine",
+   "price": 32.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Hungary",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D3.1#7",
+    "takeaway": 15.0
+   }
+  },
+  {
+   "id": "vin-rose-wine-san-marzano-tramari-rose-di-primitivo-salento-ig",
+   "name": "San Marzano Tramari Rose di Primitivo Salento IGP",
+   "category": "Rosé Wine",
+   "price": 30.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D4#11",
+    "takeaway": 14.5
+   }
+  },
+  {
+   "id": "vin-white-wine-san-marzano-verdeca",
+   "name": "San Marzano Verdeca",
+   "category": "White Wine",
+   "price": 30.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D3#7",
+    "takeaway": 14.0
+   }
+  },
+  {
+   "id": "vin-red-wine-castello-monaci-susumaniello-sciu",
+   "name": "Castello Monaci (Susumaniello Sciu)",
+   "category": "Red Wine",
+   "price": 31.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#2",
+    "takeaway": 14.0
+   }
+  },
+  {
+   "id": "vin-red-wine-sciu-susumaniello",
+   "name": "Sciu Susumaniello",
+   "category": "Red Wine",
+   "price": 32.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#2",
+    "takeaway": 15.5
+   }
+  },
+  {
+   "id": "vin-red-wine-elena-walch-lagrein",
+   "name": "Elena Walch (Lagrein)",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#9",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-white-wine-marco-porello-roero-arnies",
+   "name": "Marco Porello Roero Arnies",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#15",
+    "takeaway": 16.5
+   }
+  },
+  {
+   "id": "vin-white-wine-colle-vecchio-pecorino",
+   "name": "Colle Vecchio Pecorino",
+   "category": "White Wine",
+   "price": 33.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3#2",
+    "takeaway": 17.5
+   }
+  },
+  {
+   "id": "vin-red-wine-simboli-cannonau-di-sardegna",
+   "name": "Simboli Cannonau di Sardegna",
+   "category": "Red Wine",
+   "price": 33.5,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4#1",
+    "takeaway": 17.5
+   }
+  },
+  {
+   "id": "vin-white-wine-simboli-vermentino-di-sardegna",
+   "name": "Simboli Vermentino di Sardegna",
+   "category": "White Wine",
+   "price": 33.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3.1#12",
+    "takeaway": 17.5
+   }
+  },
+  {
+   "id": "vin-red-wine-elena-walch-lagrein-2",
+   "name": "Elena Walch Lagrein",
+   "category": "Red Wine",
+   "price": 35.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4.1#9",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-white-wine-di-majo-norante-greco-molise",
+   "name": "Di Majo Norante Greco Molise",
+   "category": "White Wine",
+   "price": 35.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3#1",
+    "takeaway": 19.0
+   }
+  },
+  {
+   "id": "vin-red-wine-guido-gocci-grifoni-colle-vechio-offida",
+   "name": "Guido Gocci Grifoni Colle Vechio Offida",
+   "category": "Red Wine",
+   "price": 35.5,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "takeaway": 19.0
+   }
+  },
+  {
+   "id": "vin-white-wine-marchesi-di-barolo-bric-amel-sav-blanc",
+   "name": "Marchesi di Barolo Bric Amel Sav Blanc",
+   "category": "White Wine",
+   "price": 35.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4.1#13",
+    "takeaway": 19.0
+   }
+  },
+  {
+   "id": "vin-red-wine-marchesi-di-barolo-bric-amel-nebbiolo",
+   "name": "Marchesi di Barolo Bric Amel Nebbiolo",
+   "category": "Red Wine",
+   "price": 37.5,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D4.1#5",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-white-wine-riesling-stefano-pola-vigneti-delle-dolomiti",
+   "name": "Riesling Stefano Pola Vigneti delle Dolomiti",
+   "category": "White Wine",
+   "price": 37.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D2#2",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-white-wine-stefano-pola-traminer-aromatico",
+   "name": "Stefano Pola Traminer Aromatico",
+   "category": "White Wine",
+   "price": 37.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D3.1#5",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-rose-wine-cos-rosa-di-lupo",
+   "name": "Cos Rosa di Lupo",
+   "category": "Rosé Wine",
+   "price": 39.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "takeaway": 22.5
+   }
+  },
+  {
+   "id": "vin-white-wine-castelfeder-mont-mes-gewurztraminer",
+   "name": "Castelfeder Mont Mes Gewurztraminer",
+   "category": "White Wine",
+   "price": 42.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D3.1#4",
+    "takeaway": 23.5
+   }
+  },
+  {
+   "id": "vin-red-wine-mura-mura-nebbiolo-mercuzio",
+   "name": "Mura Mura Nebbiolo Mercuzio",
+   "category": "Red Wine",
+   "price": 42.5,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D4.1#4",
+    "takeaway": 26.0
+   }
+  },
+  {
+   "id": "vin-orange-wine-malvasia-orange",
+   "name": "Malvasia Orange",
+   "category": "Orange Wine",
+   "price": 47.0,
+   "color": "#d98b3a",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D4#16",
+    "takeaway": 28.0
+   }
+  },
+  {
+   "id": "vin-red-wine-tintilia-di-majo-norante",
+   "name": "Tintilia di Majo Norante",
+   "category": "Red Wine",
+   "price": 47.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D4.1#8",
+    "takeaway": 28.0
+   }
+  },
+  {
+   "id": "vin-red-wine-proprieta-sperino-uvaggio-coste-della-sesia",
+   "name": "Proprieta Sperino (Uvaggio Coste della Sesia",
+   "category": "Red Wine",
+   "price": 48.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D4.1#6",
+    "takeaway": 30.0
+   }
+  },
+  {
+   "id": "vin-red-wine-proprieta-sperina-uvaggio",
+   "name": "Proprieta Sperina Uvaggio",
+   "category": "Red Wine",
+   "price": 51.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.5
+     },
+     {
+      "ml": 125,
+      "price": 8.5
+     }
+    ],
+    "tap": "D4.1#6",
+    "takeaway": 32.5
+   }
+  },
+  {
+   "id": "vin-orange-wine-cos-zibibbo-in-pithos-2024",
+   "name": "Cos Zibibbo in Pithos 2024",
+   "category": "Orange Wine",
+   "price": 52.0,
+   "color": "#d98b3a",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.5
+     },
+     {
+      "ml": 125,
+      "price": 9.0
+     }
+    ],
+    "tap": "D4#17",
+    "takeaway": 32.5
+   }
+  },
+  {
+   "id": "vin-orange-wine-cos-pithos-bianco",
+   "name": "Cos Pithos Bianco",
+   "category": "Orange Wine",
+   "price": 55.0,
+   "color": "#d98b3a",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.5
+     },
+     {
+      "ml": 125,
+      "price": 9.5
+     }
+    ],
+    "tap": "D4#17",
+    "takeaway": 31.0
+   }
+  },
+  {
+   "id": "vin-white-wine-la-chiara-colli-tortonesi-timorasso",
+   "name": "La Chiara Colli Tortonesi Timorasso",
+   "category": "White Wine",
+   "price": 56.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 6.0
+     },
+     {
+      "ml": 125,
+      "price": 9.5
+     }
+    ],
+    "tap": "D4.1#14",
+    "takeaway": 34.0
+   }
+  },
+  {
+   "id": "vin-white-wine-sanct-valentin-pinot-blanc",
+   "name": "Sanct Valentin Pinot Blanc",
+   "category": "White Wine",
+   "price": 68.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.5
+     },
+     {
+      "ml": 75,
+      "price": 7.0
+     },
+     {
+      "ml": 125,
+      "price": 11.5
+     }
+    ],
+    "tap": "D4.1#11",
+    "takeaway": 47.5
+   }
+  },
+  {
+   "id": "vin-white-wine-casa-e-di-mirafiore-langhe-nascetta",
+   "name": "Casa E.di Mirafiore (Langhe Nascetta)",
+   "category": "White Wine",
+   "price": 0,
+   "color": "#c9b458",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Italy",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D4.1#11"
+   }
+  },
+  {
+   "id": "vin-white-wine-chateau-oumsiyat-merwah",
+   "name": "Chateau Oumsiyat Merwah",
+   "category": "White Wine",
+   "price": 34.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Lebanon",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3#7",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-white-wine-chateau-ka-blanc",
+   "name": "Chateau Ka Blanc",
+   "category": "White Wine",
+   "price": 37.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Lebanon",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D3#6",
+    "takeaway": 20.5
+   }
+  },
+  {
+   "id": "vin-red-wine-1919-gellewza",
+   "name": "1919 Gellewza",
+   "category": "Red Wine",
+   "price": 32.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#7",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-white-wine-1919-girgentina",
+   "name": "1919 Girgentina",
+   "category": "White Wine",
+   "price": 32.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D3#3",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-rose-wine-1919-rose",
+   "name": "1919 Rose",
+   "category": "Rosé Wine",
+   "price": 32.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "rose",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4#12",
+    "takeaway": 18.0
+   }
+  },
+  {
+   "id": "vin-red-wine-laurenti-merlot",
+   "name": "Laurenti Merlot",
+   "category": "Red Wine",
+   "price": 32.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4.1#1",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-white-wine-laurenti-sauvignon-blanc",
+   "name": "Laurenti Sauvignon Blanc",
+   "category": "White Wine",
+   "price": 32.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D2#14",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-white-wine-blanc-de-cheval",
+   "name": "Blanc de Cheval",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D3#8",
+    "takeaway": 20.5
+   }
+  },
+  {
+   "id": "vin-white-wine-antonin-blanc",
+   "name": "Antonin Blanc",
+   "category": "White Wine",
+   "price": 34.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3.1#10",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-red-wine-antonin-rouge",
+   "name": "Antonin Rouge",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D4.1#3",
+    "takeaway": 21.0
+   }
+  },
+  {
+   "id": "vin-red-wine-cheval-franc",
+   "name": "Cheval Franc",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D1#13",
+    "takeaway": 20.5
+   }
+  },
+  {
+   "id": "vin-red-wine-marnisi",
+   "name": "Marnisi",
+   "category": "Red Wine",
+   "price": 45.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.5
+     }
+    ],
+    "tap": "D1#9",
+    "takeaway": 27.5
+   }
+  },
+  {
+   "id": "vin-white-wine-guze-white-late-harvest",
+   "name": "Guze White Late Harvest",
+   "category": "White Wine",
+   "price": 49.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.5
+     }
+    ],
+    "tap": "D3.1#1",
+    "takeaway": 29.5
+   }
+  },
+  {
+   "id": "vin-red-wine-grand-maitre-2013",
+   "name": "Grand Maitre 2013",
+   "category": "Red Wine",
+   "price": 100.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 3.5
+     },
+     {
+      "ml": 75,
+      "price": 10.0
+     },
+     {
+      "ml": 125,
+      "price": 17.0
+     }
+    ],
+    "tap": "D1#11",
+    "takeaway": 90.0
+   }
+  },
+  {
+   "id": "vin-orange-wine-markus-divinus-zaren-skin-contact",
+   "name": "Markus Divinus (Zaren Skin Contact)",
+   "category": "Orange Wine",
+   "price": 0,
+   "color": "#d98b3a",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Malta",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D4#18"
+   }
+  },
+  {
+   "id": "vin-white-wine-clos-henry-sauv-blanc",
+   "name": "Clos Henry Sauv Blanc",
+   "category": "White Wine",
+   "price": 36.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "New Zealand",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "tap": "D2#12",
+    "takeaway": 20.0
+   }
+  },
+  {
+   "id": "vin-white-wine-alvarinho-classico",
+   "name": "Alvarinho Classico",
+   "category": "White Wine",
+   "price": 32.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Portugal",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D2#6",
+    "takeaway": 15.5
+   }
+  },
+  {
+   "id": "vin-white-wine-spier-chenin-blanc",
+   "name": "Spier (Chenin Blanc)",
+   "category": "White Wine",
+   "price": 30.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "South Africa",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D3.1#11",
+    "takeaway": 13.5
+   }
+  },
+  {
+   "id": "vin-red-wine-spier-pinotage",
+   "name": "Spier Pinotage",
+   "category": "Red Wine",
+   "price": 30.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "South Africa",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.0
+     },
+     {
+      "ml": 75,
+      "price": 3.0
+     },
+     {
+      "ml": 125,
+      "price": 5.0
+     }
+    ],
+    "tap": "D4#10",
+    "takeaway": 13.5
+   }
+  },
+  {
+   "id": "vin-red-wine-acustic-celler-acustic-roast",
+   "name": "Acustic Celler (Acustic Roast)",
+   "category": "Red Wine",
+   "price": 33.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "tap": "D4#15",
+    "takeaway": 16.0
+   }
+  },
+  {
+   "id": "vin-orange-wine-enblanco-orange-wine",
+   "name": "Enblanco Orange Wine",
+   "category": "Orange Wine",
+   "price": 33.0,
+   "color": "#d98b3a",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "orange",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "takeaway": 16.5
+   }
+  },
+  {
+   "id": "vin-white-wine-onix-classic-blanc-priorat",
+   "name": "Onix Classic Blanc Priorat",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 5.5
+     }
+    ],
+    "takeaway": 16.5
+   }
+  },
+  {
+   "id": "vin-white-wine-caballito-del-diablo-montemundo-verdejo",
+   "name": "Caballito del Diablo Montemundo Verdejo",
+   "category": "White Wine",
+   "price": 33.5,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 3.5
+     },
+     {
+      "ml": 125,
+      "price": 6.0
+     }
+    ],
+    "tap": "D3#12",
+    "takeaway": 17.0
+   }
+  },
+  {
+   "id": "vin-white-wine-mar-de-frades-albarino-rias-baixas",
+   "name": "Mar de Frades Albarino Rias Baixas",
+   "category": "White Wine",
+   "price": 41.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.5
+     },
+     {
+      "ml": 125,
+      "price": 7.0
+     }
+    ],
+    "tap": "D2#7",
+    "takeaway": 22.5
+   }
+  },
+  {
+   "id": "vin-red-wine-tinto-pesquera-crianza",
+   "name": "Tinto Pesquera Crianza",
+   "category": "Red Wine",
+   "price": 47.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 2.0
+     },
+     {
+      "ml": 75,
+      "price": 5.0
+     },
+     {
+      "ml": 125,
+      "price": 8.0
+     }
+    ],
+    "tap": "D1#5",
+    "takeaway": 28.0
+   }
+  },
+  {
+   "id": "vin-white-wine-autocton-celler-autocton-blanc",
+   "name": "Autocton Celler (Autocton Blanc)",
+   "category": "White Wine",
+   "price": 0,
+   "color": "#c9b458",
+   "available": false,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "white",
+    "country": "Spain",
+    "bottleMl": 750,
+    "pours": [],
+    "tap": "D3#10"
+   }
+  },
+  {
+   "id": "vin-red-wine-gallo-signature",
+   "name": "Gallo Signature",
+   "category": "Red Wine",
+   "price": 82.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "United States",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 3.0
+     },
+     {
+      "ml": 75,
+      "price": 8.5
+     },
+     {
+      "ml": 125,
+      "price": 14.0
+     }
+    ],
+    "takeaway": 54.0
+   }
+  },
+  {
+   "id": "vin-red-wine-gimenez-mendez-arinaroa-alta-res",
+   "name": "Gimenez Mendez (Arinaroa Alta Res)",
+   "category": "Red Wine",
+   "price": 37.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "garrafa",
+   "trackStock": true,
+   "stock": 0,
+   "minStock": 1,
+   "wine": {
+    "color": "red",
+    "country": "Uruguay",
+    "bottleMl": 750,
+    "pours": [
+     {
+      "ml": 25,
+      "price": 1.5
+     },
+     {
+      "ml": 75,
+      "price": 4.0
+     },
+     {
+      "ml": 125,
+      "price": 6.5
+     }
+    ],
+    "takeaway": 22.0
+   }
+  }
+ ]
+}

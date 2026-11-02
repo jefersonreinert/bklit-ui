@@ -2,7 +2,7 @@
 
 import { api } from "@/convex/_generated/api";
 import { METHOD_LABEL } from "./receipt";
-import { dayKey, usePosQuery } from "./store";
+import { dayKey, useCompany, usePosQuery } from "./store";
 import type { PaymentMethod } from "./types";
 
 /**
@@ -33,9 +33,11 @@ export function periodFor(id: PeriodId, now = new Date()): Period {
 
 /** Live day totals for a period (undefined while loading, null: no access). */
 export function usePosDaily(period: Period) {
+  const company = useCompany();
   return usePosQuery(api.pos.daily, {
     from: dayKey(period.from),
     to: dayKey(period.to),
+    company,
   }) as Daily[] | null | undefined;
 }
 
