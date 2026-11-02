@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 import type { Txn } from "./types";
 
 const formatters = new Map<string, Intl.NumberFormat>();
@@ -7,7 +8,7 @@ export function money(value: number, currency = "EUR", digits = 2) {
   const key = `${currency}:${digits}`;
   let f = formatters.get(key);
   if (!f) {
-    f = new Intl.NumberFormat("pt-BR", {
+    f = new Intl.NumberFormat(appLocale(), {
       style: "currency",
       currency,
       minimumFractionDigits: digits,
@@ -20,7 +21,7 @@ export function money(value: number, currency = "EUR", digits = 2) {
 
 /** Compact axis label: "€ 1,2 mil". */
 export function moneyAxis(value: number, currency = "EUR") {
-  return new Intl.NumberFormat("pt-BR", {
+  return new Intl.NumberFormat(appLocale(), {
     style: "currency",
     currency,
     notation: "compact",

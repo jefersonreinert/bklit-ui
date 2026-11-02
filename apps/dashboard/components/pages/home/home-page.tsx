@@ -19,6 +19,7 @@ import {
   type WidgetInfo,
   widgetInfo,
 } from "@/lib/home";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon, type IconName } from "@/lib/icons";
 import { navItems } from "@/lib/nav";
 import { firstName, usePreferences } from "@/lib/preferences";
@@ -35,7 +36,7 @@ import { AppIcon, useNow, WidgetView } from "./home-widgets";
 
 type Panel = "wallpaper" | "gallery" | "apps" | null;
 
-const fullDate = new Intl.DateTimeFormat("pt-BR", {
+const fullDate = new Intl.DateTimeFormat(appLocale(), {
   weekday: "long",
   day: "numeric",
   month: "long",
@@ -393,7 +394,7 @@ function Hero() {
   if (!now) {
     return <div className="h-56" />;
   }
-  const time = now.toLocaleTimeString("pt-BR", {
+  const time = now.toLocaleTimeString(appLocale(), {
     hour: "2-digit",
     minute: "2-digit",
   });

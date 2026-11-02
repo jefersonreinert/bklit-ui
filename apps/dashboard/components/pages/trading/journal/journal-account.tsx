@@ -14,6 +14,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import {
   ACCOUNT_TYPE_LABEL,
   balanceCurve,
@@ -127,7 +128,7 @@ function Target({
   );
 }
 
-const shortDate = new Intl.DateTimeFormat("pt-BR", {
+const shortDate = new Intl.DateTimeFormat(appLocale(), {
   day: "2-digit",
   month: "short",
   year: "2-digit",

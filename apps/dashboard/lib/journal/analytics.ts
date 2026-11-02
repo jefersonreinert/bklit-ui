@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 import { ACCOUNT_TYPE_LABEL, MARKET_LABEL } from "./account";
 import { dayKey, type Trade } from "./metrics";
 import { MACROS } from "./note-fields";
@@ -575,7 +576,7 @@ export function pnlHistogram(trades: Trade[], bins = 12) {
   const hi = Math.max(...closed.map((t) => t.net));
   const step = (hi - lo) / bins || 1;
   const out = Array.from({ length: bins }, (_, i) => ({
-    key: Math.round(lo + step * (i + 0.5)).toLocaleString("pt-BR"),
+    key: Math.round(lo + step * (i + 0.5)).toLocaleString(appLocale()),
     wins: 0,
     losses: 0,
   }));

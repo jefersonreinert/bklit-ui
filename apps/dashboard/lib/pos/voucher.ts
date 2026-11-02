@@ -1,6 +1,7 @@
 "use client";
 
 import { encode } from "uqr";
+import { appLocale } from "@/lib/i18n/locale";
 import { money } from "./store";
 
 export interface VoucherInfo {
@@ -60,7 +61,7 @@ export function renderVoucher(
     { text: v.code.replace(FIRST4, "$1 "), size: 18, weight: 800 },
     {
       text: v.expiresAt
-        ? `Válido até ${new Date(v.expiresAt).toLocaleDateString("pt-BR")}`
+        ? `Válido até ${new Date(v.expiresAt).toLocaleDateString(appLocale())}`
         : "Sem data de validade",
       size: 10,
       weight: 500,

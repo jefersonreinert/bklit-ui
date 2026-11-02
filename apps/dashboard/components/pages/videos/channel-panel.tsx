@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import {
@@ -91,7 +92,7 @@ function VideoRows({
                   {v.title}
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  {new Date(v.publishedAt).toLocaleDateString("pt-BR")} ·{" "}
+                  {new Date(v.publishedAt).toLocaleDateString(appLocale())} ·{" "}
                   {formatDuration(v.duration)} · {shortNumber(v.views)}{" "}
                   visualizações
                   {pct >= 95 ? " · assistido" : null}
@@ -205,7 +206,7 @@ function ChannelHeader({
   };
 
   const stats = channel
-    ? `${channel.handle ? `${channel.handle} · ` : ""}${shortNumber(channel.subscribers)} inscritos · ${channel.videoCount.toLocaleString("pt-BR")} vídeos · ${playlistCount} playlists`
+    ? `${channel.handle ? `${channel.handle} · ` : ""}${shortNumber(channel.subscribers)} inscritos · ${channel.videoCount.toLocaleString(appLocale())} vídeos · ${playlistCount} playlists`
     : "Carregando…";
   return (
     <>
@@ -335,7 +336,7 @@ function UploadsTab({
           value={filter}
         />
         <span className="text-muted-foreground text-xs">
-          {videos.length} de {total.toLocaleString("pt-BR")} carregados
+          {videos.length} de {total.toLocaleString(appLocale())} carregados
           {newCount > 0 ? ` · ${newCount} novos desde a última visita` : ""}
         </span>
         <Button
@@ -440,7 +441,7 @@ export function ChannelPanel({
   const playlists = data?.playlists ?? [];
   const videoCount = total || channel?.videoCount || 0;
   const tabs = [
-    ["videos", `Vídeos (${videoCount.toLocaleString("pt-BR")})`],
+    ["videos", `Vídeos (${videoCount.toLocaleString(appLocale())})`],
     ["playlists", `Playlists (${playlists.length})`],
   ] as const;
 

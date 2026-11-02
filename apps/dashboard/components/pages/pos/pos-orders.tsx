@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   deleteOrder,
@@ -63,7 +64,7 @@ const METHOD: Record<PaymentMethod, string> = {
 };
 
 const time = (ts: number) =>
-  new Date(ts).toLocaleString("pt-BR", {
+  new Date(ts).toLocaleString(appLocale(), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",

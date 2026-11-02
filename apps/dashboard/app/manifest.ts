@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { appLocale } from "@/lib/i18n/locale";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -23,7 +24,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     background_color: "#141413",
     theme_color: "#141413",
-    lang: "pt-BR",
+    lang: appLocale(),
     icons: [
       {
         src: icon(192),

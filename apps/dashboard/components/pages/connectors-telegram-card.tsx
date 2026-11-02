@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { TG_PACKAGE_VERSION, TG_TOOLS } from "@/lib/telegram/catalog";
 import { TelegramLogin } from "./telegram/telegram-login";
@@ -42,7 +43,7 @@ const OPT_INS = [
 
 const when = (ms: number | null) =>
   ms
-    ? new Date(ms).toLocaleString("pt-BR", {
+    ? new Date(ms).toLocaleString(appLocale(), {
         dateStyle: "short",
         timeStyle: "short",
       })

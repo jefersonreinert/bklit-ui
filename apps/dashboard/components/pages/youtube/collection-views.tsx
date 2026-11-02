@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import {
@@ -66,7 +67,7 @@ export function ChannelView({
           <p className="text-muted-foreground text-sm">
             {channel.handle ? `${channel.handle} · ` : ""}
             {shortNumber(channel.subscribers)} inscritos ·{" "}
-            {channel.videoCount.toLocaleString("pt-BR")} vídeos ·{" "}
+            {channel.videoCount.toLocaleString(appLocale())} vídeos ·{" "}
             {shortNumber(channel.viewCount)} visualizações
           </p>
           {channel.description ? (
@@ -186,7 +187,7 @@ export function PlaylistView({
         </button>
         <div className="grid grid-cols-2 gap-2">
           {[
-            ["vídeos", p.itemCount.toLocaleString("pt-BR")],
+            ["vídeos", p.itemCount.toLocaleString(appLocale())],
             ["duração total", formatLongDuration(p.totalDuration)],
             ["média por vídeo", formatLongDuration(average)],
             [

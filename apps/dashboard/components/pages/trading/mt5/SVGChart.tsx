@@ -15,6 +15,7 @@ import {
 import type { Candle, ChartSettings } from "./engine/ChartEngine";
 import { DrawingLayer, type DrawingLayerProps } from "./tv/drawing-layer";
 import { formatTooltipDate, tzShortLabel } from "./lib/timezone";
+import { appLocale } from "@/lib/i18n/locale";
 
 interface SVGChartProps {
   data: Candle[];
@@ -135,7 +136,7 @@ export function SVGChart({ data, settings, drawingProps, goToDate, followLast, o
               const date = point.date as Date;
               const dateStr = timezone
                 ? formatTooltipDate(date, timezone)
-                : date.toLocaleString("pt-BR");
+                : date.toLocaleString(appLocale());
               const isUp = (point.close as number) >= (point.open as number);
               const color = isUp ? "var(--up)" : "var(--down)";
               return [

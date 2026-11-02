@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 import type { ChartFormat, ChartSpec } from "./ai-chart-spec";
 import { dailyBeverageRevenue } from "./beverage-data";
 import { dailySales, expenseCategories, topDishes } from "./data";
@@ -18,7 +19,7 @@ import { cmvByCategory, revenueByCategory } from "./menu-data";
 
 const monthLabel = (d: unknown) =>
   d instanceof Date
-    ? d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })
+    ? d.toLocaleDateString(appLocale(), { month: "short", year: "2-digit" })
     : String(d);
 
 const slices = (rows: { label: string; value: number }[]) =>

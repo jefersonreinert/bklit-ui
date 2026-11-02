@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/gen-icons.mjs && next dev --turbopack -p 3004",
     "build": "node scripts/gen-icons.mjs && next build",
+    "i18n:extract": "node scripts/i18n-extract.mjs",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "icons": "node scripts/gen-icons.mjs",

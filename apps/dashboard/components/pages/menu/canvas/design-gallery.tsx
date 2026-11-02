@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ConfirmButton } from "@/components/dashboard/confirm-button";
 import { Button } from "@/components/ui/button";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { loadFonts } from "@/lib/menu-canvas/fonts";
 import {
@@ -147,7 +148,7 @@ function Gallery() {
                 </span>
                 <span className="block text-muted-foreground text-xs">
                   {d.pages.length} {d.pages.length === 1 ? "página" : "páginas"}{" "}
-                  · {new Date(d.updatedAt).toLocaleDateString("pt-BR")}
+                  · {new Date(d.updatedAt).toLocaleDateString(appLocale())}
                 </span>
               </button>
               <div className="flex flex-wrap gap-1.5">

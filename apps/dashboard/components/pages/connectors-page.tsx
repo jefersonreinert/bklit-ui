@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   BASE_PATH,
@@ -91,7 +92,7 @@ function NotionCard({
 }) {
   const connected = status?.notion.connected ?? false;
   const since = status?.notion.connectedAt
-    ? new Date(status.notion.connectedAt).toLocaleDateString("pt-BR")
+    ? new Date(status.notion.connectedAt).toLocaleDateString(appLocale())
     : null;
   let action = (
     <Button disabled size="sm" variant="outline">

@@ -498,6 +498,18 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_pinKey", ["pinKey"]),
 
+  /* ------------------------------ translations ---------------------------- */
+  // AI translations of the interface, shared by every device: one language
+  // is split in CHUNKS documents (key = Portuguese text → translation).
+
+  i18nChunks: defineTable({
+    locale: v.string(),
+    chunk: v.number(),
+    /** [Portuguese text, translation] (keys with accents can't be fields). */
+    pairs: v.array(v.array(v.string())),
+    updatedAt: v.number(),
+  }).index("by_locale_chunk", ["locale", "chunk"]),
+
   /* --------------------------------- team --------------------------------- */
   // Rota and time clock of the POS users, per business.
 

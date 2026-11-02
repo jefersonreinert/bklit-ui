@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { Component, type ReactNode, useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon, type IconName } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
@@ -336,7 +337,7 @@ function EventRow({ e }: { e: GuardianEventRow }) {
     <li className="flex flex-col gap-0.5 px-3 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-muted-foreground tabular-nums">
-          {new Date(e.time).toLocaleString("pt-BR")}
+          {new Date(e.time).toLocaleString(appLocale())}
         </span>
         <StateBadge level={e.state} />
         <span className="font-medium">{EVENT_LABEL[e.kind] ?? e.kind}</span>
@@ -453,7 +454,7 @@ function GuardianNotices({ s, online }: { s: Status; online: boolean }) {
       {online ? null : (
         <Notice>
           O robô não sincroniza há mais de 30 s: os números abaixo são os do
-          último sync ({new Date(s.updatedAt).toLocaleTimeString("pt-BR")}).
+          último sync ({new Date(s.updatedAt).toLocaleTimeString(appLocale())}).
           Confira se o MT5 está aberto e o EA anexado — a proteção só funciona
           com o MT5 ligado.
         </Notice>
@@ -502,7 +503,7 @@ function Locks({ s, toReset }: { s: Status; toReset: number }) {
         {s.permLocked >= 2 ? (
           <li>
             <StateBadge level={s.permLocked} /> <b>Permanente</b> desde{" "}
-            {new Date(s.permSince).toLocaleString("pt-BR")} — só sai com o
+            {new Date(s.permSince).toLocaleString(appLocale())} — só sai com o
             código de desbloqueio que aparece no log do MT5. {s.permReason}
           </li>
         ) : null}

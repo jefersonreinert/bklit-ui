@@ -24,6 +24,7 @@ import {
   useBrowser,
   type WebApp,
 } from "@/lib/browser/store";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { WIDGETS, Widget } from "./browser-widgets";
@@ -220,7 +221,7 @@ function HistorySheet({
                   </span>
                   <span className="truncate text-muted-foreground text-xs">
                     {hostOf(h.url)} ·{" "}
-                    {new Date(h.at).toLocaleString("pt-BR", {
+                    {new Date(h.at).toLocaleString(appLocale(), {
                       dateStyle: "short",
                       timeStyle: "short",
                     })}

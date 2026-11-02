@@ -5,6 +5,7 @@ import type { FunctionReference } from "convex/server";
 import { ConvexError } from "convex/values";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { convexClient } from "@/lib/sync/convex-client";
 import { DEFAULT_RECEIPT, seedData } from "./seed";
 import type {
@@ -505,7 +506,7 @@ const formatters = new Map<string, Intl.NumberFormat>();
 export function money(value: number, currency = "EUR") {
   let f = formatters.get(currency);
   if (!f) {
-    f = new Intl.NumberFormat("pt-BR", { style: "currency", currency });
+    f = new Intl.NumberFormat(appLocale(), { style: "currency", currency });
     formatters.set(currency, f);
   }
   return f.format(value);

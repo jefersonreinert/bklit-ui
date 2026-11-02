@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { useLiveWriter } from "@/lib/ai/live-writer";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { createNote, deleteNote, saveNote, useNotes } from "@/lib/notes/db";
 import {
@@ -249,7 +250,7 @@ function SidePanel({
         )}
       </div>
       <p className="mt-auto text-muted-foreground text-xs">
-        Editada {new Date(note.updatedAt).toLocaleString("pt-BR")}
+        Editada {new Date(note.updatedAt).toLocaleString(appLocale())}
       </p>
     </aside>
   );

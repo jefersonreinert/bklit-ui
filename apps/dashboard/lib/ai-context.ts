@@ -1,3 +1,4 @@
+import { appLocale } from "@/lib/i18n/locale";
 import { CHART_INSTRUCTIONS } from "./ai-chart-spec";
 import {
   cmvTargets,
@@ -25,7 +26,7 @@ import {
  */
 
 const brl = (v: number) =>
-  new Intl.NumberFormat("pt-BR", {
+  new Intl.NumberFormat(appLocale(), {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 0,
@@ -141,7 +142,7 @@ export function beverageSnapshot() {
 
 export function businessContext() {
   return [
-    `# ${RESTAURANT_NAME} — dados do painel em ${TODAY.toLocaleDateString("pt-BR")}`,
+    `# ${RESTAURANT_NAME} — dados do painel em ${TODAY.toLocaleDateString(appLocale())}`,
     `Visão geral: faturamento dos últimos 30 dias ${brl(overviewStats.revenue)}, ${overviewStats.orders} pedidos, ticket médio ${brl(overviewStats.ticket)}, ocupação ${overviewStats.occupancy}%.`,
     financeSnapshot().text,
     hrSnapshot().text,

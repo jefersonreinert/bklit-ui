@@ -15,6 +15,7 @@ import {
 import { curveLinear } from "@visx/curve";
 import { type ReactNode, useMemo, useState } from "react";
 import { ChartCard } from "@/components/dashboard/chart-card";
+import { appLocale } from "@/lib/i18n/locale";
 import type { GroupRow } from "@/lib/journal/analytics";
 import { formatDuration } from "@/lib/journal/metrics";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ export const colorAt = (i: number) =>
 export const pct = (x: number, digits = 0) => `${(x * 100).toFixed(digits)}%`;
 export const ratio = (x: number | null, digits = 2) =>
   x === null ? "∞" : x.toFixed(digits);
-const compact = new Intl.NumberFormat("pt-BR", {
+const compact = new Intl.NumberFormat(appLocale(), {
   notation: "compact",
   maximumFractionDigits: 1,
 });
@@ -357,7 +358,7 @@ function RiskCells({ row: r }: { row: GroupRow }) {
         {dash(r.avgRR, (x) => `1:${x.toFixed(2)}`)}
       </td>
       <td className={cn("px-1 py-1.5 text-right", tone(r.points ?? 0))}>
-        {dash(r.points, (x) => x.toLocaleString("pt-BR"))}
+        {dash(r.points, (x) => x.toLocaleString(appLocale()))}
         {r.avgPoints === null ? null : (
           <span className="block text-muted-foreground">
             méd. {r.avgPoints.toFixed(0)}

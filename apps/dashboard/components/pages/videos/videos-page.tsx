@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { BASE_PATH, googleStartUrl, useConnectors } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
@@ -511,7 +512,7 @@ export function VideosPage() {
         <Kpi label="playlists" value={String(lib.playlists.length)} />
         <Kpi
           label="vídeos na biblioteca"
-          value={totalVideos.toLocaleString("pt-BR")}
+          value={totalVideos.toLocaleString(appLocale())}
         />
         <Kpi label="em andamento" value={String(inProgress)} />
         <Kpi

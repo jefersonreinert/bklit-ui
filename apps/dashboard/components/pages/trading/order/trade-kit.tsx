@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { appLocale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 /** Shared bits of the trading screen (order ticket and positions). */
@@ -37,7 +38,7 @@ export const priceText = (n: number, digits: number) =>
   n > 0 ? n.toFixed(Math.max(0, digits)) : "—";
 
 export const lotText = (n: number) =>
-  n.toLocaleString("pt-BR", {
+  n.toLocaleString(appLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

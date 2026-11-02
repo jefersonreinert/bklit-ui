@@ -15,6 +15,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { baseName, formatBytes } from "@/lib/files/kinds";
 import { blobToBase64 } from "@/lib/files/scan";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { callExtract } from "@/lib/upload";
 import { Markdown } from "../ai/markdown";
@@ -330,7 +331,7 @@ export function FileViewer({
           <SheetTitle className="break-all">{file?.name ?? "…"}</SheetTitle>
           <SheetDescription>
             {file
-              ? `${KIND_LABEL[file.kind]} · ${formatBytes(file.size)} · ${new Date(file.updatedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+              ? `${KIND_LABEL[file.kind]} · ${formatBytes(file.size)} · ${new Date(file.updatedAt).toLocaleString(appLocale(), { dateStyle: "short", timeStyle: "short" })}`
               : ""}
           </SheetDescription>
         </SheetHeader>

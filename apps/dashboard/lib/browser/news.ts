@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import type { NewsFeed } from "./store";
 
 export interface NewsItem {
@@ -90,7 +91,7 @@ export function timeAgo(t: number) {
   if (h < 24) {
     return `há ${h} h`;
   }
-  return new Date(t).toLocaleDateString("pt-BR", {
+  return new Date(t).toLocaleDateString(appLocale(), {
     day: "numeric",
     month: "short",
   });

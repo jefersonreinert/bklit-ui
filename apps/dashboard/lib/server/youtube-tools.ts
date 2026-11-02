@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { appLocale } from "@/lib/i18n/locale";
 import {
   formatDuration,
   formatLongDuration,
@@ -124,9 +125,9 @@ const clampMax = (v: unknown) =>
     ? Math.min(Math.max(Math.round(v), 1), 25)
     : 10;
 const int = (n: number | null) =>
-  n === null ? "—" : n.toLocaleString("pt-BR");
+  n === null ? "—" : n.toLocaleString(appLocale());
 const date = (iso: string) =>
-  iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+  iso ? new Date(iso).toLocaleDateString(appLocale()) : "—";
 
 class InvalidInput extends Error {}
 

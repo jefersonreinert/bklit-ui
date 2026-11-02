@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { appLocale } from "@/lib/i18n/locale";
 import type { WaChat, WaMessage } from "@/lib/whatsapp-types";
 import { listChats, readChat } from "./whatsapp";
 
@@ -50,7 +51,7 @@ Você pode ler o WhatsApp da pessoa com whatsapp_list_chats e whatsapp_read_chat
 export const isWhatsappTool = (name: string) => name.startsWith("whatsapp_");
 
 const when = (seconds: number) =>
-  new Date(seconds * 1000).toLocaleString("pt-BR", {
+  new Date(seconds * 1000).toLocaleString(appLocale(), {
     timeZone: "America/Sao_Paulo",
     dateStyle: "short",
     timeStyle: "short",

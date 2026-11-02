@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { appLocale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 import { Notice } from "./mt-shared";
 
@@ -152,7 +153,7 @@ export function MtQuotes({ url }: { url: string | null }) {
                 <td className="px-2 py-1.5 tabular-nums">{t?.volume ?? "—"}</td>
                 <td className="px-2 py-1.5 text-muted-foreground text-xs">
                   {t
-                    ? new Date(t.time).toLocaleTimeString("pt-BR")
+                    ? new Date(t.time).toLocaleTimeString(appLocale())
                     : (errors[s] ?? "—")}
                 </td>
               </tr>

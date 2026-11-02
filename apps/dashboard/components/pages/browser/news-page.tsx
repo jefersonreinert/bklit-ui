@@ -24,6 +24,7 @@ import {
   saveFeeds,
   useNewsFeeds,
 } from "@/lib/browser/store";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { dayKey, flag, useCalendar } from "@/lib/markets/calendar";
 import { cn } from "@/lib/utils";
@@ -222,7 +223,7 @@ function TodayEvents() {
         >
           <span>{flag(e.currency)}</span>
           <span className="tabular-nums">
-            {new Date(e.time).toLocaleTimeString("pt-BR", {
+            {new Date(e.time).toLocaleTimeString(appLocale(), {
               hour: "2-digit",
               minute: "2-digit",
             })}

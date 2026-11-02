@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   balanceSeries,
@@ -86,7 +87,7 @@ function Files({ files }: { files: ImportedFile[] }) {
             <Icon className="size-3.5" name="IconFileText" />
             <span className="min-w-0 flex-1 truncate">
               {f.name} · {f.bank} · {f.count} linhas ·{" "}
-              {new Date(f.importedAt).toLocaleDateString("pt-BR")}
+              {new Date(f.importedAt).toLocaleDateString(appLocale())}
             </span>
             <button
               aria-label={`Remover ${f.name}`}

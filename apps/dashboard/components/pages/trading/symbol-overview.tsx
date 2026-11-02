@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import {
   type History,
@@ -41,7 +42,7 @@ import { changeClass, PriceText, pct, signed } from "./trading-watchlist";
 type Tab = "overview" | "news";
 
 function compact(n: number) {
-  return n.toLocaleString("pt-BR", {
+  return n.toLocaleString(appLocale(), {
     notation: "compact",
     maximumFractionDigits: 2,
   });
@@ -116,7 +117,7 @@ function News({ symbol }: { symbol: string }) {
             target="_blank"
           >
             <span className="text-muted-foreground text-xs">
-              {new Date(n.date).toLocaleString("pt-BR", {
+              {new Date(n.date).toLocaleString(appLocale(), {
                 dateStyle: "short",
                 timeStyle: "short",
               })}{" "}

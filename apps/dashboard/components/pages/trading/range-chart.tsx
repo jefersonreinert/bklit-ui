@@ -1,6 +1,7 @@
 "use client";
 
 import { type PointerEvent, useId, useMemo, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import type { HistoryPoint, RangeId } from "@/lib/markets/history";
 import { formatPx } from "@/lib/markets/trading";
 
@@ -19,14 +20,14 @@ const PAD_LEFT = 44;
 function when(t: number, range: RangeId) {
   const d = new Date(t);
   if (range === "1D" || range === "5D") {
-    return d.toLocaleString("pt-BR", {
+    return d.toLocaleString(appLocale(), {
       day: "2-digit",
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
     });
   }
-  return d.toLocaleDateString("pt-BR", {
+  return d.toLocaleDateString(appLocale(), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -36,18 +37,21 @@ function when(t: number, range: RangeId) {
 function axisLabel(t: number, range: RangeId) {
   const d = new Date(t);
   if (range === "1D") {
-    return d.toLocaleTimeString("pt-BR", {
+    return d.toLocaleTimeString(appLocale(), {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
   if (range === "5D" || range === "1M") {
-    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    return d.toLocaleDateString(appLocale(), {
+      day: "2-digit",
+      month: "short",
+    });
   }
   if (range === "5Y" || range === "ALL") {
     return String(d.getFullYear());
   }
-  return d.toLocaleDateString("pt-BR", { month: "short" });
+  return d.toLocaleDateString(appLocale(), { month: "short" });
 }
 
 /** ~4 nice price levels inside [min, max]. */

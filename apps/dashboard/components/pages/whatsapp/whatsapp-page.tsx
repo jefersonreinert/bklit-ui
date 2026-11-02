@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { WaChat, WaMessage } from "@/lib/whatsapp-types";
@@ -24,8 +25,8 @@ const time = (seconds: number) => {
   const d = new Date(seconds * 1000);
   const today = new Date().toDateString() === d.toDateString();
   return today
-    ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    ? d.toLocaleTimeString(appLocale(), { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString(appLocale(), { day: "2-digit", month: "2-digit" });
 };
 
 function Panel({
@@ -435,9 +436,9 @@ function Inbox({ wa, onConnect }: { wa: Wa; onConnect: () => void }) {
             {me?.number ? ` · +${me.number}` : ""}
             {stats ? (
               <span className="block truncate">
-                Arquivo: {stats.messages.toLocaleString("pt-BR")} mensagens ·{" "}
-                {stats.chats.toLocaleString("pt-BR")} conversas ·{" "}
-                {stats.mediaArchived.toLocaleString("pt-BR")} arquivos
+                Arquivo: {stats.messages.toLocaleString(appLocale())} mensagens
+                · {stats.chats.toLocaleString(appLocale())} conversas ·{" "}
+                {stats.mediaArchived.toLocaleString(appLocale())} arquivos
               </span>
             ) : null}
           </p>

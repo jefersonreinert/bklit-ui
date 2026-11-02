@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { mt5Symbol } from "@/lib/journal/lot";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../../telegram/telegram-shared";
@@ -53,7 +54,7 @@ function Activity({ account }: { account: string }) {
           key={c.id}
         >
           <span className="text-muted-foreground tabular-nums">
-            {new Date(c.createdAt).toLocaleTimeString("pt-BR")}
+            {new Date(c.createdAt).toLocaleTimeString(appLocale())}
           </span>
           <span className="font-medium">
             {KIND[c.kind] ?? c.kind}

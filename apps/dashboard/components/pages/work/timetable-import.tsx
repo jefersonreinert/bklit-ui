@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import type { ExtractedTimetable } from "@/lib/server/extract";
 import { callExtract, prepareFile, type UploadFile } from "@/lib/upload";
@@ -32,7 +33,7 @@ import {
 } from "@/lib/work-schedule";
 import { PlaceMark, PlaceSelect } from "./place-ui";
 
-const dayLabel = new Intl.DateTimeFormat("pt-BR", {
+const dayLabel = new Intl.DateTimeFormat(appLocale(), {
   weekday: "short",
   day: "2-digit",
   month: "2-digit",

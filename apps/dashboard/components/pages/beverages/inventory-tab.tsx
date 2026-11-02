@@ -15,6 +15,7 @@ import {
   type MovementType,
 } from "@/lib/beverage-data";
 import { formatBRL, formatBRLCents } from "@/lib/format";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { FilterSelect, normalize, SearchInput, StockBar } from "./bev-shared";
@@ -456,7 +457,7 @@ export function InventoryTab({
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-sm">{m.itemName}</p>
                   <p className="truncate text-muted-foreground text-xs">
-                    {m.date.toLocaleString("pt-BR", {
+                    {m.date.toLocaleString(appLocale(), {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",

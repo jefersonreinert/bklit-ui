@@ -16,6 +16,7 @@ import {
   PieSlice,
 } from "@bklitui/ui/charts";
 import { useMemo, useState } from "react";
+import { appLocale } from "@/lib/i18n/locale";
 import { pnlHistogram, rHistogram } from "@/lib/journal/analytics";
 import type { Stats, Trade } from "@/lib/journal/metrics";
 import { colorAt, DOWN, Empty, Panel, Stat, UP } from "./journal-kit";
@@ -88,7 +89,7 @@ function Streak({ trades }: { trades: Trade[] }) {
             backgroundColor: t.net >= 0 ? UP : DOWN,
             opacity: 0.35 + (Math.abs(t.net) / max) * 0.65,
           }}
-          title={`${t.symbol} · ${new Date(t.closeTime ?? t.openTime).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · ${money(t.net, true)}`}
+          title={`${t.symbol} · ${new Date(t.closeTime ?? t.openTime).toLocaleString(appLocale(), { dateStyle: "short", timeStyle: "short" })} · ${money(t.net, true)}`}
         />
       ))}
     </div>

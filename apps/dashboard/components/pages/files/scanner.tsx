@@ -22,6 +22,7 @@ import {
   type ScanFilter,
   type ScanPage,
 } from "@/lib/files/scan";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { scanToText } from "./file-viewer";
@@ -33,7 +34,8 @@ import { type FolderId, useUploader } from "./files-shared";
  * text into an editable sheet (Claude reads the pages).
  */
 
-const today = () => new Date().toLocaleDateString("pt-BR").replaceAll("/", "-");
+const today = () =>
+  new Date().toLocaleDateString(appLocale()).replaceAll("/", "-");
 
 function PagePreview({
   page,

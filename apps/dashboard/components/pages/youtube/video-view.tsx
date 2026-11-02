@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,7 @@ function TranscriptBody({
           value={filter}
         />
         <span className="text-muted-foreground text-xs">
-          {words.toLocaleString("pt-BR")} palavras
+          {words.toLocaleString(appLocale())} palavras
         </span>
         <div className="ml-auto flex gap-1">
           <Button onClick={copy} size="sm" variant="outline">
@@ -267,7 +268,7 @@ export function VideoView({
             </button>
             <span>·</span>
             <span>
-              {new Date(video.publishedAt).toLocaleDateString("pt-BR")}
+              {new Date(video.publishedAt).toLocaleDateString(appLocale())}
             </span>
             <span>({relativeDate(video.publishedAt)})</span>
           </div>

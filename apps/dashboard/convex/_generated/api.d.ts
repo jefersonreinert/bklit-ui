@@ -16,6 +16,7 @@ import type * as files from "../files.js";
 import type * as guardian from "../guardian.js";
 import type * as home from "../home.js";
 import type * as http from "../http.js";
+import type * as i18n from "../i18n.js";
 import type * as ict from "../ict.js";
 import type * as journal from "../journal.js";
 import type * as lib from "../lib.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   guardian: typeof guardian;
   home: typeof home;
   http: typeof http;
+  i18n: typeof i18n;
   ict: typeof ict;
   journal: typeof journal;
   lib: typeof lib;

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PanelUnlock } from "@/components/dashboard/panel-unlock";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { TV_ALERT_TEMPLATE } from "@/lib/journal/ingest";
 import {
@@ -41,7 +42,7 @@ export function siteUrl() {
 
 const when = (ms: number | null) =>
   ms
-    ? new Date(ms).toLocaleString("pt-BR", {
+    ? new Date(ms).toLocaleString(appLocale(), {
         dateStyle: "short",
         timeStyle: "short",
       })

@@ -7,7 +7,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  isBuiltin,
   LANGUAGES,
   languageName,
   setLocale,
@@ -64,11 +63,14 @@ export function LanguagePicker({ onPick }: { onPick?: () => void }) {
         <span className="flex-1 truncate text-left">
           {languageName(locale)}
         </span>
-        {translating ? (
-          <span className="text-xs">{t("traduzindo…")}</span>
-        ) : (
-          <Icon className="size-4" name="IconChevronDownSmall" />
+        {translating === null ? null : (
+          <span className="text-xs tabular-nums">
+            {t("traduzindo…")} {Math.round(translating * 100)}%
+          </span>
         )}
+        {translating === null ? (
+          <Icon className="size-4" name="IconChevronDownSmall" />
+        ) : null}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 rounded-2xl p-2">
         <input
@@ -94,9 +96,7 @@ export function LanguagePicker({ onPick }: { onPick?: () => void }) {
               type="button"
             >
               <span className="flex-1 truncate">{l.name}</span>
-              <span className="text-muted-foreground text-xs">
-                {isBuiltin(l.code) ? l.english : `${l.english} · IA`}
-              </span>
+              <span className="text-muted-foreground text-xs">{l.english}</span>
             </button>
           ))}
         </div>
