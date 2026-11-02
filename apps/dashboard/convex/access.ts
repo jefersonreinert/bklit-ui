@@ -61,10 +61,22 @@ export async function staff(ctx: QueryCtx, session: string | undefined) {
   return user?.active ? user : null;
 }
 
+/** The first business; documents without a company belong to it. */
+export const MAIN = "main";
+
+export const companyOf = (doc: { company?: string }) => doc.company ?? MAIN;
+
+/** Users without a list work in every business. */
+export const worksIn = (
+  user: Pick<Doc<"posUsers">, "companies">,
+  company: string
+) => !user.companies?.length || user.companies.includes(company);
+
 export async function requireStaff(
   ctx: QueryCtx,
   session: string | undefined,
-  perm?: Perm | Perm[]
+  perm?: Perm | Perm[],
+  company?: string
 ): Promise<Doc<"posUsers">> {
   // The POS needs only the user's PIN session, not the panel access code
   const user = await staff(ctx, session);
@@ -75,31 +87,51 @@ export async function requireStaff(
   if (need.length && !need.some((p) => user.perms.includes(p))) {
     throw new ConvexError("POS_FORBIDDEN");
   }
+  if (company !== undefined && !worksIn(user, company)) {
+    throw new ConvexError("POS_FORBIDDEN");
+  }
   return user;
 }
 
-/** Panel browsers (access code) or any signed-in POS user may read POS data. */
-export async function canReadPos(ctx: QueryCtx, session: string | undefined) {
-  return (await isPanel(ctx)) || (await staff(ctx, session)) !== null;
+/** Whether this is a panel browser, and the POS user of the session. */
+export async function isPanelUser(ctx: QueryCtx, session: string | undefined) {
+  const [panel, user] = await Promise.all([isPanel(ctx), staff(ctx, session)]);
+  return { panel, user };
+}
+
+/** Panel browsers (access code) or a POS user of the business may read it. */
+export async function canReadPos(
+  ctx: QueryCtx,
+  session: string | undefined,
+  company = MAIN
+) {
+  if (await isPanel(ctx)) {
+    return true;
+  }
+  const user = await staff(ctx, session);
+  return user !== null && worksIn(user, company);
 }
 
 export async function audit(
   ctx: MutationCtx,
   user: Pick<Doc<"posUsers">, "name"> | null,
   action: string,
-  detail = ""
+  detail = "",
+  company?: string
 ) {
   await ctx.db.insert("posAudit", {
     userName: user?.name ?? "Sistema",
     action,
     detail: detail.slice(0, 300),
+    company,
     at: Date.now(),
   });
 }
 
-export async function meta(ctx: QueryCtx) {
+/** Settings of a business ("main" also holds the login lock). */
+export async function meta(ctx: QueryCtx, company = MAIN) {
   return await ctx.db
     .query("posMeta")
-    .withIndex("by_key", (q) => q.eq("key", "main"))
+    .withIndex("by_key", (q) => q.eq("key", company))
     .unique();
 }

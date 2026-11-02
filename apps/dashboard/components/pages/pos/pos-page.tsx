@@ -9,11 +9,13 @@ import {
   orderTotals,
   payOrder,
   updateOrder,
+  useCurrentCompany,
   usePos,
   usePosError,
 } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import { PosGate, type PosPerm, UserChip, useCan } from "./pos-auth";
+import { CompanySwitcher } from "./pos-company";
 import { OrdersView } from "./pos-orders";
 import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
@@ -21,11 +23,13 @@ import { ReportsView } from "./pos-reports";
 import { SettingsView } from "./pos-settings";
 import { TablesView } from "./pos-tables";
 import { VouchersView } from "./pos-vouchers";
+import { WinesView } from "./pos-wine";
 
 export type PosTab =
   | "register"
   | "tables"
   | "orders"
+  | "wines"
   | "products"
   | "reports"
   | "vouchers"
@@ -44,6 +48,12 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     label: "Pedidos",
     icon: "IconReceiptBill",
     perm: ["orders", "history"],
+  },
+  {
+    id: "wines",
+    label: "Vinhos",
+    icon: "IconGlass",
+    perm: ["orders", "products", "stock"],
   },
   {
     id: "products",
@@ -138,7 +148,10 @@ export function PosPage() {
 
 function PosApp() {
   const can = useCan();
-  const tabs = TABS.filter((t) => can(t.perm));
+  const company = useCurrentCompany();
+  const tabs = TABS.filter(
+    (t) => can(t.perm) && (t.id !== "wines" || company?.wine)
+  );
   const [picked, setTab] = useState<PosTab>("register");
   const tab = tabs.some((t) => t.id === picked)
     ? picked
@@ -154,6 +167,9 @@ function PosApp() {
   return (
     <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] flex-col md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
       <nav className="hidden shrink-0 items-center justify-center gap-1 border-b px-4 py-2 md:flex">
+        <span className="mr-2">
+          <CompanySwitcher />
+        </span>
         {tabs.map((t) => (
           <button
             className={cn(
@@ -174,8 +190,11 @@ function PosApp() {
           <UserChip />
         </span>
       </nav>
-      <div className="flex shrink-0 justify-end border-b px-3 py-1.5 md:hidden">
-        <UserChip />
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 md:hidden">
+        <CompanySwitcher />
+        <span className="ml-auto">
+          <UserChip />
+        </span>
       </div>
       <ErrorBanner />
       {sumup.notice ? (
@@ -201,6 +220,7 @@ function PosApp() {
         ) : null}
         {tab === "tables" ? <TablesView onOpenOrder={openOrder} /> : null}
         {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
+        {tab === "wines" ? <WinesView /> : null}
         {tab === "products" ? <ProductsView /> : null}
         {tab === "reports" ? <ReportsView /> : null}
         {tab === "vouchers" ? <VouchersView /> : null}

@@ -20,12 +20,14 @@ import {
   money,
   moveStock,
   saveProduct,
+  useCurrentCompany,
   usePos,
   usePosQuery,
 } from "@/lib/pos/store";
 import type { PosProduct, StockMove, StockMoveKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { cleanModifiers, ModifiersEditor } from "./pos-modifiers";
+import { WineEditor } from "./pos-wine";
 
 const UNITS = ["un", "kg", "g", "L", "ml", "garrafa", "lata", "dose", "porção"];
 
@@ -324,6 +326,7 @@ export function ProductForm({
   onClose: () => void;
 }) {
   const data = usePos();
+  const company = useCurrentCompany();
   const cur = data.settings.currency;
   const [p, setP] = useState(product);
   const [price, setPrice] = useState(
@@ -357,6 +360,9 @@ export function ProductForm({
       stock: isNew ? num(stock) || 0 : (live?.stock ?? p.stock),
       minStock: num(minStock) || 0,
       modifiers: cleanModifiers(p.modifiers ?? []),
+      wine: p.wine
+        ? { ...p.wine, pours: p.wine.pours.filter((x) => x.ml > 0) }
+        : undefined,
     });
     onClose();
   };
@@ -483,6 +489,21 @@ export function ProductForm({
             </div>
             <PriceStats cost={costValue} currency={cur} price={value} />
           </Group>
+
+          {p.wine || company?.wine ? (
+            <Group title="Vinho">
+              <WineEditor
+                onChange={(wine) =>
+                  setP({
+                    ...p,
+                    wine,
+                    unit: wine ? "garrafa" : p.unit,
+                  })
+                }
+                value={p.wine}
+              />
+            </Group>
+          ) : null}
 
           <Group title="Opções (steps)">
             <ModifiersEditor

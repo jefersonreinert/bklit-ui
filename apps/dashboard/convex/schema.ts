@@ -288,6 +288,25 @@ export const posItem = v.object({
     )
   ),
   note: v.optional(v.string()),
+  /** Stock units taken per qty (a 125 ml glass of a 750 ml bottle = 1/6). */
+  portion: v.optional(v.number()),
+});
+
+/** Wine details of a POS product (bottle stock, sold by glass or bottle). */
+export const posWine = v.object({
+  color: v.string(),
+  country: v.optional(v.string()),
+  region: v.optional(v.string()),
+  grape: v.optional(v.string()),
+  producer: v.optional(v.string()),
+  vintage: v.optional(v.string()),
+  /** Dispenser slot ("D2#10"). */
+  tap: v.optional(v.string()),
+  bottleMl: v.number(),
+  /** Bottle to take away (the product price is the bottle at the table). */
+  takeaway: v.optional(v.number()),
+  /** Glass sizes sold from the bottle. */
+  pours: v.array(v.object({ ml: v.number(), price: v.number() })),
 });
 
 export const modifierGroup = v.object({
@@ -360,8 +379,13 @@ export default defineSchema({
     minStock: v.optional(v.number()),
     description: v.optional(v.string()),
     modifiers: v.optional(v.array(modifierGroup)),
+    wine: v.optional(posWine),
+    /** Business (posMeta key); missing = "main". */
+    company: v.optional(v.string()),
     updatedAt: v.number(),
-  }).index("by_cid", ["cid"]),
+  })
+    .index("by_cid", ["cid"])
+    .index("by_company", ["company"]),
 
   posOrders: defineTable({
     cid: v.string(),
@@ -383,13 +407,19 @@ export default defineSchema({
     payment: v.optional(posPayment),
     openedBy: v.optional(v.string()),
     closedBy: v.optional(v.string()),
+    company: v.optional(v.string()),
   })
     .index("by_cid", ["cid"])
-    .index("by_status_closed", ["status", "closedAt"]),
+    .index("by_status_closed", ["status", "closedAt"])
+    .index("by_company_status_closed", ["company", "status", "closedAt"]),
 
-  /** Settings, floor plan and receipt design (one document, key "main"). */
+  /**
+   * One document per business (key "main" is the first one): settings,
+   * floor plan, receipt design and its profile (name, color, modules).
+   */
   posMeta: defineTable({
     key: v.string(),
+    profile: v.optional(v.any()),
     areas: v.any(),
     settings: v.any(),
     receipt: v.any(),
@@ -413,6 +443,7 @@ export default defineSchema({
     note: v.optional(v.string()),
     orderCid: v.optional(v.string()),
     userName: v.optional(v.string()),
+    company: v.optional(v.string()),
     at: v.number(),
   })
     .index("by_product", ["productCid", "at"])
@@ -443,7 +474,10 @@ export default defineSchema({
         cost: v.number(),
       })
     ),
-  }).index("by_day", ["day"]),
+    company: v.optional(v.string()),
+  })
+    .index("by_day", ["day"])
+    .index("by_company_day", ["company", "day"]),
 
   posUsers: defineTable({
     name: v.string(),
@@ -453,6 +487,8 @@ export default defineSchema({
     /** SHA-256 of the PIN with a server secret; the PIN is never stored. */
     pinKey: v.string(),
     active: v.boolean(),
+    /** Businesses this user works in (missing or empty = all). */
+    companies: v.optional(v.array(v.string())),
     createdAt: v.number(),
   }).index("by_pinKey", ["pinKey"]),
 
@@ -494,6 +530,7 @@ export default defineSchema({
     userName: v.string(),
     action: v.string(),
     detail: v.string(),
+    company: v.optional(v.string()),
     at: v.number(),
   }).index("by_at", ["at"]),
 

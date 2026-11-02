@@ -4,15 +4,17 @@ import { useState } from "react";
 import { usePos } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import { type PosPerm, useCan } from "./pos-auth";
+import { CompaniesSettings } from "./pos-company";
 import { PosSettingsCard } from "./pos-general";
 import { PrintersCard } from "./pos-printers";
 import { ReceiptDesigner } from "./pos-receipt-designer";
 import { UsersCard } from "./pos-users";
 
-type Section = "users" | "receipt" | "printers" | "general";
+type Section = "users" | "companies" | "receipt" | "printers" | "general";
 
 const SECTIONS: { id: Section; label: string; perm: PosPerm }[] = [
   { id: "users", label: "Usuários", perm: "users" },
+  { id: "companies", label: "Empresas", perm: "users" },
   { id: "receipt", label: "Recibo e fatura", perm: "settings" },
   { id: "printers", label: "Impressoras", perm: "settings" },
   { id: "general", label: "Pagamentos", perm: "settings" },
@@ -46,6 +48,11 @@ export function SettingsView() {
       {section === "users" ? (
         <div className="mx-auto w-full max-w-2xl">
           <UsersCard />
+        </div>
+      ) : null}
+      {section === "companies" ? (
+        <div className="mx-auto w-full max-w-2xl">
+          <CompaniesSettings />
         </div>
       ) : null}
       {section === "receipt" ? <ReceiptDesigner /> : null}

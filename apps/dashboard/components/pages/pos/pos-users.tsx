@@ -14,7 +14,13 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Icon } from "@/lib/icons";
 import { TILE_COLORS } from "@/lib/pos/seed";
-import { saveSettings, sendPos, usePos, usePosQuery } from "@/lib/pos/store";
+import {
+  saveSettings,
+  sendPos,
+  useCompanies,
+  usePos,
+  usePosQuery,
+} from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import { type PosPerm, type PosUser, useCan, usePosUser } from "./pos-auth";
 
@@ -87,6 +93,8 @@ interface Draft {
   perms: PosPerm[];
   color: string;
   active: boolean;
+  /** Businesses (empty = all). */
+  companies: string[];
 }
 
 function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
@@ -95,6 +103,7 @@ function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const companies = useCompanies() ?? [];
   const isNew = !d.id;
   const pinOk = pin === "" ? !isNew : PIN4.test(pin);
   const perms =
@@ -114,6 +123,7 @@ function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
       color: d.color,
       active: d.active,
       pin: pin || undefined,
+      companies: d.companies,
     });
     setBusy(false);
     if (ok === undefined) {
@@ -190,6 +200,53 @@ function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
               ))}
             </div>
           </div>
+          {companies.length > 1 ? (
+            <div className="flex flex-col gap-1.5 text-sm">
+              Empresas
+              <div className="flex flex-wrap gap-2">
+                {[{ key: "", name: "Todas", color: "" }, ...companies].map(
+                  (c) => {
+                    const on = c.key
+                      ? d.companies.includes(c.key)
+                      : d.companies.length === 0;
+                    return (
+                      <button
+                        aria-pressed={on}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm",
+                          on ? "bg-foreground text-background" : "bg-muted"
+                        )}
+                        key={c.key || "all"}
+                        onClick={() => {
+                          if (!c.key) {
+                            setD({ ...d, companies: [] });
+                            return;
+                          }
+                          const next = on
+                            ? d.companies.filter((k) => k !== c.key)
+                            : [...d.companies, c.key];
+                          setD({
+                            ...d,
+                            companies:
+                              next.length === companies.length ? [] : next,
+                          });
+                        }}
+                        type="button"
+                      >
+                        {c.color ? (
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ background: c.color }}
+                          />
+                        ) : null}
+                        {c.name}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col divide-y rounded-2xl border">
             {PERMS.map((p) => (
               <span className="flex items-center gap-3 px-3 py-2.5" key={p.id}>
@@ -356,6 +413,7 @@ export function UsersCard() {
                 perms: ["orders"],
                 color: TILE_COLORS[5] ?? "#4a6fa5",
                 active: true,
+                companies: [],
               })
             }
             size="sm"
@@ -377,6 +435,7 @@ export function UsersCard() {
                     perms: u.perms as PosPerm[],
                     color: u.color,
                     active: u.active,
+                    companies: u.companies,
                   })
                 }
                 type="button"
