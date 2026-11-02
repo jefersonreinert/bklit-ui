@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/convex/_generated/api";
 import { unlock } from "@/lib/code/client";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import {
   bootstrapPos,
@@ -44,6 +45,7 @@ export type PosPerm =
   | "stock"
   | "tables"
   | "settings"
+  | "team"
   | "users";
 
 function deviceName() {
@@ -74,7 +76,12 @@ export function useCan() {
   const user = usePosUser();
   return useCallback(
     (perm: PosPerm | PosPerm[]) =>
-      Boolean(user && [perm].flat().some((p) => user.perms.includes(p))),
+      Boolean(
+        user &&
+          // The administrator may do everything, including newer permissions
+          (user.perms.includes("users") ||
+            [perm].flat().some((p) => user.perms.includes(p)))
+      ),
     [user]
   );
 }
@@ -158,7 +165,7 @@ function PinPad({
         {KEYS.map((k, i) =>
           k ? (
             <button
-              aria-label={k === "⌫" ? "Apagar" : k}
+              aria-label={k === "⌫" ? tx("Apagar") : k}
               className={cn(
                 "flex h-16 items-center justify-center rounded-full text-2xl transition-colors active:scale-95",
                 k === "⌫"
@@ -213,10 +220,12 @@ function PanelLock() {
         <Icon className="mx-auto size-8" name="IconShieldCheck" />
         <p className="font-semibold text-xl">Liberar este aparelho</p>
         <p className="text-muted-foreground text-sm">
-          Digite o código de acesso do painel uma vez neste iPad ou celular.
+          {tx(
+            "Digite o código de acesso do painel uma vez neste iPad ou celular."
+          )}
         </p>
         <Input
-          aria-label="Código de acesso"
+          aria-label={tx("Código de acesso")}
           onChange={(e) => setCode(e.target.value)}
           type="password"
           value={code}
@@ -253,14 +262,14 @@ function SetupAdmin() {
             cadastrar os outros usuários.
           </p>
           <Input
-            aria-label="Nome do administrador"
+            aria-label={tx("Nome do administrador")}
             autoFocus
             onChange={(e) => setName(e.target.value)}
-            placeholder="Seu nome"
+            placeholder={tx("Seu nome")}
             value={name}
           />
           <Button disabled={!name.trim()} type="submit">
-            Continuar
+            {tx("Continuar")}
           </Button>
         </form>
       </Screen>
@@ -306,8 +315,8 @@ function SetupAdmin() {
         onPin={submit}
         title={
           first
-            ? "Repita o código principal"
-            : "Crie o código principal (4 dígitos)"
+            ? tx("Repita o código principal")
+            : tx("Crie o código principal (4 dígitos)")
         }
       />
     </Screen>
@@ -348,10 +357,10 @@ function Login({ lockedUntil }: { lockedUntil: number }) {
     <Screen>
       <PinPad
         busy={busy}
-        error={locked ? "Muitas tentativas. Espere 1 minuto." : error}
-        hint={settings ? "Digite seu PIN de 4 dígitos" : undefined}
+        error={locked ? tx("Muitas tentativas. Espere 1 minuto.") : error}
+        hint={settings ? tx("Digite seu PIN de 4 dígitos") : undefined}
         onPin={submit}
-        title="Entrar no POS"
+        title={tx("Entrar no POS")}
       />
     </Screen>
   );
@@ -451,7 +460,7 @@ export function UserChip() {
       onClick={() => {
         lockPos().catch(() => null);
       }}
-      title="Bloquear e trocar de usuário"
+      title={tx("Bloquear e trocar de usuário")}
       type="button"
     >
       <span

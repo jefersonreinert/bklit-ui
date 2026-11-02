@@ -66,6 +66,11 @@ const PERMS: { id: PosPerm; label: string; hint: string }[] = [
     hint: "Recibo, pagamentos e configurações",
   },
   {
+    id: "team",
+    label: "Equipe",
+    hint: "Montar a escala, ver horas, custo e corrigir o ponto",
+  },
+  {
     id: "users",
     label: "Administrador",
     hint: "Gerenciar usuários e permissões",
@@ -95,6 +100,11 @@ interface Draft {
   active: boolean;
   /** Businesses (empty = all). */
   companies: string[];
+  jobTitle: string;
+  phone: string;
+  email: string;
+  hourlyRate: string;
+  startDate: string;
 }
 
 function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
@@ -124,6 +134,11 @@ function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
       active: d.active,
       pin: pin || undefined,
       companies: d.companies,
+      jobTitle: d.jobTitle.trim() || undefined,
+      phone: d.phone.trim() || undefined,
+      email: d.email.trim() || undefined,
+      hourlyRate: Number(d.hourlyRate.replace(",", ".")) || undefined,
+      startDate: d.startDate || undefined,
     });
     setBusy(false);
     if (ok === undefined) {
@@ -199,6 +214,32 @@ function UserForm({ user, onClose }: { user: Draft; onClose: () => void }) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(
+              [
+                ["jobTitle", "Função", "text"],
+                ["hourlyRate", "Valor por hora", "decimal"],
+                ["phone", "Telefone", "tel"],
+                ["email", "E-mail", "email"],
+                ["startDate", "Admissão", "date"],
+              ] as const
+            ).map(([key, label, kind]) => (
+              <label
+                className="flex flex-col gap-1.5 text-sm"
+                htmlFor={`pu-${key}`}
+                key={key}
+              >
+                {label}
+                <Input
+                  id={`pu-${key}`}
+                  inputMode={kind === "decimal" ? "decimal" : undefined}
+                  onChange={(e) => setD({ ...d, [key]: e.target.value })}
+                  type={kind === "decimal" ? "text" : kind}
+                  value={d[key]}
+                />
+              </label>
+            ))}
           </div>
           {companies.length > 1 ? (
             <div className="flex flex-col gap-1.5 text-sm">
@@ -414,6 +455,11 @@ export function UsersCard() {
                 color: TILE_COLORS[5] ?? "#4a6fa5",
                 active: true,
                 companies: [],
+                jobTitle: "",
+                phone: "",
+                email: "",
+                hourlyRate: "",
+                startDate: "",
               })
             }
             size="sm"
@@ -436,6 +482,14 @@ export function UsersCard() {
                     color: u.color,
                     active: u.active,
                     companies: u.companies,
+                    jobTitle: u.jobTitle,
+                    phone: u.phone,
+                    email: u.email,
+                    hourlyRate:
+                      u.hourlyRate === null
+                        ? ""
+                        : String(u.hourlyRate).replace(".", ","),
+                    startDate: u.startDate,
                   })
                 }
                 type="button"

@@ -14,6 +14,7 @@ export const PERMS = [
   "stock",
   "tables",
   "settings",
+  "team",
   "users",
 ] as const;
 export type Perm = (typeof PERMS)[number];
@@ -84,7 +85,9 @@ export async function requireStaff(
     throw new ConvexError("POS_LOCKED");
   }
   const need = perm ? [perm].flat() : [];
-  if (need.length && !need.some((p) => user.perms.includes(p))) {
+  // The administrator may do everything, including newer permissions
+  const admin = user.perms.includes("users");
+  if (need.length && !admin && !need.some((p) => user.perms.includes(p))) {
     throw new ConvexError("POS_FORBIDDEN");
   }
   if (company !== undefined && !worksIn(user, company)) {

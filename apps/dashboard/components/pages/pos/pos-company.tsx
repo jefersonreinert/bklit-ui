@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import {
   type PosCompany,
@@ -44,7 +45,7 @@ export function CompanySwitcher() {
       <DropdownMenuTrigger
         render={
           <button
-            aria-label="Trocar de empresa"
+            aria-label={tx("Trocar de empresa")}
             className="flex max-w-56 items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm transition-colors hover:bg-muted"
             type="button"
           />

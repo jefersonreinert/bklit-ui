@@ -1,0 +1,3267 @@
+{
+ "company": "ribs-house",
+ "currency": "EUR",
+ "profile": {
+  "name": "The Ribs House",
+  "color": "#8b3a1e",
+  "tagline": "Naxxar · Ribs & Steaks",
+  "wine": false
+ },
+ "products": [
+  {
+   "id": "ribs-street-food-corner-vegetarian-nachos",
+   "name": "Vegetarian nachos",
+   "category": "Street Food Corner",
+   "price": 10.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pico de gallo, jalapeños, mozzarella, guacamole. (vegetarian)"
+  },
+  {
+   "id": "ribs-street-food-corner-pulled-pork-croquettes-with-texas-sauce",
+   "name": "Pulled pork croquettes with texas sauce",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pulled pork, eggs, flour, panko, Texas spicy sauce."
+  },
+  {
+   "id": "ribs-street-food-corner-pulled-pork-cheese-stuffed-mushrooms",
+   "name": "Pulled pork & cheese stuffed mushrooms",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mushrooms, mozzarella cheese, pulled pork."
+  },
+  {
+   "id": "ribs-street-food-corner-pulled-pork-fries-with-jalapenos",
+   "name": "Pulled pork fries with jalapeños",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Fries, pulled pork, jalapeños, cheese sauce."
+  },
+  {
+   "id": "ribs-street-food-corner-pulled-pork-nachos",
+   "name": "Pulled pork nachos",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pulled pork, pico de gallo, jalapeños, mozzarella, guacamole."
+  },
+  {
+   "id": "ribs-street-food-corner-pork-rib-quesadilla",
+   "name": "Pork rib quesadilla",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Pulled pork, pico de gallo, salsa, mozzarella, parsley."
+  },
+  {
+   "id": "ribs-street-food-corner-parmesan-bites-with-pulled-pork",
+   "name": "Parmesan bites with pulled pork",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "BBQ sauce & truffle mayo."
+  },
+  {
+   "id": "ribs-street-food-corner-original-caesar-salad",
+   "name": "Original caesar salad",
+   "category": "Street Food Corner",
+   "price": 12.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Prepared in the traditional style with romaine lettuce, parmesan, garlic croutons and classic Caesar dressing."
+  },
+  {
+   "id": "ribs-street-food-corner-greek-salad",
+   "name": "Greek salad",
+   "category": "Street Food Corner",
+   "price": 14.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tomatoes, cucumber, red onion, feta cheese, olives, olive oil, oregano, salt, black pepper."
+  },
+  {
+   "id": "ribs-street-food-corner-american-classic-beef-burger",
+   "name": "American classic beef burger",
+   "category": "Street Food Corner",
+   "price": 15.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with fries, 200 g beef patty, lettuce, pickles, cheddar cheese, bacon, peanut butter sauce."
+  },
+  {
+   "id": "ribs-street-food-corner-caesar-salad-with-chicken",
+   "name": "Caesar salad with chicken",
+   "category": "Street Food Corner",
+   "price": 16.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Romaine lettuce, grilled chicken, crispy parmesan, garlic croutons & Caesar dressing."
+  },
+  {
+   "id": "ribs-street-food-corner-pork-rib-burger",
+   "name": "Pork rib burger",
+   "category": "Street Food Corner",
+   "price": 17.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "BBQ sauce, onion, slow-cooked pork rib, approx. 200 g, tomatoes, roasted potatoes."
+  },
+  {
+   "id": "ribs-street-food-corner-cheesy-killer-burger",
+   "name": "Cheesy killer burger",
+   "category": "Street Food Corner",
+   "price": 18.0,
+   "color": "#c2571a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "200 g beef patty, cheddar cheese, melted cheddar cheese, ketchup, mustard, pickles, onion."
+  },
+  {
+   "id": "ribs-from-mangal-chargrilled-chicken-breast",
+   "name": "Chargrilled chicken breast",
+   "category": "From Mangal",
+   "price": 22.0,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Topped with garlic cream sauce. Served with fries."
+  },
+  {
+   "id": "ribs-from-mangal-chargrilled-sea-bream",
+   "name": "Chargrilled sea bream",
+   "category": "From Mangal",
+   "price": 22.0,
+   "color": "#8b3a1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with lemon, fries & tartar sauce."
+  },
+  {
+   "id": "ribs-pork-ribs-12-hours-slow-cooked-pork-ribs-500-g",
+   "name": "12 HOURS SLOW COOKED PORK RIBS 500 g",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Refined through nine years of culinary expertise at our Sliema brewery, these ribs are marinated in our in-house made beer, then slow-cooked for 12 hours to achieve unparalleled tenderness and exquisite taste.",
+   "modifiers": [
+    {
+     "id": "sauce",
+     "name": "Sauce",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "bbq",
+       "name": "BBQ",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "honey-mustard",
+       "name": "Honey Mustard",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "buffalo",
+       "name": "Buffalo",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "bell-pepper-sauce",
+       "name": "Bell Pepper Sauce",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "inferno",
+       "name": "Inferno",
+       "price": 0,
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-garlic-and-parmesan-slow-cooked-ribs",
+   "name": "Garlic and parmesan slow cooked ribs",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Savor ribs grilled to perfection, infused with aromatic garlic and enveloped in a velvety parmesan layer. An epicurean delight awaits you!",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-spicy-pulled-pork-not-a-pizza-flatbread",
+   "name": "Spicy pulled pork not-a-pizza flatbread",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Packed with pulled pork, fiery piri-piri sauce, chili kick, cool herbed yoghurt, and crunchy onions. It's flatbread fun, not pizza!"
+  },
+  {
+   "id": "ribs-pork-ribs-applelicious-ribs",
+   "name": "Applelicious ribs",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "These juicy ribs are smothered in a honey-cinnamon glaze and paired with apples for a sweet and savory treat.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-slow-cooked-ribs-with-blue-cheese-pepperoni",
+   "name": "Slow cooked ribs with blue cheese & pepperoni",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tender ribs smothered in creamy blue cheese sauce and sprinkled with spicy pepperoni.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-chimichurri-pork-ribs",
+   "name": "Chimichurri pork ribs",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Slow cooked ribs topped with zesty homemade chimichurri sauce. Fresh, herby, and irresistible.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-garlic-cream-ribs-with-smoked-popcorn",
+   "name": "Garlic cream ribs with smoked popcorn",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Creamy garlic ribs crowned with smoked popcorn.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-extra-hot-nachos-ribs",
+   "name": "Extra hot nachos ribs",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Smothered in spicy nacho toppings.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-hot-dog-style-slow-cooked-ribs",
+   "name": "Hot dog style slow cooked ribs",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Crispy onions, bacon, sausage, rosemary, gherkins, potatoes, sweet chili sauce & nacho crunch.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-slow-cooked-ribs-with-mushrooms-mushroom-sauce",
+   "name": "Slow cooked ribs with mushrooms & mushroom sauce",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Slow-cooked ribs with garlicky mushrooms and creamy sauce.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-naxxar-heritage-pulled-pork-pot",
+   "name": "Naxxar heritage pulled pork pot",
+   "category": "Pork Ribs",
+   "price": 23.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tender pulled pork, slow-cooked in a traditional pot using an authentic old Naxxar recipe. Served without fries."
+  },
+  {
+   "id": "ribs-pork-ribs-american-style-smoked-bbq-pork-ribs-500-g",
+   "name": "AMERICAN-STYLE SMOKED BBQ PORK RIBS 500 g",
+   "category": "Pork Ribs",
+   "price": 24.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Chow down on our USA-style ribs, smoked to perfection and coated in tangy BBQ sauce. It’s all about that tasty southern comfort and BBQ goodness.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-jamaican-jerk-slow-cooked-ribs-with-pineapple-sa",
+   "name": "Jamaican jerk slow cooked ribs with pineapple salsa",
+   "category": "Pork Ribs",
+   "price": 24.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Imagine juicy ribs soaked in spicy Jamaican flavors, falling off the bone! Slow cooked ribs with pineapple salsa and sweet chile sauce. That’s like sweet, tangy vacation on your tongue. Perfect for chill vibes and good times!",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-slow-cooked-tikka-masala-ribs-with-shrimps",
+   "name": "Slow cooked tikka masala ribs with shrimps",
+   "category": "Pork Ribs",
+   "price": 24.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "These ribs are gently slow-cooked with tikka masala zest & delicious shrimp.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-pork-ribs-mixed-pork-ribs-trio",
+   "name": "Mixed pork ribs trio",
+   "category": "Pork Ribs",
+   "price": 26.0,
+   "color": "#7a2e1e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Create your perfect rib combo! Choose any three of our slow-cooked rib flavours.",
+   "modifiers": [
+    {
+     "id": "flavours-choose-3",
+     "name": "Flavours (choose 3)",
+     "required": true,
+     "multiple": true,
+     "active": true,
+     "options": [
+      {
+       "id": "12-hours-slow-cooked-pork-ribs",
+       "name": "12 HOURS SLOW COOKED PORK RIBS",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "garlic-and-parmesan-slow-cooked-ribs",
+       "name": "Garlic and parmesan slow cooked ribs",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "applelicious-ribs",
+       "name": "Applelicious ribs",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "slow-cooked-ribs-with-blue-cheese-pepperoni",
+       "name": "Slow cooked ribs with blue cheese & pepperoni",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "chimichuri-pork-ribs",
+       "name": "Chimichuri pork ribs",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "garlic-cream-ribs-with-smoked-popcorn",
+       "name": "Garlic cream ribs with smoked popcorn",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "extra-hot-nachos-ribs",
+       "name": "Extra hot nachos ribs",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "hot-dog-style-slow-cooked-ribs",
+       "name": "Hot dog style slow cooked ribs",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "slow-cooked-ribs-with-mushrooms-mushroom-sauce",
+       "name": "Slow cooked ribs with mushrooms & mushroom sauce",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "american-style-smoked-bbq-pork-ribs",
+       "name": "AMERICAN-STYLE SMOKED BBQ PORK RIBS",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "jamaican-jerk-slow-cooked-ribs-with-pineapple-sa",
+       "name": "Jamaican jerk slow cooked ribs with pineapple salsa",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "slow-cooked-tikka-masala-ribs-with-shrimps",
+       "name": "Slow cooked tikka masala ribs with shrimps",
+       "price": 0,
+       "active": true
+      }
+     ]
+    },
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "regular-500-g",
+       "name": "Regular (500 g)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "xl-650-g",
+       "name": "XL (650 g)",
+       "price": 5,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-classic-beef-tagliata",
+   "name": "Classic beef tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 25.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with grilled tomato, pepper sauce & fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-house-signature-tagliata",
+   "name": "House signature tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 25.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with bell pepper sauce, fresh onion, parsley, rucola, fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-garlic-cream-tagliata",
+   "name": "Garlic cream tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 25.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with roasted garlic cream sauce, rucola & fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-inferno-tagliata",
+   "name": "Inferno tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 25.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served with intensely hot inferno sauce, roasted chilli peppers, rucola and fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-mushroom-tagliata",
+   "name": "Mushroom tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 25.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Covered with a smooth mushroom sauce. Served with sauteed garlic, mushrooms, rucola & fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-chimichurri-tagliata",
+   "name": "Chimichurri tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 26.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Topped with our homemade chimichurri sauce. Served with rucola and fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-truffle-tagliata",
+   "name": "Truffle tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 27.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Truffle oil, grana padano, rucola & fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-blue-cheese-tagliata",
+   "name": "Blue cheese tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 28.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Enriched with creamy blue cheese sauce, fresh blue cheese crunch, rucola & fries."
+  },
+  {
+   "id": "ribs-tagliata-steaks-300-g-rustic-burrata-tagliata",
+   "name": "Rustic burrata tagliata",
+   "category": "Tagliata Steaks (300 g)",
+   "price": 32.0,
+   "color": "#6b2a2a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Served on hearty rustic vegetable salad (tomatoes, cucumber, red onions, olive oil, spiced salt), rucola, burrata & fries."
+  },
+  {
+   "id": "ribs-the-house-legend-steak-tartare-180-g",
+   "name": "STEAK TARTARE (180 g)",
+   "category": "The House Legend",
+   "price": 16.0,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Hand-cut sirloin beef tartare with red onion, homemade gherkins, coriander, green chilli, Dijon mustard, extra virgin olive oil and fresh chives. Served with fries and homemade gherkins."
+  },
+  {
+   "id": "ribs-the-house-legend-country-style-braised-pork-neck-served-in-maltes",
+   "name": "Country style braised pork neck served in maltese bread",
+   "category": "The House Legend",
+   "price": 22.0,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Slow-braised pork neck served in fresh Maltese bread with fries."
+  },
+  {
+   "id": "ribs-the-house-legend-patagonian-style-sea-bream",
+   "name": "Patagonian style sea bream",
+   "category": "The House Legend",
+   "price": 24.0,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Fresh sea bream marinated in ginger and garlic, coated with house-made vegan mayonnaise made with olive oil, lemon, ginger and garlic. Oven-baked, finished with homemade chimichurri sauce. Served with fries."
+  },
+  {
+   "id": "ribs-the-house-legend-sirloin-steak-300-g",
+   "name": "SIRLOIN STEAK (300 g)",
+   "category": "The House Legend",
+   "price": 28.0,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Chargrilled 300 g sirloin steak, topped with homemade chimichurri sauce. Served with fries."
+  },
+  {
+   "id": "ribs-the-house-legend-slow-cooked-beef-ribs",
+   "name": "Slow cooked beef ribs",
+   "category": "The House Legend",
+   "price": 32.0,
+   "color": "#a4652a",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Juicy beef ribs slow-cooked for 12 hours in house BBQ sauce, served with fries."
+  },
+  {
+   "id": "ribs-kids-menu-vegetable-sticks",
+   "name": "Vegetable sticks",
+   "category": "Kids Menu",
+   "price": 4.0,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-kids-menu-four-mozzarella-sticks",
+   "name": "Four mozzarella sticks",
+   "category": "Kids Menu",
+   "price": 4.0,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-kids-menu-chicken-nuggets-with-fries",
+   "name": "Chicken nuggets with fries",
+   "category": "Kids Menu",
+   "price": 6.0,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-kids-menu-cheese-quesadilla",
+   "name": "Cheese quesadilla",
+   "category": "Kids Menu",
+   "price": 8.0,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-kids-menu-grilled-chicken-breast-with-fries",
+   "name": "Grilled chicken breast with fries",
+   "category": "Kids Menu",
+   "price": 8.0,
+   "color": "#3b8ea5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sides-fries",
+   "name": "Fries",
+   "category": "Sides",
+   "price": 3.0,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sides-homemade-sauerkraut",
+   "name": "Homemade sauerkraut",
+   "category": "Sides",
+   "price": 3.0,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sides-grilled-potatoes-skewer-pork-fat",
+   "name": "Grilled potatoes skewer & pork fat",
+   "category": "Sides",
+   "price": 4.0,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sides-fresh-vegetable-sticks",
+   "name": "Fresh vegetable sticks",
+   "category": "Sides",
+   "price": 4.0,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sides-homemade-gherkins",
+   "name": "Homemade gherkins",
+   "category": "Sides",
+   "price": 4.0,
+   "color": "#8a8a5c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-bbq",
+   "name": "Bbq",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-bell-pepper-sauce",
+   "name": "Bell pepper sauce",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-mushroom-sauce",
+   "name": "Mushroom sauce",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-honey-mustard",
+   "name": "Honey mustard",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-buffalo",
+   "name": "Buffalo",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-sauces-pepper-sauce",
+   "name": "Pepper sauce",
+   "category": "Sauces",
+   "price": 3.0,
+   "color": "#9a7b4f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-desserts-dessert-of-the-day",
+   "name": "Dessert of the day",
+   "category": "Desserts",
+   "price": 0,
+   "color": "#b5838d",
+   "available": false,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Our homemade desserts change regularly. Please ask our staff for today's selection."
+  },
+  {
+   "id": "ribs-beer-valletta-2018",
+   "name": "Valletta 2018",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "4.8% ABV · 35 IBU · Valletta 2018, a bright and pleasant lager of low fermentation achieving its distinctive character through the delicate bitterness of the hop and subtle after taste of citrus.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-wild-berries-sour",
+   "name": "Wild Berries Sour",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "4% ABV · 5 IBU · Refreshing sour beer with the flavor and aroma of wild berries. The beer is soured by a Kettle Sour process using lactic acid bacteria.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-helles-lager",
+   "name": "Helles Lager",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5% ABV · 15 IBU · We make our Helles Lager using the classic European noble hops Hallertauer and Saaz which are synonymous with the traditional European style.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-belgium-stout",
+   "name": "Belgium Stout",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5.5% ABV · 25 IBU · Belgian stout is a unique beer between the Irish – British stout and the German – Austrian dark beers. The beer is still very drinkable, not a real full mouthfeel, and not sweet.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-pilsner",
+   "name": "Pilsner",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5.2% ABV · 35 IBU · A German-style pilsner, brewed with floor-malted barley grown in the Bamberg. Pale blonde with a white head, this crisp lager presents a lightly bready nose with some floral notes. Mouthfeel is very light, with a crisp hop finish. The malt aroma continues on the palate with bread and light honey notes, complimented by floral, spicy hops. Bitterness is medium, but very clean. Finishes dry and clean.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-golden-ale",
+   "name": "Golden Ale",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "6% ABV · 15 IBU · Our take on a classic Golden Ale will quench your thirst and leave you ready for another. The light honeyed breadiness of the malt is balanced with \"just the kiss of the hops,\" showing a light orange aroma.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-ipa",
+   "name": "IPA",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "5.8% ABV · 50 IBU · Our India Pale Ale is brewed with four hop additions to create a powerful hop profile. A solid malt base, however, tempers the bitter American hops, giving our IPA a balance not often found in this style. The end product is a well-balanced, malty beer with the crisp taste of hops and an exceptionally fruity nose.",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-beer-pils-shandy",
+   "name": "Pils Shandy",
+   "category": "Beer",
+   "price": 3.75,
+   "color": "#e0a526",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "3.00% ABV · One of summer's simple pleasures comes in Shandy form. We took our classic Summer Pils and evolved it into just that a bright a lemony summertime refresher!",
+   "modifiers": [
+    {
+     "id": "size",
+     "name": "Size",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "0-28-l",
+       "name": "0.28 L",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "0-56-l",
+       "name": "0.56 L",
+       "price": 1.75,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-classic-cocktails-kinnie-fizz",
+   "name": "Kinnie Fizz",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Gin, Elderflower, Lemon, Kinnie"
+  },
+  {
+   "id": "ribs-classic-cocktails-mgarr-kiss",
+   "name": "Mgarr Kiss",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Strawberry Gin, Lemon, Strawberries"
+  },
+  {
+   "id": "ribs-classic-cocktails-mai-tai",
+   "name": "Mai Tai",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Dark Rum, Triple Sec, Lime, Orgeat"
+  },
+  {
+   "id": "ribs-classic-cocktails-negroni",
+   "name": "Negroni",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Campari, Gin, Sweet Vermouth"
+  },
+  {
+   "id": "ribs-classic-cocktails-mojito",
+   "name": "Mojito",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Rum, lime, sugar, mint, soda",
+   "modifiers": [
+    {
+     "id": "flavour",
+     "name": "Flavour",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "classic",
+       "name": "Classic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "strawberry",
+       "name": "Strawberry",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "raspberry",
+       "name": "Raspberry",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "mango",
+       "name": "Mango",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "passion-fruit",
+       "name": "Passion Fruit",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-classic-cocktails-whisky-sour",
+   "name": "Whisky Sour",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Bourbon, Lime, Simple Syrup"
+  },
+  {
+   "id": "ribs-classic-cocktails-london-moscow-mule",
+   "name": "London/Moscow Mule",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Lemon, Ginger Beer",
+   "modifiers": [
+    {
+     "id": "style",
+     "name": "Style",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "london-gin",
+       "name": "London (gin)",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "moscow-vodka",
+       "name": "Moscow (vodka)",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-classic-cocktails-margarita",
+   "name": "Margarita",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tequila, Lime, Triple Sec"
+  },
+  {
+   "id": "ribs-classic-cocktails-long-island-iced-tea",
+   "name": "Long Island Iced Tea",
+   "category": "Classic Cocktails",
+   "price": 9.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Rum, Tequila, Triple Sec, Sweet & Sour Mix, Cola"
+  },
+  {
+   "id": "ribs-classic-cocktails-cuba-libre",
+   "name": "Cuba Libre",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Lime, Cola"
+  },
+  {
+   "id": "ribs-classic-cocktails-aperol-spritz",
+   "name": "Aperol Spritz",
+   "category": "Classic Cocktails",
+   "price": 8.5,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Prosecco, Aperol, Soda Water"
+  },
+  {
+   "id": "ribs-classic-cocktails-pina-colada",
+   "name": "Piña Colada",
+   "category": "Classic Cocktails",
+   "price": 8.5,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Coconut, Pineapple Juice"
+  },
+  {
+   "id": "ribs-classic-cocktails-bellini",
+   "name": "Bellini",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Peach Pure, Prosecco"
+  },
+  {
+   "id": "ribs-classic-cocktails-tequila-sunrise",
+   "name": "Tequila Sunrise",
+   "category": "Classic Cocktails",
+   "price": 8.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Tequila, Orange Juice, Grenadine"
+  },
+  {
+   "id": "ribs-signature-cocktails-espresso-martini",
+   "name": "Espresso Martini",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vodka, Coffee Liqueur, Espresso"
+  },
+  {
+   "id": "ribs-signature-cocktails-tiki-rack",
+   "name": "Tiki Rack",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "White Rum, Dark Rum, Pineapple, Blackberries, Mango, Lime"
+  },
+  {
+   "id": "ribs-signature-cocktails-hoppy-blueberry",
+   "name": "Hoppy Blueberry",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Blueberries, Strawberry, Gin, Lemon, Golden Ale"
+  },
+  {
+   "id": "ribs-signature-cocktails-pornstar-martini",
+   "name": "Pornstar Martini",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Vanilla Vodka, Passoã, Passion Fruit, Lime"
+  },
+  {
+   "id": "ribs-signature-cocktails-passion-fruit-spritz",
+   "name": "Passion Fruit Spritz",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Prosecco, Aperol, Passion Fruit, Passoã"
+  },
+  {
+   "id": "ribs-signature-cocktails-iparol-spritz",
+   "name": "Iparol Spritz",
+   "category": "Signature Cocktails",
+   "price": 7.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Aperol, Passion Fruit, Orange Bitters, Valletta Beer"
+  },
+  {
+   "id": "ribs-signature-cocktails-wild-agave",
+   "name": "Wild Agave",
+   "category": "Signature Cocktails",
+   "price": 12.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mezcal, Agave, Passion Fruit, Lime, Orange Bitters, Sugar"
+  },
+  {
+   "id": "ribs-signature-cocktails-jack-sparrow",
+   "name": "Jack Sparrow",
+   "category": "Signature Cocktails",
+   "price": 12.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kraken Rum, Frangelico, Lemon, Vanilla Syrup, Cocoa Bitters"
+  },
+  {
+   "id": "ribs-signature-cocktails-don-coco",
+   "name": "Don Coco",
+   "category": "Signature Cocktails",
+   "price": 10.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Don Papa Rum, Coconut, Lime, Rosemary, Ginger Beer"
+  },
+  {
+   "id": "ribs-signature-cocktails-mezcal-old-fashioned",
+   "name": "Mezcal Old Fashioned",
+   "category": "Signature Cocktails",
+   "price": 12.0,
+   "color": "#d6336c",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Mezcal, Agave, Timur Berry"
+  },
+  {
+   "id": "ribs-gin-tonic-bombay",
+   "name": "Bombay",
+   "category": "Gin & Tonic",
+   "price": 8.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "40% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-martin-millers-gin",
+   "name": "Martin Millers Gin",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "40% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-whitley-neill-watermelon-kiwi-gin",
+   "name": "Whitley Neill Watermelon & Kiwi Gin",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-whitley-neill-rhubarb-ginger",
+   "name": "Whitley Neill Rhubarb & Ginger",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "43% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-nordes-gin",
+   "name": "Nordes Gin",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "40% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-gin-mare",
+   "name": "Gin Mare",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "42.7% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-del-professore-monsieur",
+   "name": "Del Professore Monsieur",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "43.7% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-monkey-47",
+   "name": "Monkey 47",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "47% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-ampersand-strawberry-gin",
+   "name": "Ampersand Strawberry Gin",
+   "category": "Gin & Tonic",
+   "price": 9.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "37.5% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-gin-tonic-roku-gin",
+   "name": "Roku Gin",
+   "category": "Gin & Tonic",
+   "price": 10.0,
+   "color": "#3b5ba5",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "43% · with premium tonic / mixer",
+   "modifiers": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "required": true,
+     "multiple": false,
+     "active": true,
+     "options": [
+      {
+       "id": "fentimans-premium-tonic",
+       "name": "Fentimans Premium Tonic",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-valencian-orange",
+       "name": "Fentimans Valencian Orange",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "fentimans-pink-grapefruit",
+       "name": "Fentimans Pink Grapefruit",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-ale",
+       "name": "Thomas Henry Ginger Ale",
+       "price": 0,
+       "active": true
+      },
+      {
+       "id": "thomas-henry-ginger-beer",
+       "name": "Thomas Henry Ginger Beer",
+       "price": 0,
+       "active": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ribs-white-wine-1919-marsovin",
+   "name": "1919 Marsovin",
+   "category": "White Wine",
+   "price": 24.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-white-wine-palatino-sauvignon-blanc",
+   "name": "Palatino Sauvignon Blanc",
+   "category": "White Wine",
+   "price": 19.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-white-wine-sartori-pinot-grigio-delle-venzie",
+   "name": "Sartori Pinot Grigio delle Venzie",
+   "category": "White Wine",
+   "price": 25.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-cantele-telero-chardonnay",
+   "name": "Cantele Telero Chardonnay",
+   "category": "White Wine",
+   "price": 26.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-tenuta-grifoni-tara-pecorino",
+   "name": "Tenuta Grifoni Tara Pecorino",
+   "category": "White Wine",
+   "price": 28.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-moscato-d-asti-patrizi",
+   "name": "Moscato D'asti Patrizi",
+   "category": "White Wine",
+   "price": 28.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-grillo-costadune-mandarossa-sicilly",
+   "name": "Grillo Costadune Mandarossa Sicilly",
+   "category": "White Wine",
+   "price": 29.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-simboli-vermentino-di-sardegna",
+   "name": "Simboli Vermentino di Sardegna",
+   "category": "White Wine",
+   "price": 33.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-gavi-marchesi-di-barolo-piedmont",
+   "name": "Gavi Marchesi di Barolo - Piedmont",
+   "category": "White Wine",
+   "price": 36.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-casa-e-di-mirafiore-nasceta",
+   "name": "Casa E.di Mirafiore Nasceta",
+   "category": "White Wine",
+   "price": 41.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-white-wine-cotes-de-gascogne-classic-blanc",
+   "name": "Cotes de Gascogne Classic Blanc",
+   "category": "White Wine",
+   "price": 27.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-white-wine-moulin-de-gassac-picpoul-de-pinet",
+   "name": "Moulin de Gassac Picpoul de Pinet",
+   "category": "White Wine",
+   "price": 28.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-white-wine-m-chapoutier-bellruche-cotes-du-rhone-blanc",
+   "name": "M.chapoutier Bellruche Cotes du Rhone Blanc",
+   "category": "White Wine",
+   "price": 31.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-white-wine-sancerre-grand-reserve-henri-bourgeois",
+   "name": "Sancerre Grand Reserve Henri Bourgeois",
+   "category": "White Wine",
+   "price": 39.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-white-wine-chateau-guiraud-blanc",
+   "name": "Chateau Guiraud Blanc",
+   "category": "White Wine",
+   "price": 42.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-white-wine-two-peaks-savignon-blanc-new-zeland",
+   "name": "Two Peaks Savignon Blanc (New Zeland)",
+   "category": "White Wine",
+   "price": 26.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-white-wine-georgian-legend-alazani-semi-sweet-georgia",
+   "name": "Georgian Legend Alazani Semi Sweet (Georgia)",
+   "category": "White Wine",
+   "price": 26.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-white-wine-alvarinho-classico-portugal",
+   "name": "Alvarinho Classico (Portugal)",
+   "category": "White Wine",
+   "price": 32.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-white-wine-ramon-bilbao-verdejo-spain",
+   "name": "Ramon Bilbao Verdejo (Spain)",
+   "category": "White Wine",
+   "price": 34.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-white-wine-donnhof-riesling-qualitatswein-trocken-ger",
+   "name": "Donnhof Riesling Qualitatswein Trocken (Ger)",
+   "category": "White Wine",
+   "price": 42.0,
+   "color": "#c9b458",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-red-wine-nero-d-avola-mandarossa-sicily",
+   "name": "Nero D'avola Mandarossa - Sicily",
+   "category": "Red Wine",
+   "price": 28.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-san-marzano-primitivo-di-manduria",
+   "name": "San Marzano Primitivo di Manduria",
+   "category": "Red Wine",
+   "price": 31.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-chianti-riserva-cecchi-tuscany",
+   "name": "Chianti Riserva Cecchi Tuscany",
+   "category": "Red Wine",
+   "price": 32.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-sciu-susumaniello",
+   "name": "Sciu Susumaniello",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-simboli-canonau-di-sardegna",
+   "name": "Simboli Canonau di Sardegna",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-marchesi-di-barolo-barbera-appasimento",
+   "name": "Marchesi di Barolo Barbera Appasimento",
+   "category": "Red Wine",
+   "price": 35.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-elena-walch-lagrein",
+   "name": "Elena Walch Lagrein",
+   "category": "Red Wine",
+   "price": 38.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-di-majo-norante-sangiovese",
+   "name": "Di Majo Norante Sangiovese",
+   "category": "Red Wine",
+   "price": 42.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-red-wine-m-chapoutier-bellruche-cotes-du-rhonerouge",
+   "name": "M.chapoutier Bellruche Cotes du Rhonerouge",
+   "category": "Red Wine",
+   "price": 31.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-red-wine-schroder-schyler-private-reserve-medoc",
+   "name": "Schroder & Schyler Private Reserve Medoc",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-red-wine-lupe-cholet-beaojolais-village",
+   "name": "Lupe Cholet Beaojolais Village",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-red-wine-henri-bourgeois-sancerre-rouge-pinot-noir",
+   "name": "Henri Bourgeois Sancerre Rouge Pinot Noir",
+   "category": "Red Wine",
+   "price": 52.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-red-wine-chateau-gaillou-d-arthus-st-emillion-grand-cru",
+   "name": "Chateau Gaillou D'arthus St Emillion Grand Cru",
+   "category": "Red Wine",
+   "price": 56.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-red-wine-spier-pinotage-south-africa",
+   "name": "Spier Pinotage (South Africa)",
+   "category": "Red Wine",
+   "price": 26.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-red-wine-chateau-changyu-moser-cab-sauvignon-china",
+   "name": "Chateau Changyu Moser Cab.sauvignon (China)",
+   "category": "Red Wine",
+   "price": 34.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-red-wine-viu-manet-secret-carmenere-chile",
+   "name": "Viu Manet Secret Carmenere (Chile)",
+   "category": "Red Wine",
+   "price": 35.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-red-wine-tinto-pesquera-crianza-spain",
+   "name": "Tinto Pesquera Crianza (Spain)",
+   "category": "Red Wine",
+   "price": 54.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Other World · bottle"
+  },
+  {
+   "id": "ribs-red-wine-palatino-merlot-merlot",
+   "name": "Palatino Merlot Merlot",
+   "category": "Red Wine",
+   "price": 19.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-red-wine-1919-marsovin",
+   "name": "1919 Marsovin",
+   "category": "Red Wine",
+   "price": 24.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-red-wine-marnisi",
+   "name": "Marnisi",
+   "category": "Red Wine",
+   "price": 45.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-red-wine-ta-betta-2019-philippe-villiers-superior",
+   "name": "Ta'betta 2019 Philippe Villiers Superior",
+   "category": "Red Wine",
+   "price": 75.0,
+   "color": "#7b1e2b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Malta And Gozo · bottle"
+  },
+  {
+   "id": "ribs-rose-wine-rose-d-anjou",
+   "name": "Rose D'anjou",
+   "category": "Rosé Wine",
+   "price": 26.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "France · bottle"
+  },
+  {
+   "id": "ribs-rose-wine-san-marzano-primitivo-di-manduria",
+   "name": "San Marzano Primitivo di Manduria",
+   "category": "Rosé Wine",
+   "price": 29.0,
+   "color": "#e07a8f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-sparkling-wine-prossecco-sartori",
+   "name": "Prossecco Sartori",
+   "category": "Sparkling Wine",
+   "price": 26.0,
+   "color": "#cbbf8f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-sparkling-wine-valdobbiadene-superiore-brut",
+   "name": "Valdobbiadene Superiore Brut",
+   "category": "Sparkling Wine",
+   "price": 32.0,
+   "color": "#cbbf8f",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-sparkling-wine-moscato-d-asti-marchesi-di-barolo",
+   "name": "Moscato D'asti Marchesi di Barolo",
+   "category": "Sparkling Wine",
+   "price": 0,
+   "color": "#cbbf8f",
+   "available": false,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Italy · bottle"
+  },
+  {
+   "id": "ribs-vodka-smirnoff",
+   "name": "Smirnoff",
+   "category": "Vodka",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-vodka-absolut",
+   "name": "Absolut",
+   "category": "Vodka",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-vodka-grey-goose",
+   "name": "Grey Goose",
+   "category": "Vodka",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-tequila-jose-cuervo-silver",
+   "name": "Jose Cuervo Silver",
+   "category": "Tequila",
+   "price": 3.75,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-tequila-jose-cuervo-gold",
+   "name": "Jose Cuervo Gold",
+   "category": "Tequila",
+   "price": 4.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-tequila-patron-silver",
+   "name": "Patron Silver",
+   "category": "Tequila",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-rum-don-papa",
+   "name": "Don Papa",
+   "category": "Rum",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-rum-bacardi-white",
+   "name": "Bacardi White",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-rum-captain-morgan-spiced",
+   "name": "Captain Morgan Spiced",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-rum-captain-morgan-dark",
+   "name": "Captain Morgan Dark",
+   "category": "Rum",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-woodford-reserve",
+   "name": "Woodford Reserve",
+   "category": "Whiskey",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-johnnie-walker-black-label",
+   "name": "Johnnie Walker Black Label",
+   "category": "Whiskey",
+   "price": 4.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-jack-daniels",
+   "name": "Jack Daniels",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-jameson",
+   "name": "Jameson",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-jim-beam",
+   "name": "Jim Beam",
+   "category": "Whiskey",
+   "price": 3.5,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-whiskey-glenfiddich-12-y-o",
+   "name": "Glenfiddich 12 y.o",
+   "category": "Whiskey",
+   "price": 5.0,
+   "color": "#6b4f9e",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0
+  },
+  {
+   "id": "ribs-shots-baby-guinness",
+   "name": "Baby Guinness",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kahlua, Baileys"
+  },
+  {
+   "id": "ribs-shots-b52",
+   "name": "B52",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kahlua, Baileys, Tripplesec"
+  },
+  {
+   "id": "ribs-shots-buttery-nipple",
+   "name": "Buttery Nipple",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Peach Schnapps, Baileys"
+  },
+  {
+   "id": "ribs-shots-snickers",
+   "name": "Snickers",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Kahlua, Baileys, Frangelico, Salt"
+  },
+  {
+   "id": "ribs-shots-amaretti",
+   "name": "Amaretti",
+   "category": "Shots",
+   "price": 3.5,
+   "color": "#9e4f6b",
+   "available": true,
+   "unit": "un",
+   "trackStock": false,
+   "stock": 0,
+   "minStock": 0,
+   "description": "Amaretto, Jameson"
+  }
+ ]
+}
