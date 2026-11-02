@@ -21,6 +21,8 @@ const SKIP = new Set([
   "NOSCRIPT",
 ]);
 const SPACES = /\s+/g;
+const LEAD = /^\s*/;
+const TRAIL = /\s*$/;
 
 /** Original Portuguese and what we wrote, to tell our changes from React's. */
 interface Swap {
@@ -53,8 +55,8 @@ function convert(value: string) {
   if (!out || out === key) {
     return null;
   }
-  const lead = value.match(/^\s*/)?.[0] ?? "";
-  const trail = value.match(/\s*$/)?.[0] ?? "";
+  const lead = value.match(LEAD)?.[0] ?? "";
+  const trail = value.match(TRAIL)?.[0] ?? "";
   return lead + out + trail;
 }
 
@@ -103,6 +105,7 @@ function walk(root: Node) {
   attributes(root);
   const tree = document.createTreeWalker(
     root,
+    // biome-ignore lint/suspicious/noBitwiseOperators: NodeFilter flags are a bit mask
     NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
     {
       acceptNode: (n) =>

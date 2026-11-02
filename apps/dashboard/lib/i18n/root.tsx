@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, type ReactNode, useEffect, useState } from "react";
-import { SOURCE, setShownLocale, subscribeI18n, useLocale } from ".";
+import { subscribeI18n, useLocale } from ".";
 import { translateScreen } from "./dom";
+import { SOURCE, setShownLocale } from "./locale";
 
 /**
  * Renders the app in the chosen language. The server and the first client
