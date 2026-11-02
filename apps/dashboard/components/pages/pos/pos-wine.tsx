@@ -8,6 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import {
   isLowStock,
@@ -37,13 +38,17 @@ export const WINE_COLORS: Record<string, { label: string; swatch: string }> = {
   dessert: { label: "Sobremesa", swatch: "#a4652a" },
 };
 
-export const wineColor = (color: string) =>
-  WINE_COLORS[color] ?? { label: color, swatch: "#888" };
+export const wineColor = (color: string) => {
+  const c = WINE_COLORS[color];
+  return c ? { ...c, label: tx(c.label) } : { label: color, swatch: "#888" };
+};
 
 /** Bottles with one decimal ("2,5 garrafas"). */
 export function bottles(n: number) {
   const v = Math.round(n * 10) / 10;
-  return `${v.toLocaleString("pt-BR")} ${Math.abs(v) === 1 ? "garrafa" : "garrafas"}`;
+  return Math.abs(v) === 1
+    ? tx("{n} garrafa", { n: v.toLocaleString() })
+    : tx("{n} garrafas", { n: v.toLocaleString() });
 }
 
 /** Glass sizes, bottle and takeaway of a wine, in the order shown. */
@@ -61,12 +66,14 @@ export function serves(p: PosProduct): WineServe[] {
 
 const serveLabel = (serve: WineServe) => {
   if (serve === "bottle") {
-    return "Garrafa na mesa";
+    return tx("Garrafa na mesa");
   }
   if (serve === "takeaway") {
-    return "Garrafa para levar";
+    return tx("Garrafa para levar");
   }
-  return serve <= 50 ? `Prova ${serve} ml` : `Taça ${serve} ml`;
+  return serve <= 50
+    ? tx("Prova {ml} ml", { ml: serve })
+    : tx("Taça {ml} ml", { ml: serve });
 };
 
 /** Picks how to serve a wine in the register. */
@@ -105,7 +112,7 @@ export function WineSheet({
               wine?.country,
               wine?.grape,
               wine?.vintage,
-              wine?.tap ? `torneira ${wine.tap}` : null,
+              wine?.tap ? tx("torneira {tap}", { tap: wine.tap }) : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -119,7 +126,7 @@ export function WineSheet({
                   : "text-muted-foreground"
               )}
             >
-              Estoque: {bottles(product.stock ?? 0)}
+              {tx("Estoque:")} {bottles(product.stock ?? 0)}
             </p>
           ) : null}
         </SheetHeader>
@@ -155,7 +162,7 @@ export function WineSheet({
             : null}
           {product && serves(product).length === 0 ? (
             <p className="col-span-2 py-6 text-center text-muted-foreground text-sm">
-              Sem preço cadastrado. Defina em Vinhos ou Produtos.
+              {tx("Sem preço cadastrado. Defina em Vinhos ou Produtos.")}
             </p>
           ) : null}
         </div>
@@ -194,7 +201,7 @@ function StockEntry({ product }: { product: PosProduct }) {
         value={value}
       />
       <button
-        aria-label="Lançar entrada"
+        aria-label={tx("Lançar entrada")}
         className="flex size-8 items-center justify-center rounded-lg bg-muted disabled:opacity-40"
         disabled={!(qty > 0)}
         type="submit"
@@ -261,11 +268,11 @@ export function WinesView() {
     <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 md:p-6">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          { label: "Rótulos", value: String(wines.length) },
-          { label: "Garrafas em estoque", value: bottles(totalBottles) },
-          { label: "Valor do estoque", value: money(stockValue, currency) },
+          { label: tx("Rótulos"), value: String(wines.length) },
+          { label: tx("Garrafas em estoque"), value: bottles(totalBottles) },
+          { label: tx("Valor do estoque"), value: money(stockValue, currency) },
           {
-            label: "Estoque baixo",
+            label: tx("Estoque baixo"),
             value: String(low),
             warn: low > 0,
           },
@@ -288,16 +295,16 @@ export function WinesView() {
         <Input
           className="sm:max-w-xs"
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar vinho, uva ou torneira…"
+          placeholder={tx("Buscar vinho, uva ou torneira…")}
           value={query}
         />
         <select
-          aria-label="País"
+          aria-label={tx("País")}
           className="h-9 rounded-md border bg-transparent px-3 text-sm"
           onChange={(e) => setCountry(e.target.value || null)}
           value={country ?? ""}
         >
-          <option value="">Todos os países</option>
+          <option value="">{tx("Todos os países")}</option>
           {countries.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -326,7 +333,7 @@ export function WinesView() {
             ) : null}
             {c
               ? `${wineColor(c).label} (${wines.filter((w) => w.wine?.color === c).length})`
-              : `Todos (${wines.length})`}
+              : `${tx("Todos")} (${wines.length})`}
           </button>
         ))}
       </div>
@@ -335,16 +342,26 @@ export function WinesView() {
         <table className="w-full min-w-[760px] text-sm">
           <thead className="text-left text-muted-foreground text-xs">
             <tr className="border-b">
-              <th className="px-3 py-2 font-normal">Vinho</th>
-              <th className="px-3 py-2 font-normal">Torneira</th>
-              <th className="px-3 py-2 text-right font-normal">Taça</th>
-              <th className="px-3 py-2 text-right font-normal">Garrafa</th>
-              <th className="px-3 py-2 text-right font-normal">Levar</th>
-              <th className="px-3 py-2 text-right font-normal">Estoque</th>
+              <th className="px-3 py-2 font-normal">{tx("Vinho")}</th>
+              <th className="px-3 py-2 font-normal">{tx("Torneira")}</th>
+              <th className="px-3 py-2 text-right font-normal">{tx("Taça")}</th>
+              <th className="px-3 py-2 text-right font-normal">
+                {tx("Garrafa")}
+              </th>
+              <th className="px-3 py-2 text-right font-normal">
+                {tx("Levar")}
+              </th>
+              <th className="px-3 py-2 text-right font-normal">
+                {tx("Estoque")}
+              </th>
               {canStock ? (
-                <th className="px-3 py-2 text-right font-normal">Entrada</th>
+                <th className="px-3 py-2 text-right font-normal">
+                  {tx("Entrada")}
+                </th>
               ) : null}
-              <th className="px-3 py-2 text-right font-normal">Ativo</th>
+              <th className="px-3 py-2 text-right font-normal">
+                {tx("Ativo")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -421,7 +438,7 @@ export function WinesView() {
         </table>
         {list.length === 0 ? (
           <p className="py-8 text-center text-muted-foreground text-sm">
-            Nenhum vinho com esses filtros.
+            {tx("Nenhum vinho com esses filtros.")}
           </p>
         ) : null}
       </div>
@@ -601,7 +618,7 @@ export function WineEditor({
             onClick={() => onChange(undefined)}
             type="button"
           >
-            Não é vinho
+            {tx("Não é vinho")}
           </button>
         </div>
       </div>

@@ -26,6 +26,7 @@ import type * as ohlc from "../ohlc.js";
 import type * as pos from "../pos.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
+import type * as team from "../team.js";
 import type * as telegram from "../telegram.js";
 import type * as tgmedia from "../tgmedia.js";
 import type * as vouchers from "../vouchers.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   pos: typeof pos;
   staff: typeof staff;
   stores: typeof stores;
+  team: typeof team;
   telegram: typeof telegram;
   tgmedia: typeof tgmedia;
   vouchers: typeof vouchers;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Icon, type IconName } from "@/lib/icons";
 import { readSumupResult } from "@/lib/pos/payments";
 import {
@@ -22,6 +23,7 @@ import { RegisterView } from "./pos-register";
 import { ReportsView } from "./pos-reports";
 import { SettingsView } from "./pos-settings";
 import { TablesView } from "./pos-tables";
+import { TeamView } from "./pos-team";
 import { VouchersView } from "./pos-vouchers";
 import { WinesView } from "./pos-wine";
 
@@ -30,6 +32,7 @@ export type PosTab =
   | "tables"
   | "orders"
   | "wines"
+  | "team"
   | "products"
   | "reports"
   | "vouchers"
@@ -54,6 +57,12 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     label: "Vinhos",
     icon: "IconGlass",
     perm: ["orders", "products", "stock"],
+  },
+  {
+    id: "team",
+    label: "Equipe",
+    icon: "IconUserGroup",
+    perm: ["orders", "team"],
   },
   {
     id: "products",
@@ -147,6 +156,7 @@ export function PosPage() {
 }
 
 function PosApp() {
+  const tr = useT();
   const can = useCan();
   const company = useCurrentCompany();
   const tabs = TABS.filter(
@@ -183,7 +193,7 @@ function PosApp() {
             type="button"
           >
             <Icon className="size-4" name={t.icon} />
-            {t.label}
+            {tr(t.label)}
           </button>
         ))}
         <span className="ml-3 border-l pl-3">
@@ -221,6 +231,7 @@ function PosApp() {
         {tab === "tables" ? <TablesView onOpenOrder={openOrder} /> : null}
         {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
         {tab === "wines" ? <WinesView /> : null}
+        {tab === "team" ? <TeamView /> : null}
         {tab === "products" ? <ProductsView /> : null}
         {tab === "reports" ? <ReportsView /> : null}
         {tab === "vouchers" ? <VouchersView /> : null}
@@ -243,7 +254,7 @@ function PosApp() {
             type="button"
           >
             <Icon className="size-5" name={t.icon} />
-            {t.label}
+            {tr(t.label)}
           </button>
         ))}
       </nav>

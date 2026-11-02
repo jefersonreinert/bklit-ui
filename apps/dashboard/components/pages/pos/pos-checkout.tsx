@@ -10,6 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { tx } from "@/lib/i18n";
 import { Icon, type IconName } from "@/lib/icons";
 import { paymentLinkUrl, sumupPayUrl } from "@/lib/pos/payments";
 import { receiptDoc } from "@/lib/pos/receipt";
@@ -89,7 +90,7 @@ function CashStep({
         className="h-12 text-lg"
         inputMode="decimal"
         onChange={(e) => setReceived(e.target.value)}
-        placeholder="Valor recebido"
+        placeholder={tx("Valor recebido")}
         value={received}
       />
       <div className="flex flex-wrap gap-2">
@@ -115,7 +116,7 @@ function CashStep({
         disabled={change < -0.004}
         onClick={onPaid}
       >
-        Confirmar pagamento em dinheiro
+        {tx("Confirmar pagamento em dinheiro")}
       </Button>
     </div>
   );
@@ -133,7 +134,7 @@ function PaidReceipt({ data, orderId }: { data: PosData; orderId: string }) {
       {show ? <ReceiptPreview doc={doc} settings={data.receipt} /> : null}
       <Button onClick={() => setShow(!show)} variant="ghost">
         <Icon className="size-4" name="IconReceiptBill" />
-        {show ? "Esconder recibo" : "Ver recibo"}
+        {show ? tx("Esconder recibo") : tx("Ver recibo")}
       </Button>
       <PrintButtons doc={doc} />
     </div>
@@ -265,7 +266,7 @@ export function CheckoutSheet({
                     onClick={() => setTipRate(r)}
                     type="button"
                   >
-                    {r === 0 ? "Sem" : `${r}%`}
+                    {r === 0 ? tx("Sem") : `${r}%`}
                   </button>
                 ))}
               </div>
@@ -281,41 +282,43 @@ export function CheckoutSheet({
                 disabled={!settings.sumupAffiliateKey}
                 hint={
                   settings.sumupAffiliateKey
-                    ? "Tap to Pay no telefone pelo app SumUp"
-                    : "Configure a chave da SumUp em Produtos → Configurações"
+                    ? tx("Tap to Pay no telefone pelo app SumUp")
+                    : tx(
+                        "Configure a chave da SumUp em Produtos → Configurações"
+                      )
                 }
                 icon="IconNfc1"
                 onClick={tapToPay}
-                title="Cartão por aproximação"
+                title={tx("Cartão por aproximação")}
               />
               <MethodButton
                 hint="Calcula o troco"
                 icon="IconBanknote1"
                 onClick={() => setStep("cash")}
-                title="Dinheiro"
+                title={tx("Dinheiro")}
               />
               <MethodButton
                 disabled={!link}
                 hint={
                   link
-                    ? "Envie o link — o cliente paga no celular dele"
-                    : "Configure o link em Produtos → Configurações"
+                    ? tx("Envie o link — o cliente paga no celular dele")
+                    : tx("Configure o link em Produtos → Configurações")
                 }
                 icon="IconQrCode"
                 onClick={() => setStep("link")}
-                title="Link de pagamento"
+                title={tx("Link de pagamento")}
               />
               <MethodButton
                 hint="Escaneie o QR ou digite o código: o desconto entra no pedido"
                 icon="IconGiftcard"
                 onClick={() => setStep("voucher")}
-                title="Usar voucher"
+                title={tx("Usar voucher")}
               />
               <MethodButton
                 hint="Maquininha, transferência, voucher…"
                 icon="IconCreditCard1"
                 onClick={() => setStep("other")}
-                title="Outro meio"
+                title={tx("Outro meio")}
               />
             </>
           ) : null}
@@ -339,13 +342,13 @@ export function CheckoutSheet({
                 variant="outline"
               >
                 <Icon className="size-5" name="IconPaperPlane" />
-                Enviar link
+                {tx("Enviar link")}
               </Button>
               <Button
                 className="h-12 rounded-full text-base"
                 onClick={() => pay("link")}
               >
-                Cliente pagou
+                {tx("Cliente pagou")}
               </Button>
             </div>
           ) : null}
@@ -376,7 +379,7 @@ export function CheckoutSheet({
                 className="h-12 rounded-full text-base"
                 onClick={() => pay("other")}
               >
-                Confirmar pagamento
+                {tx("Confirmar pagamento")}
               </Button>
             </div>
           ) : null}
@@ -392,14 +395,14 @@ export function CheckoutSheet({
                 className="h-12 w-full rounded-full text-base"
                 onClick={close}
               >
-                Novo pedido
+                {tx("Novo pedido")}
               </Button>
             </div>
           ) : null}
 
           {step !== "choose" && step !== "done" ? (
             <Button onClick={() => setStep("choose")} variant="ghost">
-              Voltar
+              {tx("Voltar")}
             </Button>
           ) : null}
         </div>

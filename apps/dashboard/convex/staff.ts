@@ -35,6 +35,11 @@ const publicUser = (u: Doc<"posUsers">) => ({
   color: u.color,
   active: u.active,
   companies: u.companies ?? [],
+  jobTitle: u.jobTitle ?? "",
+  phone: u.phone ?? "",
+  email: u.email ?? "",
+  hourlyRate: u.hourlyRate ?? null,
+  startDate: u.startDate ?? "",
 });
 
 const cleanPerms = (perms: string[]) => PERMS.filter((p) => perms.includes(p));
@@ -170,6 +175,11 @@ export const save = mutation({
     pin: v.optional(v.string()),
     /** Businesses the user works in (empty = all). */
     companies: v.optional(v.array(v.string())),
+    jobTitle: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    hourlyRate: v.optional(v.number()),
+    startDate: v.optional(v.string()),
   },
   handler: async (ctx, { session, id, pin, ...fields }) => {
     const me = await requireStaff(ctx, session, "users");

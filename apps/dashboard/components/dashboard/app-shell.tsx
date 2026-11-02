@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ClientOnly } from "@/components/dashboard/client-only";
 import { FloatingMenu } from "@/components/dashboard/floating-menu";
 import { InstallHint } from "@/components/dashboard/install-hint";
+import { I18nRoot } from "@/lib/i18n/root";
 import { navItemFor, normalizePath } from "@/lib/nav";
 
 const noop = () => () => undefined;
@@ -26,6 +27,14 @@ function useEmbedded() {
  * and pages embedded in a widget show only their content.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <I18nRoot>
+      <AppFrame>{children}</AppFrame>
+    </I18nRoot>
+  );
+}
+
+function AppFrame({ children }: { children: ReactNode }) {
   const path = normalizePath(usePathname());
   const embedded = useEmbedded();
 

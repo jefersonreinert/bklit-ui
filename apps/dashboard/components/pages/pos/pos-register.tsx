@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import {
   addCustomAmount,
@@ -82,7 +83,7 @@ function ProductGrid({
     <div className="flex flex-col gap-3">
       <Input
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar produto…"
+        placeholder={tx("Buscar produto…")}
         value={query}
       />
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
@@ -98,7 +99,7 @@ function ProductGrid({
             onClick={() => setCategory(c)}
             type="button"
           >
-            {c ?? "Todos"}
+            {c ?? tx("Todos")}
           </button>
         ))}
       </div>
@@ -124,7 +125,7 @@ function ProductGrid({
       </div>
       {list.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground text-sm">
-          Nenhum produto. Cadastre em Produtos.
+          {tx("Nenhum produto. Cadastre em Produtos.")}
         </p>
       ) : null}
     </div>
@@ -168,10 +169,10 @@ function AmountHeader({
   return (
     <div className="flex flex-col items-center gap-3 py-2">
       <Input
-        aria-label="Nome da comanda"
+        aria-label={tx("Nome da comanda")}
         className="h-9 max-w-64 border-none bg-transparent text-center text-base shadow-none focus-visible:ring-0"
         onChange={(e) => onName(e.target.value)}
-        placeholder={order ? orderLabel(order, data) : "Nome da comanda"}
+        placeholder={order ? orderLabel(order, data) : tx("Nome da comanda")}
         value={order?.name ?? ""}
       />
       <p
@@ -183,7 +184,7 @@ function AmountHeader({
         {money(shown, currency)}
       </p>
       <p className="h-4 text-muted-foreground text-xs">
-        {cents > 0 ? "Toque + para adicionar ao pedido" : null}
+        {cents > 0 ? tx("Toque + para adicionar ao pedido") : null}
       </p>
     </div>
   );
@@ -329,7 +330,7 @@ export function RegisterView({
       {/* Phone: action bar like a handheld register */}
       <div className="fixed inset-x-0 bottom-[calc(4.25rem+max(0.25rem,env(safe-area-inset-bottom)-0.5rem))] z-20 flex items-center gap-3 px-4 pb-2 md:bottom-4 lg:hidden">
         <button
-          aria-label="Enviar para a cozinha"
+          aria-label={tx("Enviar para a cozinha")}
           className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-sm disabled:opacity-50"
           disabled={!order?.items.some((i) => !i.sent)}
           onClick={() => order && sendToKitchen(order.id)}
@@ -346,7 +347,7 @@ export function RegisterView({
           Cobrar {money(total + cents / 100, currency)}
         </button>
         <button
-          aria-label="Ver pedido"
+          aria-label={tx("Ver pedido")}
           className="relative flex size-14 shrink-0 items-center justify-center rounded-full bg-muted shadow-sm"
           onClick={() => setCartOpen(true)}
           type="button"

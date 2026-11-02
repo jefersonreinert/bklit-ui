@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import {
   changeQty,
@@ -52,7 +53,7 @@ function NoteSheet({
           defaultValue={item?.note ?? ""}
           key={item?.id}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Ex.: sem tomate, molho à parte…"
+          placeholder={tx("Ex.: sem tomate, molho à parte…")}
         />
         <Button
           className="h-11 rounded-full"
@@ -61,7 +62,7 @@ function NoteSheet({
             onClose();
           }}
         >
-          Salvar observação
+          {tx("Salvar observação")}
         </Button>
       </SheetContent>
     </Sheet>
@@ -104,20 +105,20 @@ export function CartPanel({
           <p className="truncate font-semibold">{orderLabel(order, data)}</p>
           <p className="text-muted-foreground text-xs">
             Pedido #{order.number}
-            {order.status === "paying" ? " · aguardando pagamento" : ""}
+            {order.status === "paying" ? tx(" · aguardando pagamento") : ""}
           </p>
         </div>
         <Button
-          aria-label="Transferir mesa ou itens"
+          aria-label={tx("Transferir mesa ou itens")}
           onClick={() => setMoving(true)}
           size="sm"
           variant="ghost"
         >
           <Icon className="size-4" name="IconArrowsRepeatRightLeft" />
-          Transferir
+          {tx("Transferir")}
         </Button>
         <Button onClick={onNew} size="sm" variant="ghost">
-          Novo
+          {tx("Novo")}
         </Button>
       </div>
       <ul className="min-h-0 flex-1 divide-y overflow-y-auto px-4">
@@ -132,7 +133,7 @@ export function CartPanel({
               ) : null}
               <p className="text-muted-foreground text-xs">
                 {money(i.price, currency)}
-                {i.sent ? " · na cozinha" : ""}
+                {i.sent ? tx(" · na cozinha") : ""}
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -214,7 +215,7 @@ export function CartPanel({
           variant="outline"
         >
           <Icon className="size-5" name="IconFire2" />
-          Cozinha
+          {tx("Cozinha")}
         </Button>
         <Button
           className="h-12 flex-1 rounded-full text-base"

@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { tx } from "@/lib/i18n";
 import { Icon } from "@/lib/icons";
 import { money, uid } from "@/lib/pos/store";
 import type { ItemMod, ModifierGroup, PosProduct } from "@/lib/pos/types";
@@ -97,8 +98,8 @@ export function ModifierSheet({
               <p className="flex items-center gap-2 font-medium text-sm">
                 {g.name}
                 <span className="text-muted-foreground text-xs">
-                  {g.required ? "obrigatório" : "opcional"}
-                  {g.multiple ? " · vários" : ""}
+                  {g.required ? tx("obrigatório") : tx("opcional")}
+                  {g.multiple ? tx(" · vários") : ""}
                 </span>
               </p>
               <div className="flex flex-wrap gap-2">
@@ -129,7 +130,7 @@ export function ModifierSheet({
             <p className="font-medium text-sm">Observação para a cozinha</p>
             <Input
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Ex.: sem tomate, molho à parte…"
+              placeholder={tx("Ex.: sem tomate, molho à parte…")}
               value={note}
             />
             <div className="flex flex-wrap gap-1.5">
@@ -150,7 +151,7 @@ export function ModifierSheet({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-full bg-muted p-1">
               <button
-                aria-label="Menos"
+                aria-label={tx("Menos")}
                 className="flex size-10 items-center justify-center rounded-full bg-background"
                 onClick={() => setQty(Math.max(1, qty - 1))}
                 type="button"
@@ -159,7 +160,7 @@ export function ModifierSheet({
               </button>
               <span className="w-8 text-center tabular-nums">{qty}</span>
               <button
-                aria-label="Mais"
+                aria-label={tx("Mais")}
                 className="flex size-10 items-center justify-center rounded-full bg-background"
                 onClick={() => setQty(qty + 1)}
                 type="button"

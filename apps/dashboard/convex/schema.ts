@@ -489,8 +489,44 @@ export default defineSchema({
     active: v.boolean(),
     /** Businesses this user works in (missing or empty = all). */
     companies: v.optional(v.array(v.string())),
+    /** HR: job title, contacts, pay per hour and start date (YYYY-MM-DD). */
+    jobTitle: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    hourlyRate: v.optional(v.number()),
+    startDate: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_pinKey", ["pinKey"]),
+
+  /* --------------------------------- team --------------------------------- */
+  // Rota and time clock of the POS users, per business.
+
+  staffShifts: defineTable({
+    company: v.string(),
+    userId: v.id("posUsers"),
+    /** Local day YYYY-MM-DD. */
+    date: v.string(),
+    /** HH:MM; an end earlier than the start finishes the next day. */
+    start: v.string(),
+    end: v.string(),
+    note: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_company_date", ["company", "date"])
+    .index("by_user_date", ["userId", "date"]),
+
+  staffPunches: defineTable({
+    company: v.string(),
+    userId: v.id("posUsers"),
+    /** Clock-in and clock-out (ms); out is null while working. */
+    in: v.number(),
+    out: v.union(v.number(), v.null()),
+    /** Local day of the clock-in (YYYY-MM-DD), for weekly sums. */
+    date: v.string(),
+    device: v.optional(v.string()),
+  })
+    .index("by_company_date", ["company", "date"])
+    .index("by_user_in", ["userId", "in"]),
 
   posSessions: defineTable({
     userId: v.id("posUsers"),
