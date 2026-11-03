@@ -21,3 +21,8 @@ apagados.
   garrafa (arredondado para cima a €0,50). "Takeaway" vira o preço para levar.
 - `the-brew.json`: https://thebrewmalta.com (comida, cervejas, gins,
   destilados, coquetéis e vinhos das imagens do site).
+- `atlas.json`: https://atlasbar.sg (Singapura, em SGD) — menu de coquetéis,
+  "The ATLAS Collections" (gins por estilo, destilados) e a carta de
+  champanhes e vinhos. Gins e destilados são vendidos por dose; champanhes e
+  vinhos por garrafa (magnum = 1500 ml). Gerado dos PDFs com
+  `pdftotext -bbox-layout` (duas colunas lidas pela posição na página).
