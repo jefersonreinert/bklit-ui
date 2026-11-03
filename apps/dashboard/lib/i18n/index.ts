@@ -24,7 +24,6 @@ import { MT } from "./mt";
 export type Dict = Record<string, string>;
 
 const BUILTIN: Record<string, Dict> = { en: EN, es: ES, it: IT, mt: MT };
-export { SOURCE };
 
 /** Languages offered in the picker (BCP 47), most spoken first. */
 export const LANGUAGES = [
@@ -311,8 +310,6 @@ export function translate(
   return fill(lookup(text, code) ?? text, vars);
 }
 
-export { appLocale, setShownLocale, shownLocale } from "./locale";
-
 /**
  * tx("Caixa") outside hooks: the language on screen. I18nRoot remounts
  * the app when the language changes, so plain calls stay current.
@@ -327,7 +324,6 @@ export function useT() {
   return useCallback(
     (text: string, vars?: Record<string, string | number>) =>
       translate(text, vars, code),
-    // biome-ignore lint/correctness/useExhaustiveDependencies: new translations re-render through the store
     [code]
   );
 }
@@ -335,8 +331,38 @@ export function useT() {
 /* ------------------------------- AI filling ------------------------------ */
 
 const BATCH = 100;
-const PARALLEL = 3;
+/** One request at a time: the free AI tier allows few per minute. */
+const PARALLEL = 1;
+const RETRIES = 6;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let filling: string | null = null;
+
+/**
+ * Translates one batch; when the AI is busy or rate limited it waits 5,
+ * 10, 20… seconds and tries again (null after the last try).
+ */
+async function requestBatch(code: string, batch: string[]) {
+  for (let attempt = 0; attempt < RETRIES; attempt++) {
+    if (attempt > 0) {
+      await wait(Math.min(60_000, 5000 * 2 ** (attempt - 1)));
+    }
+    if (locale !== code) {
+      return null;
+    }
+    const res = await fetch("/api/i18n", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: code, texts: batch }),
+    }).catch(() => null);
+    if (res?.ok) {
+      const body = (await res.json()) as {
+        translations: Record<string, string>;
+      };
+      return body.translations;
+    }
+  }
+  return null;
+}
 
 /** Asks the server to translate the texts this language still lacks. */
 async function fillMissing(code: string) {
@@ -364,21 +390,11 @@ async function fillMissing(code: string) {
         if (locale !== code) {
           return;
         }
-        const res = await fetch("/api/i18n", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ locale: code, texts: batch }),
-        }).catch(() => null);
-        if (!res?.ok) {
-          continue;
-        }
-        const { translations } = (await res.json()) as {
-          translations: Record<string, string>;
-        };
+        const translations = await requestBatch(code, batch);
         if (locale !== code) {
           return;
         }
-        for (const [k, t] of Object.entries(translations)) {
+        for (const [k, t] of Object.entries(translations ?? {})) {
           remote.set(k, t);
         }
         if (progress) {
