@@ -1,0 +1,12 @@
+{
+  "name": "wine-monitor-sync",
+  "private": true,
+  "type": "module",
+  "description": "Read-only mirror of the By The Glass Wine Monitor portal into the Casa Brasa POS",
+  "scripts": {
+    "sync": "node sync.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.48.2"
+  }
+}

@@ -33,6 +33,7 @@ import type * as team from "../team.js";
 import type * as telegram from "../telegram.js";
 import type * as tgmedia from "../tgmedia.js";
 import type * as vouchers from "../vouchers.js";
+import type * as winemonitor from "../winemonitor.js";
 
 import type {
   ApiFromModules,
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   telegram: typeof telegram;
   tgmedia: typeof tgmedia;
   vouchers: typeof vouchers;
+  winemonitor: typeof winemonitor;
 }>;
 
 /**

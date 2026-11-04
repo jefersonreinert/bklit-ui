@@ -225,4 +225,58 @@ http.route({
   ),
 });
 
+/**
+ * POST /winemonitor/sync (header x-wm-token: $WINEMONITOR_TOKEN)
+ * Snapshot of the Wine Monitor portal from services/wine-monitor-sync.
+ */
+http.route({
+  path: "/winemonitor/sync",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const expected = process.env.WINEMONITOR_TOKEN ?? "";
+    const given = request.headers.get("x-wm-token") ?? "";
+    if (!(expected && sameToken(given, expected))) {
+      return json({ ok: false, error: "unauthorized" }, 401);
+    }
+    const text = await request.text();
+    if (text.length > 4_000_000) {
+      return json({ ok: false, error: "too_large" }, 413);
+    }
+    let b: Record<string, unknown>;
+    try {
+      b = JSON.parse(text);
+    } catch {
+      return json({ ok: false, error: "bad_json" }, 400);
+    }
+    const list = (k: string) => (Array.isArray(b[k]) ? (b[k] as never[]) : []);
+    const company = typeof b.company === "string" ? b.company : "";
+    const takenAt = Number(b.takenAt);
+    if (!(company && Number.isFinite(takenAt))) {
+      return json({ ok: false, error: "bad_snapshot" }, 400);
+    }
+    try {
+      const result = await ctx.runMutation(internal.winemonitor.ingest, {
+        company,
+        takenAt,
+        ms: Number(b.ms) || 0,
+        node: b.node ?? null,
+        dispensers: list("dispensers"),
+        positions: list("positions"),
+        wines: list("wines"),
+        cards: list("cards"),
+        sales: list("sales"),
+        salesFrom: Number(b.salesFrom) || takenAt - 86_400_000,
+        credits: list("credits"),
+        changes: list("changes"),
+      });
+      return json({ ok: true, ...result });
+    } catch (err) {
+      return json(
+        { ok: false, error: err instanceof Error ? err.message : "failed" },
+        400
+      );
+    }
+  }),
+});
+
 export default http;
