@@ -412,8 +412,12 @@ export default defineSchema({
     openedBy: v.optional(v.string()),
     closedBy: v.optional(v.string()),
     company: v.optional(v.string()),
+    /** Guest book customer of this order (loyalty). */
+    customerId: v.optional(v.id("posCustomers")),
+    customerName: v.optional(v.string()),
   })
     .index("by_cid", ["cid"])
+    .index("by_customer", ["customerId", "closedAt"])
     .index("by_status_closed", ["status", "closedAt"])
     .index("by_company_status_closed", ["company", "status", "closedAt"]),
 
@@ -433,6 +437,82 @@ export default defineSchema({
     failedLogins: v.optional(v.number()),
     lockedUntil: v.optional(v.number()),
   }).index("by_key", ["key"]),
+
+  /**
+   * Customers of the whole group (guest book): contact, VIP discount,
+   * loyalty stamps and what they spent. Shared by every business.
+   */
+  posCustomers: defineTable({
+    name: v.string(),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    /** "MM-DD" or "YYYY-MM-DD". */
+    birthday: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    tags: v.array(v.string()),
+    /** VIP card: percent off every order (0 = none). */
+    vip: v.number(),
+    /** Loyalty card code (QR / barcode on the card or phone). */
+    code: v.string(),
+    stamps: v.array(v.object({ programId: v.string(), count: v.number() })),
+    visits: v.number(),
+    spent: v.number(),
+    lastVisit: v.optional(v.number()),
+    lastCompany: v.optional(v.string()),
+    /** Agreed to receive offers (GDPR). */
+    optIn: v.boolean(),
+    createdAt: v.number(),
+    createdBy: v.string(),
+  })
+    .index("by_code", ["code"])
+    .index("by_phone", ["phone"])
+    .index("by_email", ["email"])
+    .index("by_lastVisit", ["lastVisit"])
+    .searchIndex("search_name", { searchField: "name" }),
+
+  /** Punch cards: every N qualifying items earns a reward. */
+  posPunchPrograms: defineTable({
+    company: v.string(),
+    name: v.string(),
+    categories: v.array(v.string()),
+    productIds: v.array(v.string()),
+    stamps: v.number(),
+    /** "free": the cheapest qualifying item of the order; "amount": value off. */
+    reward: v.union(v.literal("free"), v.literal("amount")),
+    rewardValue: v.number(),
+    active: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_company", ["company"]),
+
+  /** Gift cards with a balance (sold, topped up and spent at the POS). */
+  posGiftCards: defineTable({
+    code: v.string(),
+    label: v.string(),
+    initial: v.number(),
+    balance: v.number(),
+    /** Not active until the order that sells it is paid. */
+    active: v.boolean(),
+    customerId: v.optional(v.id("posCustomers")),
+    /** 0 = never expires. */
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    history: v.array(
+      v.object({
+        kind: v.union(
+          v.literal("issue"),
+          v.literal("topup"),
+          v.literal("redeem")
+        ),
+        amount: v.number(),
+        orderCid: v.optional(v.string()),
+        orderNumber: v.optional(v.number()),
+        company: v.optional(v.string()),
+        userName: v.string(),
+        at: v.number(),
+      })
+    ),
+  }).index("by_code", ["code"]),
 
   /** Suppliers of a business (inventory). */
   posSuppliers: defineTable({

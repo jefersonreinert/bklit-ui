@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,6 +10,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { tx } from "@/lib/i18n";
 import { Icon, type IconName } from "@/lib/icons";
 import { paymentLinkUrl, sumupPayUrl } from "@/lib/pos/payments";
@@ -19,11 +21,13 @@ import {
   orderTotals,
   payOrder,
   readPos,
+  sendPos,
   updateOrder,
 } from "@/lib/pos/store";
 import type { PaymentMethod, PosData, PosOrder } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { orderLabel } from "./pos-cart";
+import { GiftCardStep } from "./pos-customers";
 import { SumupQrStep, useSumupQrAvailable } from "./pos-qr";
 import { autoPrint, PrintButtons, ReceiptPreview } from "./pos-receipt";
 import { RedeemVoucher } from "./pos-vouchers";
@@ -31,7 +35,15 @@ import { RedeemVoucher } from "./pos-vouchers";
 const TIPS = [0, 5, 10, 15];
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-type Step = "choose" | "qr" | "cash" | "link" | "other" | "voucher" | "done";
+type Step =
+  | "choose"
+  | "qr"
+  | "cash"
+  | "link"
+  | "other"
+  | "voucher"
+  | "gift"
+  | "done";
 
 function MethodButton({
   icon,
@@ -161,6 +173,18 @@ export function CheckoutSheet({
   const total = orderTotals(order).total;
   const tip = Math.round(total * tipRate) / 100;
   const due = total + tip;
+
+  // VIP discount follows the items added since the customer was chosen
+  const customerId = order.customerId;
+  const orderId = order.id;
+  useEffect(() => {
+    if (open && customerId) {
+      sendPos(api.loyalty.attachCustomer, {
+        orderId,
+        customerId: customerId as Id<"posCustomers">,
+      });
+    }
+  }, [open, customerId, orderId]);
 
   const qrAvailable = useSumupQrAvailable();
   // Prints on the automatic printers once the payment is saved
@@ -315,6 +339,12 @@ export function CheckoutSheet({
                 title={tx("Usar voucher")}
               />
               <MethodButton
+                hint="Pagar com saldo, vender ou recarregar um gift card"
+                icon="IconGiftcard"
+                onClick={() => setStep("gift")}
+                title={tx("Gift card")}
+              />
+              <MethodButton
                 hint="Maquininha, transferência, voucher…"
                 icon="IconCreditCard1"
                 onClick={() => setStep("other")}
@@ -351,6 +381,10 @@ export function CheckoutSheet({
                 {tx("Cliente pagou")}
               </Button>
             </div>
+          ) : null}
+
+          {step === "gift" ? (
+            <GiftCardStep onDone={() => setStep("choose")} order={order} />
           ) : null}
 
           {step === "voucher" ? (

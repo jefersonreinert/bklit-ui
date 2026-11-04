@@ -15,6 +15,7 @@ import {
 } from "@/lib/pos/store";
 import type { OrderItem, PosData, PosOrder } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
+import { CustomerButton } from "./pos-customers";
 import { lineDetail } from "./pos-modifiers";
 import { TransferSheet } from "./pos-transfer";
 
@@ -108,6 +109,7 @@ export function CartPanel({
             {order.status === "paying" ? tx(" · aguardando pagamento") : ""}
           </p>
         </div>
+        <CustomerButton order={order} />
         <Button
           aria-label={tx("Transferir mesa ou itens")}
           onClick={() => setMoving(true)}
