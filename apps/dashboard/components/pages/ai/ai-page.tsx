@@ -1411,6 +1411,14 @@ export function AiPage() {
               .join(" · ")}
           </p>
           <div className="acrylic flex h-11 items-center gap-1 rounded-full border bg-card/80 px-1.5 shadow-sm">
+            <a
+              aria-label="Meu telefone"
+              className="flex size-9 items-center justify-center rounded-full hover:bg-muted"
+              href={`${BASE_PATH}/ia/telefone/`}
+              title="Meu telefone"
+            >
+              <Icon className="size-5" name="IconPhone" />
+            </a>
             <button
               aria-label="Nova conversa"
               className="flex size-9 items-center justify-center rounded-full hover:bg-muted"
@@ -1456,6 +1464,10 @@ export function AiPage() {
                     </span>
                   </span>
                 </button>
+                <a className={MENU_ROW} href={`${BASE_PATH}/ia/telefone/`}>
+                  <Icon className="size-5" name="IconPhone" />
+                  Meu telefone
+                </a>
                 <a className={MENU_ROW} href={`${BASE_PATH}/voz/`}>
                   <Icon className="size-5" name="IconVoiceMid" />
                   Modo voz

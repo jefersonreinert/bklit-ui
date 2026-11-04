@@ -1,0 +1,14 @@
+[Unit]
+Description=Casa Brasa - celular virtual (Mobilerun)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/phone-agent
+ExecStartPre=-/usr/bin/adb connect 127.0.0.1:5555
+ExecStart=/opt/phone-agent/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8740
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
