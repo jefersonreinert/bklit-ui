@@ -11,8 +11,8 @@ services:
     cpus: 2
     mem_limit: 3g
     command:
-      - androidboot.redroid_width=1080
-      - androidboot.redroid_height=2340
-      - androidboot.redroid_dpi=420
+      - androidboot.redroid_width=1179
+      - androidboot.redroid_height=2556
+      - androidboot.redroid_dpi=460
       - androidboot.redroid_gpu_mode=guest
-      - androidboot.redroid_fps=15
+      - androidboot.redroid_fps=30

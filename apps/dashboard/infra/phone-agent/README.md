@@ -17,3 +17,13 @@ JWKS `/api/convex/jwks/` do app), ou seja, do código de acesso. A chave da IA
 
 Atualizar o servidor: copie `server.py` para `/opt/phone-agent/` e
 `systemctl restart phone-agent`.
+
+## Visual de iPhone
+
+- Tela 1179×2556 a 460 dpi (iPhone 16 Pro), navegação por gestos
+  (`cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural`),
+  modo escuro, fuso Europe/Malta, papel de parede em gradiente.
+- Ícones da barra de status do Android ocultos
+  (`settings put secure icon_blacklist clock,battery,ethernet,wifi,mobile,…`);
+  a página desenha a barra de status do iOS, a Dynamic Island e a moldura.
+- `com.android.quicksearchbox` desativado (sai a barra antiga do Google).

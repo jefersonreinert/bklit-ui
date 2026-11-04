@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ReactNode,
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
@@ -292,7 +293,7 @@ function useFrames(paused: boolean) {
     let url: string | null = null;
     const frame = async () => {
       try {
-        const res = await call("/screen?w=540");
+        const res = await call("/screen?w=590");
         if (!res.ok) {
           setError(message(new Error("phone_offline")));
           return;
@@ -377,51 +378,146 @@ function PhoneScreen({
     json(`/key/${name}`, {}).catch((err) => setError(message(err)));
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative w-full max-w-[340px] overflow-hidden rounded-[2.2rem] border-[6px] border-foreground/85 bg-black shadow-xl">
+    <div className="flex flex-col items-center gap-4">
+      <IPhoneFrame>
         {src ? (
           // biome-ignore lint/performance/noImgElement: live frames from the VPS, not a static asset
           <img
             alt="Tela do celular"
-            className="block aspect-[1080/2340] w-full cursor-pointer touch-none select-none"
+            className="block aspect-[1179/2556] w-full cursor-pointer touch-none select-none"
             draggable={false}
-            height={1170}
+            height={1279}
             onPointerDown={onDown}
             onPointerUp={onUp}
             src={src}
-            width={540}
+            width={590}
           />
         ) : (
-          <div className="flex aspect-[1080/2340] w-full items-center justify-center p-6 text-center text-sm text-white/70">
+          <div className="flex aspect-[1179/2556] w-full items-center justify-center bg-[radial-gradient(circle_at_30%_25%,#ff5e3a55,transparent_55%),radial-gradient(circle_at_75%_40%,#a23aff55,transparent_55%),radial-gradient(circle_at_40%_80%,#1e78ff55,transparent_55%)] p-8 text-center text-sm text-white/80">
             {error ?? "Ligando a tela…"}
           </div>
         )}
-      </div>
+      </IPhoneFrame>
       {error && src ? (
         <p className="text-center text-destructive text-xs">{error}</p>
       ) : null}
-      <div className="flex items-center gap-2">
-        <Button onClick={() => key("back")} size="sm" variant="outline">
-          <Icon className="size-4" name="IconChevronLeft" />
-          Voltar
-        </Button>
-        <Button onClick={() => key("home")} size="sm" variant="outline">
-          <Icon className="size-4" name="IconHome" />
-          Início
-        </Button>
-        <Button onClick={() => key("recents")} size="sm" variant="outline">
-          Apps
-        </Button>
-        <Button
-          aria-label="Atualizar a tela"
-          onClick={onRefresh}
-          size="sm"
-          variant="ghost"
-        >
-          <Icon className="size-4" name="IconArrowRotateClockwise" />
-        </Button>
+      <div className="acrylic flex items-center gap-1 rounded-full border bg-card/80 p-1 shadow-sm">
+        <RoundKey label="Voltar" onClick={() => key("back")}>
+          <Icon className="size-[18px]" name="IconChevronLeft" />
+        </RoundKey>
+        <RoundKey label="Início" onClick={() => key("home")}>
+          <Icon className="size-[18px]" name="IconHome" />
+        </RoundKey>
+        <RoundKey label="Apps abertos" onClick={() => key("recents")}>
+          <span className="grid size-[15px] grid-cols-2 gap-[3px]">
+            <span className="rounded-[2px] border-[1.5px] border-current" />
+            <span className="rounded-[2px] border-[1.5px] border-current" />
+            <span className="rounded-[2px] border-[1.5px] border-current" />
+            <span className="rounded-[2px] border-[1.5px] border-current" />
+          </span>
+        </RoundKey>
+        <span className="mx-1 h-5 w-px bg-border" />
+        <RoundKey label="Atualizar a tela" onClick={onRefresh}>
+          <Icon className="size-[18px]" name="IconArrowRotateClockwise" />
+        </RoundKey>
       </div>
       <TypeBox onError={(e) => setError(message(e))} />
+    </div>
+  );
+}
+
+function RoundKey({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="flex size-10 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+const MALTA_TIME = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Malta",
+});
+
+/** iOS status bar drawn over the phone (Android's own icons are hidden). */
+function StatusBar() {
+  const [now, setNow] = useState(() => MALTA_TIME.format(new Date()));
+  useEffect(() => {
+    const t = setInterval(() => setNow(MALTA_TIME.format(new Date())), 15_000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 flex h-[5.9%] items-center justify-between px-[9%] pt-[0.4%] font-semibold text-[15px] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]"
+      translate="no"
+    >
+      <span className="w-[24%] text-center tabular-nums">{now}</span>
+      <span className="flex w-[24%] items-center justify-center gap-[5px]">
+        <span className="flex h-[11px] items-end gap-[1.5px]">
+          {[4, 6, 8, 11].map((h) => (
+            <span
+              className="w-[3px] rounded-[1px] bg-white"
+              key={h}
+              style={{ height: h }}
+            />
+          ))}
+        </span>
+        <svg
+          aria-hidden="true"
+          className="h-[11px] w-[15px]"
+          viewBox="0 0 16 12"
+        >
+          <path
+            d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3A10.3 10.3 0 0 0 8 .4C5.2.4 2.7 1.5.8 3.3L2 4.6a8.6 8.6 0 0 1 6-2.4Zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3A6.7 6.7 0 0 0 8 4c-1.8 0-3.4.7-4.6 1.8l1.2 1.3c.9-.8 2.1-1.3 3.4-1.3Zm0 3.6c-.4 0-.8.2-1.1.4L8 11.6l1.1-1.8c-.3-.2-.7-.4-1.1-.4Z"
+            fill="white"
+          />
+        </svg>
+        <span className="relative flex h-[12px] w-[24px] items-center rounded-[3.5px] border border-white/45 p-[1.5px]">
+          <span className="h-full w-[80%] rounded-[1.5px] bg-white" />
+          <span className="absolute -right-[3px] h-[4px] w-[1.5px] rounded-r-sm bg-white/45" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** iPhone 16 Pro look: titanium band, black bezel, Dynamic Island, buttons. */
+function IPhoneFrame({ children }: { children: ReactNode }) {
+  const side =
+    "absolute w-[3px] bg-gradient-to-b from-[#b9b4ac] via-[#8a857e] to-[#5f5b55]";
+  return (
+    <div className="relative w-full max-w-[350px] px-[3px]">
+      {/* side buttons */}
+      <span className={cn(side, "top-[15%] left-0 h-[4.5%] rounded-l-sm")} />
+      <span className={cn(side, "top-[23%] left-0 h-[7.5%] rounded-l-sm")} />
+      <span className={cn(side, "top-[32.5%] left-0 h-[7.5%] rounded-l-sm")} />
+      <span className={cn(side, "top-[26%] right-0 h-[11%] rounded-r-sm")} />
+      <div className="rounded-[3.6rem] bg-gradient-to-br from-[#d6d1c9] via-[#8d8880] to-[#4c4944] p-[3px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55),0_10px_25px_-10px_rgba(0,0,0,0.4)]">
+        <div className="rounded-[3.45rem] bg-black p-[11px]">
+          <div className="relative overflow-hidden rounded-[2.75rem] bg-black">
+            {children}
+            <StatusBar />
+            <span className="pointer-events-none absolute top-[1.15%] left-1/2 h-[3.55%] w-[31%] -translate-x-1/2 rounded-full bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+              <span className="absolute top-1/2 right-[14%] size-[22%] -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,#3a4a6b,#0b0f19_60%)]" />
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -558,6 +654,10 @@ function Settings({
 
 /* ---------------------------------- tasks -------------------------------- */
 
+const LOG_ERROR = /error|💥|failed|❌/i;
+const LOG_DONE = /✅|done|success|complete/i;
+const LOG_THINK = /^\s*(🧠|💭|📝|🤔)/;
+
 function TaskCard({ task, onStop }: { task: Task; onStop?: () => void }) {
   return (
     <div className="space-y-2 rounded-2xl border bg-card p-3">
@@ -576,12 +676,35 @@ function TaskCard({ task, onStop }: { task: Task; onStop?: () => void }) {
         </span>
       </div>
       {task.log.length ? (
-        <pre
-          className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/60 p-2 font-mono text-[11px] leading-relaxed"
-          translate="no"
-        >
-          {task.log.join("\n")}
-        </pre>
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0d1117] text-[#c9d1d9]">
+          <div className="flex items-center gap-1.5 border-white/10 border-b px-3 py-2">
+            <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+            <span className="size-2.5 rounded-full bg-[#febc2e]" />
+            <span className="size-2.5 rounded-full bg-[#28c840]" />
+            <span className="ml-2 font-mono text-[11px] text-white/40">
+              mobilerun
+            </span>
+          </div>
+          <pre
+            className="max-h-80 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11.5px] leading-relaxed"
+            translate="no"
+          >
+            {task.log.map((line, i) => (
+              <span
+                className={cn(
+                  "block",
+                  LOG_ERROR.test(line) && "text-[#ff7b72]",
+                  LOG_DONE.test(line) && "text-[#7ee787]",
+                  LOG_THINK.test(line) && "text-[#d2a8ff]"
+                )}
+                // biome-ignore lint/suspicious/noArrayIndexKey: log lines only grow
+                key={i}
+              >
+                {line}
+              </span>
+            ))}
+          </pre>
+        </div>
       ) : null}
       {onStop && task.state === "running" ? (
         <Button onClick={onStop} size="sm" variant="destructive">
