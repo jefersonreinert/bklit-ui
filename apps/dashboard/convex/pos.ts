@@ -75,7 +75,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
  * Runs an index query for a business; "main" also gets the documents
  * saved before companies existed (no company field).
  */
-async function inCompany<T>(
+export async function inCompany<T>(
   company: string,
   run: (key: string | undefined) => Promise<T[]>
 ) {
