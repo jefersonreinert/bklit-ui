@@ -18,6 +18,7 @@ import {
   worksIn,
 } from "./access";
 import { requirePanel } from "./lib";
+import { settleLoyalty } from "./loyalty";
 import { modifierGroup, posItem, posWine } from "./schema";
 
 /**
@@ -49,7 +50,9 @@ const productFields = {
   modifiers: v.optional(v.array(modifierGroup)),
   wine: v.optional(posWine),
   /** Recipe (technical sheet): selling one uses these ingredients. */
-  recipe: v.optional(v.array(v.object({ productId: v.string(), qty: v.number() }))),
+  recipe: v.optional(
+    v.array(v.object({ productId: v.string(), qty: v.number() }))
+  ),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
@@ -641,10 +644,14 @@ function addToDaily(
   for (const i of order.items) {
     const p = i.productId ? products.get(i.productId) : undefined;
     const unitCost = i.cost ?? (p?.cost ?? 0) * (i.portion ?? 1);
-    const key = i.productId ?? `avulso:${i.name}`;
+    // Record keys must be ASCII: system lines get a fixed key, typed
+    // amounts a plain version of their name
+    const sys = SYSTEM_LINE.exec(i.id)?.[1];
+    const key =
+      i.productId ?? (sys ? `sys:${sys}` : `avulso:${asciiKey(i.name)}`);
     const cur = d.products[key] ?? {
-      name: p?.name ?? i.name,
-      category: p?.category ?? "Avulso",
+      name: p?.name ?? (sys ? (SYSTEM_NAMES[sys] ?? i.name) : i.name),
+      category: p?.category ?? (sys ? "Fidelidade e descontos" : "Avulso"),
       qty: 0,
       revenue: 0,
       cost: 0,
@@ -660,6 +667,24 @@ function addToDaily(
   }
 }
 
+const SYSTEM_LINE = /^(vip|reward|gift|gift-sale|gift-topup|voucher):/;
+const SYSTEM_NAMES: Record<string, string> = {
+  vip: "Descontos VIP",
+  reward: "Prêmios do cartão de selos",
+  gift: "Pago com gift card",
+  "gift-sale": "Gift cards vendidos",
+  "gift-topup": "Recargas de gift card",
+  voucher: "Vouchers",
+};
+const NON_ASCII_KEY = /[^\x20-\x7e]/g;
+const COMBINING = /[\u0300-\u036f]/g;
+const asciiKey = (s: string) =>
+  s
+    .normalize("NFKD")
+    .replace(COMBINING, "")
+    .replace(NON_ASCII_KEY, "_")
+    .slice(0, 80);
+
 /** Pays the order, takes stock out and updates the day's totals. */
 export const pay = mutation({
   args: {
@@ -674,6 +699,7 @@ export const pay = mutation({
     day: v.string(),
     hour: v.string(),
   },
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one transaction: stock, loyalty, day totals
   handler: async (ctx, { session, orderId, payment, day, hour }) => {
     const user = await requireStaff(ctx, session, "charge");
     const order = await findOrder(ctx, orderId, user);
@@ -739,6 +765,8 @@ export const pay = mutation({
         }
       }
     }
+    // Gift cards, punch card stamps and the customer's visit
+    await settleLoyalty(ctx, order, user.name, company, now);
     // Day totals
     const [existing] = await inCompany(company, (key) =>
       ctx.db

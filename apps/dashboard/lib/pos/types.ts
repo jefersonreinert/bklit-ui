@@ -160,6 +160,9 @@ export interface PosOrder {
   createdAt: number;
   updatedAt: number;
   payment?: Payment;
+  /** Guest book customer (loyalty). */
+  customerId?: string;
+  customerName?: string;
 }
 
 export interface PosSettings {

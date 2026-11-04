@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PosGate, type PosPerm, UserChip, useCan } from "./pos-auth";
 import { CompanySwitcher } from "./pos-company";
+import { CustomersView } from "./pos-customers";
 import { OrdersView } from "./pos-orders";
 import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
@@ -36,6 +37,7 @@ export type PosTab =
   | "team"
   | "products"
   | "stock"
+  | "customers"
   | "reports"
   | "vouchers"
   | "settings";
@@ -77,6 +79,12 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     label: "Estoque",
     icon: "IconArchive",
     perm: ["stock"],
+  },
+  {
+    id: "customers",
+    label: "Clientes",
+    icon: "IconPeople",
+    perm: ["orders", "charge"],
   },
   { id: "reports", label: "Relatórios", icon: "IconChart1", perm: ["reports"] },
   {
@@ -184,27 +192,33 @@ function PosApp() {
 
   return (
     <div className="-m-4 mb-[calc(-1rem-env(safe-area-inset-bottom))] flex h-[calc(100dvh-var(--header-h))] flex-col md:-m-6 md:mb-[calc(-1.5rem-env(safe-area-inset-bottom))]">
-      <nav className="hidden shrink-0 items-center justify-center gap-1 border-b px-4 py-2 md:flex">
-        <span className="mr-2">
+      {/* Company and user stay put; the tabs scroll sideways when they
+          don't fit (no more overlap with the sidebar) */}
+      <nav className="hidden shrink-0 items-center gap-2 border-b px-4 py-2 md:flex">
+        <span className="shrink-0">
           <CompanySwitcher />
         </span>
-        {tabs.map((t) => (
-          <button
-            className={cn(
-              "flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors",
-              tab === t.id
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:bg-muted"
-            )}
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            type="button"
-          >
-            <Icon className="size-4" name={t.icon} />
-            {tr(t.label)}
-          </button>
-        ))}
-        <span className="ml-3 border-l pl-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto flex w-max items-center gap-1">
+            {tabs.map((t) => (
+              <button
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm transition-colors",
+                  tab === t.id
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                type="button"
+              >
+                <Icon className="size-4" name={t.icon} />
+                {tr(t.label)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <span className="shrink-0 border-l pl-3">
           <UserChip />
         </span>
       </nav>
@@ -242,6 +256,7 @@ function PosApp() {
         {tab === "team" ? <TeamView /> : null}
         {tab === "products" ? <ProductsView /> : null}
         {tab === "stock" ? <StockView /> : null}
+        {tab === "customers" ? <CustomersView /> : null}
         {tab === "reports" ? <ReportsView /> : null}
         {tab === "vouchers" ? <VouchersView /> : null}
         {tab === "settings" ? <SettingsView /> : null}
