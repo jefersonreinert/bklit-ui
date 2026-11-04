@@ -380,6 +380,10 @@ export default defineSchema({
     description: v.optional(v.string()),
     modifiers: v.optional(v.array(modifierGroup)),
     wine: v.optional(posWine),
+    /** Recipe (technical sheet): selling one uses these ingredients. */
+    recipe: v.optional(
+      v.array(v.object({ productId: v.string(), qty: v.number() }))
+    ),
     /** Business (posMeta key); missing = "main". */
     company: v.optional(v.string()),
     updatedAt: v.number(),
@@ -430,6 +434,71 @@ export default defineSchema({
     lockedUntil: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
+  /** Suppliers of a business (inventory). */
+  posSuppliers: defineTable({
+    company: v.string(),
+    name: v.string(),
+    contact: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_company", ["company"]),
+
+  /** Purchase orders: draft → ordered → received (adds the stock). */
+  posPurchases: defineTable({
+    company: v.string(),
+    number: v.number(),
+    supplierId: v.optional(v.id("posSuppliers")),
+    supplierName: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("ordered"),
+      v.literal("received"),
+      v.literal("cancelled")
+    ),
+    items: v.array(
+      v.object({
+        productId: v.string(),
+        name: v.string(),
+        qty: v.number(),
+        unitCost: v.number(),
+        /** Quantity that arrived (set when received). */
+        received: v.optional(v.number()),
+      })
+    ),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    orderedAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+    receivedBy: v.optional(v.string()),
+  }).index("by_company_created", ["company", "createdAt"]),
+
+  /** Stock takes: what the system had vs what was counted. */
+  posCounts: defineTable({
+    company: v.string(),
+    number: v.number(),
+    name: v.string(),
+    status: v.union(v.literal("open"), v.literal("closed")),
+    items: v.array(
+      v.object({
+        productId: v.string(),
+        name: v.string(),
+        category: v.string(),
+        unit: v.optional(v.string()),
+        expected: v.number(),
+        counted: v.union(v.number(), v.null()),
+        unitCost: v.number(),
+      })
+    ),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    closedAt: v.optional(v.number()),
+    closedBy: v.optional(v.string()),
+  }).index("by_company_created", ["company", "createdAt"]),
+
   posStock: defineTable({
     productCid: v.string(),
     qty: v.number(),
@@ -437,7 +506,9 @@ export default defineSchema({
       v.literal("sale"),
       v.literal("purchase"),
       v.literal("adjust"),
-      v.literal("waste")
+      v.literal("waste"),
+      /** Stock take: the difference between the count and the system. */
+      v.literal("count")
     ),
     unitCost: v.optional(v.number()),
     note: v.optional(v.string()),

@@ -24,6 +24,8 @@ export interface PosProduct {
   modifiers?: ModifierGroup[];
   /** Wine sold by the glass or bottle (stock in bottles). */
   wine?: WineInfo;
+  /** Recipe (technical sheet): ingredients used by one sale. */
+  recipe?: { productId: string; qty: number }[];
 }
 
 export type WineColor =
