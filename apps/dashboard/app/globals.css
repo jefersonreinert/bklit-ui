@@ -494,3 +494,8 @@
   --chart-crosshair: var(--muted-foreground);
   --chart-label: var(--muted-foreground);
 }
+
+/* No double-tap zoom on phones (pinch still works for accessibility) */
+html {
+  touch-action: manipulation;
+}

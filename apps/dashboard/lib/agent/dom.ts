@@ -42,8 +42,8 @@ const INTERACTIVE = [
   '[role="combobox"]',
 ].join(",");
 
-const MAX_ELEMENTS = 160;
-const MAX_TEXT = 2500;
+const MAX_ELEMENTS = 120;
+const MAX_TEXT = 1800;
 const SPACES = /\s+/g;
 
 /** The agent's own panel and cursor are not part of the page it reads. */
@@ -196,59 +196,15 @@ export function snapshot(): PageSnapshot {
 
 export const elementById = (id: number) => registry.get(id) ?? null;
 
-/* --------------------------------- cursor -------------------------------- */
+/* -------------------------------- actions -------------------------------- */
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-let cursor: HTMLDivElement | null = null;
-
-function ensureCursor() {
-  if (cursor?.isConnected) {
-    return cursor;
-  }
-  cursor = document.createElement("div");
-  cursor.dataset.agentUi = "cursor";
-  cursor.setAttribute("aria-hidden", "true");
-  cursor.style.cssText =
-    "position:fixed;left:0;top:0;z-index:2147483646;pointer-events:none;transition:transform 450ms cubic-bezier(.2,.8,.2,1),opacity 200ms;opacity:0;transform:translate(50vw,50vh)";
-  cursor.innerHTML =
-    '<svg width="26" height="26" viewBox="0 0 24 24" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))"><path d="M4 2.5l15 9.2-6.4 1.4 3.9 7.1-2.6 1.4-3.9-7.1-4.6 4.6z" fill="#c96442" stroke="white" stroke-width="1.4" stroke-linejoin="round"/></svg>';
-  document.body.appendChild(cursor);
-  return cursor;
-}
-
-export function hideCursor() {
-  if (cursor) {
-    cursor.style.opacity = "0";
-  }
-}
-
-async function pointAt(el: HTMLElement) {
-  el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-  await wait(300);
+/** No cursor: a short outline on the element, without scrolling the page
+ * unless the element is out of sight (no jumps, no zoom). */
+function reveal(el: HTMLElement) {
   const r = el.getBoundingClientRect();
-  const x = r.left + Math.min(r.width / 2, 40);
-  const y = r.top + r.height / 2;
-  const c = ensureCursor();
-  c.style.opacity = "1";
-  c.style.transform = `translate(${x - 4}px, ${y - 3}px)`;
-  await wait(480);
-  return { x, y };
-}
-
-function ripple(x: number, y: number) {
-  const dot = document.createElement("div");
-  dot.dataset.agentUi = "ripple";
-  dot.style.cssText = `position:fixed;left:${x - 18}px;top:${y - 18}px;width:36px;height:36px;border-radius:50%;background:rgba(201,100,66,.35);z-index:2147483645;pointer-events:none;transition:transform 450ms,opacity 450ms`;
-  document.body.appendChild(dot);
-  requestAnimationFrame(() => {
-    dot.style.transform = "scale(1.8)";
-    dot.style.opacity = "0";
-  });
-  setTimeout(() => dot.remove(), 500);
-}
-
-function highlight(el: HTMLElement) {
+  if (r.bottom < 0 || r.top > window.innerHeight) {
+    el.scrollIntoView({ block: "center", behavior: "instant" });
+  }
   const prev = el.style.outline;
   const prevOffset = el.style.outlineOffset;
   el.style.outline = "2px solid #c96442";
@@ -256,15 +212,31 @@ function highlight(el: HTMLElement) {
   setTimeout(() => {
     el.style.outline = prev;
     el.style.outlineOffset = prevOffset;
-  }, 900);
+  }, 350);
+  const after = el.getBoundingClientRect();
+  return {
+    x: after.left + Math.min(after.width / 2, 40),
+    y: after.top + after.height / 2,
+  };
 }
 
-/* -------------------------------- actions -------------------------------- */
+/** On phones focusing a field pops the keyboard up: the agent types
+ * without it. */
+const touch = () => window.matchMedia("(pointer: coarse)").matches;
 
-export async function click(el: HTMLElement) {
-  const { x, y } = await pointAt(el);
-  highlight(el);
-  ripple(x, y);
+function focus(el: HTMLElement) {
+  if (!touch()) {
+    el.focus({ preventScroll: true });
+  }
+}
+
+/** Kept for callers; there is no cursor any more. */
+export function hideCursor() {
+  // nothing to hide
+}
+
+export function click(el: HTMLElement) {
+  const { x, y } = reveal(el);
   const common = {
     bubbles: true,
     cancelable: true,
@@ -277,9 +249,7 @@ export async function click(el: HTMLElement) {
     new PointerEvent("pointerdown", { ...common, pointerType: "mouse" })
   );
   el.dispatchEvent(new MouseEvent("mousedown", common));
-  if (el instanceof HTMLElement && typeof el.focus === "function") {
-    el.focus({ preventScroll: true });
-  }
+  focus(el);
   el.dispatchEvent(
     new PointerEvent("pointerup", { ...common, pointerType: "mouse" })
   );
@@ -297,10 +267,9 @@ function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, v: string) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-export async function type(el: HTMLElement, text: string, clear = true) {
-  await pointAt(el);
-  highlight(el);
-  el.focus({ preventScroll: true });
+export function type(el: HTMLElement, text: string, clear = true) {
+  reveal(el);
+  focus(el);
   if (el instanceof HTMLSelectElement) {
     const option = [...el.options].find(
       (o) =>
@@ -313,15 +282,7 @@ export async function type(el: HTMLElement, text: string, clear = true) {
     return;
   }
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-    let value = clear ? "" : el.value;
-    setNativeValue(el, value);
-    // Types in small chunks so it is visible but quick
-    const step = Math.max(1, Math.ceil(text.length / 40));
-    for (let i = 0; i < text.length; i += step) {
-      value += text.slice(i, i + step);
-      setNativeValue(el, value);
-      await wait(28);
-    }
+    setNativeValue(el, (clear ? "" : el.value) + text);
     el.dispatchEvent(new Event("change", { bubbles: true }));
     return;
   }
@@ -363,7 +324,7 @@ export function scroll(direction: "up" | "down") {
   );
   (scroller ?? main ?? document.scrollingElement)?.scrollBy({
     top: amount,
-    behavior: "smooth",
+    behavior: "instant",
   });
-  window.scrollBy({ top: amount, behavior: "smooth" });
+  window.scrollBy({ top: amount, behavior: "instant" });
 }
