@@ -40,6 +40,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // No automatic zoom when a field gets focus on the iPhone
+  maximumScale: 1,
   viewportFit: "cover",
   themeColor: "#141413",
 };

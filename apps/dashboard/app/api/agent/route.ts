@@ -22,65 +22,60 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY = 120_000;
 
-const Action = z.object({
-  thought: z.string(),
-  type: z.enum([
-    "navigate",
-    "click",
-    "type",
-    "press",
-    "scroll",
-    "wait",
-    "done",
-    "ask",
-  ]),
+const TYPES = [
+  "navigate",
+  "click",
+  "type",
+  "press",
+  "scroll",
+  "wait",
+  "done",
+  "ask",
+] as const;
+
+const Step = z.object({
+  type: z.enum(TYPES),
   id: z.number().int().nullable(),
   text: z.string().nullable(),
   path: z.string().nullable(),
   key: z.string().nullable(),
   submit: z.boolean().nullable(),
   direction: z.enum(["up", "down"]).nullable(),
+});
+
+/** Several steps per answer: far fewer round trips to the AI. */
+const Plan = z.object({
+  thought: z.string(),
+  actions: z.array(Step).min(1).max(6),
   message: z.string().nullable(),
 });
-type Action = z.infer<typeof Action>;
+type Plan = z.infer<typeof Plan>;
 
 const nullable = (type: string) => ({ type: [type, "null"] });
 const SCHEMA = {
   type: "object",
   properties: {
     thought: { type: "string" },
-    type: {
-      type: "string",
-      enum: [
-        "navigate",
-        "click",
-        "type",
-        "press",
-        "scroll",
-        "wait",
-        "done",
-        "ask",
-      ],
+    actions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: [...TYPES] },
+          id: nullable("integer"),
+          text: nullable("string"),
+          path: nullable("string"),
+          key: nullable("string"),
+          submit: nullable("boolean"),
+          direction: { type: ["string", "null"], enum: ["up", "down", null] },
+        },
+        required: ["type", "id", "text", "path", "key", "submit", "direction"],
+        additionalProperties: false,
+      },
     },
-    id: nullable("integer"),
-    text: nullable("string"),
-    path: nullable("string"),
-    key: nullable("string"),
-    submit: nullable("boolean"),
-    direction: { type: ["string", "null"], enum: ["up", "down", null] },
     message: nullable("string"),
   },
-  required: [
-    "thought",
-    "type",
-    "id",
-    "text",
-    "path",
-    "key",
-    "submit",
-    "direction",
-    "message",
-  ],
+  required: ["thought", "actions", "message"],
   additionalProperties: false,
 };
 
@@ -145,26 +140,26 @@ function prompt(
     "What is on screen now:",
     describe(page),
     "",
-    "Choose exactly ONE next action:",
+    "Answer with the next actions (1 to 6) to do right now, in order, on THIS screen — chain them to be fast (e.g. type in a field and then click Send). Stop the list right after an action that changes the page or opens something new (navigate, a click that opens a page/dialog/menu): the screen is read again after the list. Action types:",
     '- navigate: path = one of the pages above (e.g. "/whatsapp"). Prefer this to clicking the menu.',
     "- click: id = element id.",
     "- type: id = an input/textarea/editor, text = what to write (replaces its content); submit = true to press Enter after.",
-    '- press: key = "Enter", "Escape", "Tab", "ArrowDown"…; id optional (the element to press it on).',
-    '- scroll: direction = "up" or "down" (to reach off-screen elements or read more).',
-    "- wait: when the page is still loading.",
-    `- done: the request is complete; message = a short answer for him in ${language} (what you did, or the information he asked for, read from the screen).`,
-    `- ask: you need something only he can tell (which contact, which message…); message = the question in ${language}.`,
+    '- press: key = "Enter", "Escape", "Tab", "ArrowDown"…; id optional.',
+    '- scroll: direction = "up" or "down".',
+    "- wait: only when the page is still loading.",
+    `- done: the request is complete (alone, or last); message = a short answer for him in ${language} (what you did, or the information he asked for, read from the screen).`,
+    `- ask: you need something only he can tell; message = the question in ${language}.`,
     "",
-    "Rules: his request is his authorization to send the messages or make the changes it asks for, and nothing beyond it. Never type passwords, PINs or access codes he did not give you, and never delete data unless he asked. If a step did not work, try another way (search box, scroll, another element) instead of repeating it. Keep thought to one short sentence. Fill every field (null when unused).",
+    "Rules: his request is his authorization to send the messages or make the changes it asks for, and nothing beyond it. Never type passwords, PINs or access codes he did not give you, and never delete data unless he asked. If a step did not work, try another way (search box, scroll, another element) instead of repeating it. Keep thought to one short sentence. Fill every field (null when unused); message is null unless done/ask.",
   ].join("\n");
 }
 
-async function withClaude(text: string): Promise<Action> {
+async function withClaude(text: string): Promise<Plan> {
   const client = new Anthropic();
   const response = await client.messages.parse({
     model: "claude-sonnet-5-5",
     max_tokens: 2000,
-    output_config: { effort: "low", format: zodOutputFormat(Action) },
+    output_config: { effort: "low", format: zodOutputFormat(Plan) },
     messages: [{ role: "user", content: text }],
   });
   if (!response.parsed_output) {
@@ -173,15 +168,20 @@ async function withClaude(text: string): Promise<Action> {
   return response.parsed_output;
 }
 
-async function nextAction(text: string): Promise<Action> {
-  if (process.env.ANTHROPIC_API_KEY) {
+/** After Claude fails (no credits, rate limit) skip it for a while: each
+ * failed try would add a second to every step. */
+let claudeDownUntil = 0;
+const CLAUDE_COOLDOWN_MS = 10 * 60_000;
+
+async function nextPlan(text: string): Promise<Plan> {
+  if (process.env.ANTHROPIC_API_KEY && Date.now() > claudeDownUntil) {
     try {
       return await withClaude(text);
     } catch {
-      // no credits or rate limited: Groq below
+      claudeDownUntil = Date.now() + CLAUDE_COOLDOWN_MS;
     }
   }
-  return Action.parse(await groqJson<Action>([], text, SCHEMA));
+  return Plan.parse(await groqJson<Plan>([], text, SCHEMA));
 }
 
 /** An administrator's POS session (the PIN), checked in Convex. */
@@ -231,11 +231,11 @@ export async function POST(request: NextRequest) {
   if (!(goal && body.page && Array.isArray(body.page.elements))) {
     return NextResponse.json({ error: "invalid" }, { status: 400 });
   }
-  const history = (body.history ?? []).slice(-25);
+  const history = (body.history ?? []).slice(-30);
   const language = (body.language ?? "Brazilian Portuguese").slice(0, 40);
   try {
-    const action = await nextAction(prompt(goal, body.page, history, language));
-    return NextResponse.json(action, {
+    const plan = await nextPlan(prompt(goal, body.page, history, language));
+    return NextResponse.json(plan, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch {

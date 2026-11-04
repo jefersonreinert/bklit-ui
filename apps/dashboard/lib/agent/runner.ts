@@ -45,7 +45,6 @@ export interface AgentState {
 }
 
 interface Action {
-  thought: string;
   type:
     | "navigate"
     | "click"
@@ -61,6 +60,11 @@ interface Action {
   key: string | null;
   submit: boolean | null;
   direction: "up" | "down" | null;
+}
+
+interface Plan {
+  thought: string;
+  actions: Action[];
   message: string | null;
 }
 
@@ -117,7 +121,7 @@ async function ask(goal: string, page: PageSnapshot) {
   const session = getSession();
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt) {
-      await wait(2500 * attempt);
+      await wait(1200 * attempt);
     }
     const res = await fetch(API, {
       method: "POST",
@@ -131,7 +135,7 @@ async function ask(goal: string, page: PageSnapshot) {
       return "locked" as const;
     }
     if (res?.ok) {
-      return (await res.json()) as Action;
+      return (await res.json()) as Plan;
     }
   }
   return null;
@@ -141,11 +145,12 @@ const quote = (s: string, max = 40) =>
   `“${s.length > max ? `${s.slice(0, max)}…` : s}”`;
 
 async function waitForPath(from: string, to: string) {
-  for (let i = 0; i < 25 && window.location.pathname === from; i++) {
-    await wait(120);
+  for (let i = 0; i < 60 && window.location.pathname === from; i++) {
+    await wait(50);
   }
+  // The new page renders its controls right after the route changes
   await wait(
-    window.location.pathname.replace(TRAILING_SLASHES, "") === to ? 1200 : 400
+    window.location.pathname.replace(TRAILING_SLASHES, "") === to ? 450 : 150
   );
 }
 
@@ -179,8 +184,8 @@ async function perform(a: Action, page: PageSnapshot) {
           result: "element not found",
         };
       }
-      await click(target);
-      await wait(900);
+      click(target);
+      await wait(250);
       return {
         label: `Clicando em ${quote(name)}`,
         ok: true,
@@ -192,12 +197,12 @@ async function perform(a: Action, page: PageSnapshot) {
         return { label: "Digitar", ok: false, result: "element not found" };
       }
       const text = a.text ?? "";
-      await type(target, text);
+      type(target, text);
       if (a.submit) {
-        await wait(200);
+        await wait(60);
         press("Enter", target);
       }
-      await wait(700);
+      await wait(a.submit ? 250 : 40);
       return {
         label: `Digitando ${quote(text)}${a.submit ? " e enviando" : ""}`,
         ok: true,
@@ -207,12 +212,12 @@ async function perform(a: Action, page: PageSnapshot) {
     case "press": {
       const key = a.key ?? "Enter";
       press(key, target);
-      await wait(700);
+      await wait(200);
       return { label: `Tecla ${key}`, ok: true, result: `pressed ${key}` };
     }
     case "scroll": {
       scroll(a.direction ?? "down");
-      await wait(800);
+      await wait(150);
       return {
         label:
           a.direction === "up" ? "Rolando para cima" : "Rolando para baixo",
@@ -221,55 +226,52 @@ async function perform(a: Action, page: PageSnapshot) {
       };
     }
     default: {
-      await wait(1500);
+      await wait(700);
       return { label: "Esperando a página", ok: true, result: "waited" };
     }
   }
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the read → ask → act loop with its exits
-async function loop(id: number) {
-  for (let step = 0; step < MAX_STEPS; step++) {
+const finish = (
+  status: "done" | "asking",
+  thought: string,
+  message: string
+) => {
+  set({
+    status,
+    message,
+    steps: [
+      ...state.steps,
+      {
+        thought,
+        label: status === "done" ? "Concluído" : "Pergunta",
+        ok: true,
+      },
+    ],
+  });
+};
+
+const summary = (a: Action) =>
+  `${a.type}${a.id ? ` #${a.id}` : ""}${a.path ? ` ${a.path}` : ""}${a.text ? ` ${JSON.stringify(a.text)}` : ""}${a.key ? ` ${a.key}` : ""}`;
+
+/** Does the plan's actions in order; false when it had to stop early. */
+async function runPlan(id: number, plan: Plan, page: PageSnapshot) {
+  const start = window.location.pathname;
+  for (const action of plan.actions) {
     if (id !== run) {
-      return;
-    }
-    const page = snapshot();
-    const action = await ask(state.goal, page);
-    if (id !== run) {
-      return;
-    }
-    if (action === "locked") {
-      set({ status: "locked", message: null });
-      hideCursor();
-      return;
-    }
-    if (!action) {
-      set({
-        status: "error",
-        message: "A IA não respondeu. Tente de novo em instantes.",
-      });
-      hideCursor();
-      return;
+      return false;
     }
     if (action.type === "done" || action.type === "ask") {
-      set({
-        status: action.type === "done" ? "done" : "asking",
-        message: action.message ?? (action.type === "done" ? "Pronto." : ""),
-        steps: [
-          ...state.steps,
-          {
-            thought: action.thought,
-            label: action.type === "done" ? "Concluído" : "Pergunta",
-            ok: true,
-          },
-        ],
-      });
-      hideCursor();
-      return;
+      finish(
+        action.type === "done" ? "done" : "asking",
+        plan.thought,
+        plan.message ?? (action.type === "done" ? "Pronto." : "")
+      );
+      return false;
     }
     const steps = [
       ...state.steps,
-      { thought: action.thought, label: "…", ok: null },
+      { thought: plan.thought, label: "…", ok: null },
     ];
     set({ steps });
     let done: { label: string; ok: boolean; result: string };
@@ -278,25 +280,51 @@ async function loop(id: number) {
     } catch {
       done = { label: "Ação", ok: false, result: "failed" };
     }
-    history.push({
-      action: `${action.type}${action.id ? ` #${action.id}` : ""}${action.path ? ` ${action.path}` : ""}${action.text ? ` ${JSON.stringify(action.text)}` : ""}${action.key ? ` ${action.key}` : ""}`,
-      result: done.result,
-    });
-    if (id !== run) {
-      return;
-    }
+    history.push({ action: summary(action), result: done.result });
     set({
       steps: [
         ...steps.slice(0, -1),
-        { thought: action.thought, label: done.label, ok: done.ok },
+        { thought: plan.thought, label: done.label, ok: done.ok },
       ],
     });
+    // Ids belong to the screen that was read: a new page or a failure
+    // means reading it again
+    if (!done.ok || window.location.pathname !== start) {
+      return true;
+    }
+  }
+  return true;
+}
+
+async function loop(id: number) {
+  for (let step = 0; step < MAX_STEPS; step++) {
+    if (id !== run) {
+      return;
+    }
+    const page = snapshot();
+    const plan = await ask(state.goal, page);
+    if (id !== run) {
+      return;
+    }
+    if (plan === "locked") {
+      set({ status: "locked", message: null });
+      return;
+    }
+    if (!plan?.actions?.length) {
+      set({
+        status: "error",
+        message: "A IA não respondeu. Tente de novo em instantes.",
+      });
+      return;
+    }
+    if (!(await runPlan(id, plan, page))) {
+      return;
+    }
   }
   set({
     status: "done",
-    message: "Parei depois de 30 passos. Quer que eu continue?",
+    message: "Parei depois de 30 rodadas. Quer que eu continue?",
   });
-  hideCursor();
 }
 
 /** Starts a new request (or answers the agent's question). */
