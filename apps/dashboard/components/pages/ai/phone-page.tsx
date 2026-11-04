@@ -8,14 +8,18 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
 import { Icon } from "@/lib/icons";
+import { getSession, setSession } from "@/lib/pos/store";
+import { convexClient } from "@/lib/sync/convex-client";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 
 /**
  * "Meu telefone": an Android phone running 24/7 on the VPS (Redroid),
- * driven by Mobilerun. The VPS server (/opt/phone-agent) only answers
- * with the panel's own token, so the access code protects the phone too.
+ * driven by Mobilerun. The VPS server (/opt/phone-agent) only answers to
+ * an administrator's POS PIN (the POS session of this device) or to the
+ * panel's own token (access code).
  */
 
 const PHONE_URL =
@@ -97,22 +101,32 @@ async function panelToken() {
 
 class Locked extends Error {}
 
-async function call(path: string, init?: RequestInit) {
+/** The POS session (PIN) of this device, else the panel's token. */
+async function credentials(): Promise<Record<string, string> | null> {
+  const pos = getSession();
+  if (pos) {
+    return { "x-pos-session": pos };
+  }
   const auth = await panelToken();
+  return auth ? { authorization: `Bearer ${auth}` } : null;
+}
+
+async function call(path: string, init?: RequestInit) {
+  const auth = await credentials();
   if (!auth) {
     throw new Locked("locked");
   }
   const res = await fetch(`${PHONE_URL}${path}`, {
     ...init,
     headers: {
-      authorization: `Bearer ${auth}`,
+      ...auth,
       ...(init?.body ? { "content-type": "application/json" } : {}),
     },
     cache: "no-store",
   });
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     token = null;
-    throw new Locked("locked");
+    throw new Locked(res.status === 403 ? "not_admin" : "locked");
   }
   return res;
 }
@@ -141,9 +155,130 @@ const ERRORS: Record<string, string> = {
 
 const message = (e: unknown) =>
   e instanceof Locked
-    ? "Digite o código de acesso do painel para usar o celular."
+    ? "Digite o PIN de administrador do POS para usar o celular."
     : (ERRORS[(e as Error).message] ??
       "Não consegui falar com o celular. Tente de novo.");
+
+/* ----------------------------------- PIN ---------------------------------- */
+
+/** The POS PIN (administrators only); signs this device in to the POS too. */
+function PinUnlock({
+  notAdmin,
+  onDone,
+}: {
+  notAdmin: boolean;
+  onDone: () => void;
+}) {
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(
+    notAdmin ? "Esse PIN não é de administrador." : null
+  );
+
+  const submit = async (value: string) => {
+    const client = convexClient();
+    if (!client || value.length !== 4) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await client.mutation(api.staff.login, {
+        pin: value,
+        device: "Meu telefone",
+      });
+      if ("token" in res && res.token) {
+        setSession(res.token);
+        onDone();
+      } else if ("error" in res && res.error === "locked") {
+        const at = new Date(res.until).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        setError(`Muitas tentativas. Tente de novo às ${at}.`);
+      } else {
+        setError("PIN incorreto.");
+      }
+    } catch {
+      setError("Não consegui conferir o PIN. Tente de novo.");
+    } finally {
+      setBusy(false);
+      setPin("");
+    }
+  };
+
+  const press = (d: string) => {
+    if (busy) {
+      return;
+    }
+    const next = (pin + d).slice(0, 4);
+    setPin(next);
+    if (next.length === 4) {
+      submit(next);
+    }
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border bg-card p-6 text-center">
+      <Icon className="size-8" name="IconLock" />
+      <div>
+        <p className="font-semibold text-lg">PIN do POS</p>
+        <p className="text-muted-foreground text-sm">
+          Digite o seu PIN de administrador para usar o celular.
+        </p>
+      </div>
+      <div className="flex gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <span
+            className={cn(
+              "size-3.5 rounded-full border-2 border-foreground/60",
+              i < pin.length && "bg-foreground"
+            )}
+            key={i}
+          />
+        ))}
+      </div>
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      <div className="grid w-full grid-cols-3 gap-2">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+          <Button
+            className="h-12 text-lg"
+            disabled={busy}
+            key={d}
+            onClick={() => press(d)}
+            variant="outline"
+          >
+            {d}
+          </Button>
+        ))}
+        <Button
+          className="h-12"
+          disabled={busy || !pin}
+          onClick={() => setPin("")}
+          variant="ghost"
+        >
+          Limpar
+        </Button>
+        <Button
+          className="h-12 text-lg"
+          disabled={busy}
+          onClick={() => press("0")}
+          variant="outline"
+        >
+          0
+        </Button>
+        <Button
+          className="h-12"
+          disabled={busy || !pin}
+          onClick={() => setPin((p) => p.slice(0, -1))}
+          variant="ghost"
+        >
+          ⌫
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /* --------------------------------- screen -------------------------------- */
 
@@ -467,18 +602,24 @@ export function PhonePage() {
   const [history, setHistory] = useState<Task[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [screenKey, setScreenKey] = useState(0);
+  const [locked, setLocked] = useState<"locked" | "not_admin" | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
       const s = await json<Status>("/status");
       setStatus(s);
       setError(null);
+      setLocked(null);
       if (!s.hasKey) {
         setSettingsOpen(true);
       }
       return s;
     } catch (e) {
-      setError(message(e));
+      if (e instanceof Locked) {
+        setLocked(e.message === "not_admin" ? "not_admin" : "locked");
+      } else {
+        setError(message(e));
+      }
       return null;
     }
   }, []);
@@ -550,6 +691,22 @@ export function PhonePage() {
       setCurrent(await json<Task>(`/tasks/${current.id}/stop`, {}));
     }
   };
+
+  if (locked) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-4">
+        <PinUnlock
+          notAdmin={locked === "not_admin"}
+          onDone={() => {
+            setLocked(null);
+            setScreenKey((n) => n + 1);
+            loadStatus();
+            loadHistory();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[360px_1fr]">

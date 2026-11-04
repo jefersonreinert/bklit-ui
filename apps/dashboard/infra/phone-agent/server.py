@@ -16,6 +16,7 @@ import time
 import uuid
 from pathlib import Path
 
+import httpx
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +25,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 APP_URL = os.environ.get("PANEL_APP_URL", "https://casa-brasa.casabrasa.workers.dev")
+CONVEX_URL = os.environ.get("CONVEX_URL", "http://127.0.0.1:3210")
 DEVICE = os.environ.get("PHONE_DEVICE", "127.0.0.1:5555")
 CONFIG = Path(os.environ.get("PHONE_CONFIG", "/root/.secrets/phone-agent.json"))
 HISTORY = Path("/opt/phone-agent/history.json")
@@ -45,11 +47,35 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[APP_URL, "http://localhost:3000"],
     allow_methods=["GET", "POST"],
-    allow_headers=["authorization", "content-type"],
+    allow_headers=["authorization", "content-type", "x-pos-session"],
 )
 
 
-def panel(authorization: str = Header(default="")):
+POS_OK: dict[str, float] = {}
+
+
+def pos_admin(session: str) -> bool:
+    """A POS session (PIN) of an administrator, checked in Convex (staff:me)."""
+    if POS_OK.get(session, 0) > time.time():
+        return True
+    try:
+        res = httpx.post(f"{CONVEX_URL}/api/query", timeout=8,
+                         json={"path": "staff:me", "args": {"session": session}, "format": "json"})
+        user = res.json().get("value") if res.status_code == 200 else None
+    except Exception:
+        return False
+    ok = bool(user and user.get("active") and (user.get("role") == "admin" or "users" in (user.get("perms") or [])))
+    if ok:
+        POS_OK[session] = time.time() + 60
+    return ok
+
+
+def panel(authorization: str = Header(default=""), x_pos_session: str = Header(default="")):
+    """The panel's access code (its token) or the POS PIN of an administrator."""
+    if x_pos_session and len(x_pos_session) <= 100:
+        if pos_admin(x_pos_session):
+            return True
+        raise HTTPException(403, "not_admin")
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
         raise HTTPException(401, "locked")
