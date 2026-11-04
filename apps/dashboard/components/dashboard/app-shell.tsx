@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { type ReactNode, useSyncExternalStore } from "react";
+import { AgentDock } from "@/components/agent/agent-dock";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { ClientOnly } from "@/components/dashboard/client-only";
 import { FloatingMenu } from "@/components/dashboard/floating-menu";
@@ -42,6 +43,7 @@ function AppFrame({ children }: { children: ReactNode }) {
     return (
       <ClientOnly fallback={<div className="min-h-dvh bg-[#141413]" />}>
         {children}
+        <AgentDock />
       </ClientOnly>
     );
   }
@@ -60,7 +62,10 @@ function AppFrame({ children }: { children: ReactNode }) {
         <FloatingMenu />
         <h1 className="sr-only">{navItemFor(path)?.label ?? "Painel"}</h1>
         <main className="flex-1 p-4 pt-[calc(1rem+env(safe-area-inset-top))] md:p-6 md:pt-[calc(1.5rem+env(safe-area-inset-top))]">
-          <ClientOnly>{children}</ClientOnly>
+          <ClientOnly>
+            {children}
+            <AgentDock />
+          </ClientOnly>
         </main>
       </div>
     </div>
