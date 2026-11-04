@@ -279,6 +279,24 @@ export function AgentDock() {
     setNavigator((path) => router.push(path));
   }, [router]);
 
+  // "E aí Siri, Jarvis": the Shortcut opens the app with ?agente=<request>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const request = params.get("agente")?.trim();
+    if (!request) {
+      return;
+    }
+    params.delete("agente");
+    const rest = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${rest ? `?${rest}` : ""}${window.location.hash}`
+    );
+    setByVoice(true);
+    startAgent(request.slice(0, 1000));
+  }, []);
+
   const dictation = useDictation((text) => {
     dictation.stop();
     setByVoice(true);
