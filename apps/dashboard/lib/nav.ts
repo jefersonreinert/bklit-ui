@@ -27,6 +27,12 @@ export const navItems: NavItem[] = [
     icon: "IconSparklesSoft",
   },
   {
+    href: "/ia/telefone",
+    label: "Meu telefone",
+    description: "Um Android 24h no seu VPS, controlado pela IA (Mobilerun)",
+    icon: "IconPhone",
+  },
+  {
     href: "/agentes",
     label: "Agentes",
     description: "Crie, salve e edite agentes automáticos (Claude Agent SDK)",
