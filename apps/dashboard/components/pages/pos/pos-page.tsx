@@ -22,6 +22,7 @@ import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
 import { ReportsView } from "./pos-reports";
 import { SettingsView } from "./pos-settings";
+import { StockView } from "./pos-stock";
 import { TablesView } from "./pos-tables";
 import { TeamView } from "./pos-team";
 import { VouchersView } from "./pos-vouchers";
@@ -34,6 +35,7 @@ export type PosTab =
   | "wines"
   | "team"
   | "products"
+  | "stock"
   | "reports"
   | "vouchers"
   | "settings";
@@ -69,6 +71,12 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     label: "Produtos",
     icon: "IconTag",
     perm: ["products", "stock"],
+  },
+  {
+    id: "stock",
+    label: "Estoque",
+    icon: "IconArchive",
+    perm: ["stock"],
   },
   { id: "reports", label: "Relatórios", icon: "IconChart1", perm: ["reports"] },
   {
@@ -233,6 +241,7 @@ function PosApp() {
         {tab === "wines" ? <WinesView /> : null}
         {tab === "team" ? <TeamView /> : null}
         {tab === "products" ? <ProductsView /> : null}
+        {tab === "stock" ? <StockView /> : null}
         {tab === "reports" ? <ReportsView /> : null}
         {tab === "vouchers" ? <VouchersView /> : null}
         {tab === "settings" ? <SettingsView /> : null}

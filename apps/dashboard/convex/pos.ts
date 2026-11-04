@@ -48,6 +48,8 @@ const productFields = {
   description: v.optional(v.string()),
   modifiers: v.optional(v.array(modifierGroup)),
   wine: v.optional(posWine),
+  /** Recipe (technical sheet): selling one uses these ingredients. */
+  recipe: v.optional(v.array(v.object({ productId: v.string(), qty: v.number() }))),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
@@ -693,23 +695,48 @@ export const pay = mutation({
       }
     }
     const company = companyOf(order);
-    // Stock (a glass takes its share of the bottle)
+    // Stock (a glass takes its share of the bottle; a dish with a recipe
+    // uses its ingredients)
+    const take = async (cid: string, used: number) => {
+      let p = products.get(cid);
+      if (!p) {
+        p =
+          (await ctx.db
+            .query("posProducts")
+            .withIndex("by_cid", (q) => q.eq("cid", cid))
+            .unique()) ?? undefined;
+        if (p) {
+          products.set(cid, p);
+        }
+      }
+      if (!p?.trackStock || used === 0) {
+        return;
+      }
+      const stock = Math.round(((p.stock ?? 0) - used) * 10_000) / 10_000;
+      products.set(p.cid, { ...p, stock });
+      await ctx.db.patch(p._id, { stock, updatedAt: now });
+      await ctx.db.insert("posStock", {
+        productCid: p.cid,
+        qty: -used,
+        kind: "sale",
+        orderCid: order.cid,
+        userName: user.name,
+        company,
+        at: now,
+      });
+    };
+    const round4 = (n: number) => Math.round(n * 10_000) / 10_000;
     for (const i of order.items) {
       const p = i.productId ? products.get(i.productId) : undefined;
-      if (p?.trackStock) {
-        const used = Math.round(i.qty * (i.portion ?? 1) * 10_000) / 10_000;
-        const stock = Math.round(((p.stock ?? 0) - used) * 10_000) / 10_000;
-        products.set(p.cid, { ...p, stock });
-        await ctx.db.patch(p._id, { stock, updatedAt: now });
-        await ctx.db.insert("posStock", {
-          productCid: p.cid,
-          qty: -used,
-          kind: "sale",
-          orderCid: order.cid,
-          userName: user.name,
-          company,
-          at: now,
-        });
+      if (!p) {
+        continue;
+      }
+      const sold = i.qty * (i.portion ?? 1);
+      await take(p.cid, round4(sold));
+      for (const r of p.recipe ?? []) {
+        if (r.productId !== p.cid) {
+          await take(r.productId, round4(sold * r.qty));
+        }
       }
     }
     // Day totals
