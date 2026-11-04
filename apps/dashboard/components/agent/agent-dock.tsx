@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { useFloatingPosition } from "@/components/dashboard/floating-button";
 import { useDictation } from "@/components/pages/ai/attachments";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -25,6 +32,145 @@ import { cn } from "@/lib/utils";
  */
 
 const CLAY = "#c96442";
+/** Size (px) of the round floating button. */
+const FAB = 52;
+const ICON_KEY = "cb:agent:icon";
+const ICON_EVENT = "cb:agent-icon";
+
+/** The user's own picture for the button (per device), or null. */
+function readIcon(): string | null {
+  try {
+    return localStorage.getItem(ICON_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function subscribeIcon(cb: () => void) {
+  window.addEventListener(ICON_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(ICON_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function useAgentIcon() {
+  return useSyncExternalStore(subscribeIcon, readIcon, () => null);
+}
+
+function storeIcon(value: string | null) {
+  try {
+    if (value) {
+      localStorage.setItem(ICON_KEY, value);
+    } else {
+      localStorage.removeItem(ICON_KEY);
+    }
+  } catch {
+    // private mode: the picture just isn't remembered
+  }
+  window.dispatchEvent(new Event(ICON_EVENT));
+}
+
+/** Crops the photo to a centered square and shrinks it to 160 px. */
+function squareThumb(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = 160;
+      canvas.height = 160;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("canvas"));
+        return;
+      }
+      ctx.drawImage(
+        img,
+        (img.naturalWidth - side) / 2,
+        (img.naturalHeight - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        160,
+        160
+      );
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image"));
+    };
+    img.src = url;
+  });
+}
+
+/** The button face: the user's picture or the sparkle on clay. */
+function AgentFace({ icon, small }: { icon: string | null; small?: boolean }) {
+  if (icon) {
+    return (
+      <span
+        aria-hidden
+        className="pointer-events-none size-full rounded-full bg-center bg-cover"
+        style={{ backgroundImage: `url("${icon}")` }}
+      />
+    );
+  }
+  return (
+    <Icon className={small ? "size-4" : "size-6"} name="IconSparklesSoft" />
+  );
+}
+
+/** Lets the user pick a photo from the phone for the button, or remove it. */
+function IconPicker({ icon }: { icon: string | null }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-xs">
+      <span className="flex-1 text-muted-foreground">
+        Ícone do botão (arraste o botão para qualquer lugar da tela)
+      </span>
+      <Button
+        onClick={() => input.current?.click()}
+        size="sm"
+        variant="outline"
+      >
+        <Icon className="size-4" name="IconImages1" />
+        Trocar
+      </Button>
+      {icon ? (
+        <Button onClick={() => storeIcon(null)} size="sm" variant="ghost">
+          Padrão
+        </Button>
+      ) : null}
+      <input
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) {
+            return;
+          }
+          setError(null);
+          try {
+            storeIcon(await squareThumb(file));
+          } catch {
+            setError("Não consegui abrir essa imagem.");
+          }
+        }}
+        ref={input}
+        type="file"
+      />
+      {error ? <p className="w-full text-destructive">{error}</p> : null}
+    </div>
+  );
+}
 
 const SUGGESTIONS = [
   "Abra o WhatsApp e me diga quem mandou a última mensagem",
@@ -124,6 +270,10 @@ export function AgentDock() {
   const [draft, setDraft] = useState("");
   const [byVoice, setByVoice] = useState(false);
   const list = useRef<HTMLDivElement>(null);
+  const icon = useAgentIcon();
+  const [showPicker, setShowPicker] = useState(false);
+  // Starts at the right edge, a bit above the middle (clear of tab bars)
+  const fab = useFloatingPosition("cb:fab:agent", { fx: 1, fy: 0.62 }, FAB);
 
   useEffect(() => {
     setNavigator((path) => router.push(path));
@@ -212,17 +362,35 @@ export function AgentDock() {
   }
 
   if (!open) {
+    if (!fab.pos) {
+      return null;
+    }
     return (
       <button
         aria-label="Agente do app"
-        className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[70] flex h-12 items-center gap-2 rounded-full px-4 font-medium text-sm text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
+        className={cn(
+          "fixed z-[70] flex touch-none select-none items-center justify-center overflow-hidden rounded-full text-white shadow-black/30 shadow-xl transition-transform [-webkit-touch-callout:none] print:hidden",
+          fab.dragging ? "scale-110 cursor-grabbing" : "active:scale-95",
+          icon ? "border-2 border-white/80" : ""
+        )}
         data-agent-ui="button"
-        onClick={() => setOpen(true)}
-        style={{ backgroundColor: CLAY }}
+        onClick={() => {
+          if (!fab.consumeDrag()) {
+            setOpen(true);
+          }
+        }}
+        style={{
+          left: fab.pos.x,
+          top: fab.pos.y,
+          width: FAB,
+          height: FAB,
+          backgroundColor: icon ? undefined : CLAY,
+        }}
+        title="Agente · arraste para mover"
         type="button"
+        {...fab.handlers}
       >
-        <Icon className="size-5" name="IconSparklesSoft" />
-        Agente
+        <AgentFace icon={icon} />
       </button>
     );
   }
@@ -310,12 +478,15 @@ export function AgentDock() {
       data-agent-ui="panel"
     >
       <div className="flex items-center gap-2 border-b px-4 py-3">
-        <span
-          className="flex size-7 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: CLAY }}
+        <button
+          aria-label="Trocar o ícone do agente"
+          className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-white"
+          onClick={() => setShowPicker((v) => !v)}
+          style={icon ? undefined : { backgroundColor: CLAY }}
+          type="button"
         >
-          <Icon className="size-4" name="IconSparklesSoft" />
-        </span>
+          <AgentFace icon={icon} small />
+        </button>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm">Agente do app</p>
           <p className="truncate text-muted-foreground text-xs">
@@ -328,6 +499,15 @@ export function AgentDock() {
           </Button>
         ) : null}
         <button
+          aria-label="Trocar o ícone do botão"
+          aria-pressed={showPicker}
+          className="flex size-8 items-center justify-center rounded-full hover:bg-muted"
+          onClick={() => setShowPicker((v) => !v)}
+          type="button"
+        >
+          <Icon className="size-4" name="IconImages1" />
+        </button>
+        <button
           aria-label="Minimizar"
           className="flex size-8 items-center justify-center rounded-full hover:bg-muted"
           onClick={() => setOpen(false)}
@@ -338,6 +518,7 @@ export function AgentDock() {
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4" ref={list}>
+        {showPicker ? <IconPicker icon={icon} /> : null}
         {body}
       </div>
 

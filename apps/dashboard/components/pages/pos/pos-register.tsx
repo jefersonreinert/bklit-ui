@@ -328,7 +328,7 @@ export function RegisterView({
       <aside className="hidden min-h-0 lg:flex">{cart}</aside>
 
       {/* Phone: action bar like a handheld register */}
-      <div className="fixed inset-x-0 bottom-[calc(4.25rem+max(0.25rem,env(safe-area-inset-bottom)-0.5rem))] z-20 flex items-center gap-3 px-4 pb-2 md:bottom-4 lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+max(0.25rem,env(safe-area-inset-bottom)-0.5rem))] z-20 flex items-center gap-3 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-6 pb-2 md:bottom-4 md:bg-none md:pt-0 lg:hidden">
         <button
           aria-label={tx("Enviar para a cozinha")}
           className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-sm disabled:opacity-50"

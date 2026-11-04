@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useT } from "@/lib/i18n";
 import { Icon, type IconName } from "@/lib/icons";
 import { readSumupResult } from "@/lib/pos/payments";
@@ -108,6 +114,106 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     perm: ["settings", "users"],
   },
 ];
+
+/** How many tabs fit in the phone bar; the rest go under "Mais". */
+const BAR_SLOTS = 4;
+
+/**
+ * Phone tab bar: a few fixed tabs plus "Mais", which opens a grid with
+ * every module. The open tab always shows in the bar, so the user sees
+ * where they are. Fixed height and one-line labels: nothing overlaps.
+ */
+function MobileTabBar({
+  tabs,
+  tab,
+  onPick,
+}: {
+  tabs: typeof TABS;
+  tab: PosTab;
+  onPick: (t: PosTab) => void;
+}) {
+  const tr = useT();
+  const [more, setMore] = useState(false);
+  const fits = tabs.length <= BAR_SLOTS + 1;
+  let bar = fits ? tabs : tabs.slice(0, BAR_SLOTS);
+  const current = tabs.find((t) => t.id === tab);
+  if (!(fits || bar.some((t) => t.id === tab)) && current) {
+    bar = [...bar.slice(0, BAR_SLOTS - 1), current];
+  }
+  const item = (active: boolean) =>
+    cn(
+      "flex h-14 min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] leading-none transition-colors",
+      active ? "text-foreground" : "text-muted-foreground"
+    );
+
+  return (
+    <>
+      <nav
+        className="grid shrink-0 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden"
+        style={{
+          gridTemplateColumns: `repeat(${bar.length + (fits ? 0 : 1)}, minmax(0, 1fr))`,
+        }}
+      >
+        {bar.map((t) => (
+          <button
+            className={item(tab === t.id)}
+            key={t.id}
+            onClick={() => onPick(t.id)}
+            type="button"
+          >
+            <Icon className="size-6 shrink-0" name={t.icon} />
+            <span className="max-w-full truncate">{tr(t.label)}</span>
+          </button>
+        ))}
+        {fits ? null : (
+          <button
+            aria-expanded={more}
+            className={item(more)}
+            onClick={() => setMore(true)}
+            type="button"
+          >
+            <Icon className="size-6 shrink-0" name="IconApps" />
+            <span>{tr("Mais")}</span>
+          </button>
+        )}
+      </nav>
+      <Sheet onOpenChange={setMore} open={more}>
+        <SheetContent
+          className="rounded-t-3xl px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+          side="bottom"
+        >
+          <SheetTitle>{tr("Módulos")}</SheetTitle>
+          <SheetDescription className="sr-only">
+            {tr("Todos os módulos do POS")}
+          </SheetDescription>
+          <div className="grid grid-cols-4 gap-2">
+            {tabs.map((t) => (
+              <button
+                className={cn(
+                  "flex min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-3 text-xs transition-colors",
+                  tab === t.id
+                    ? "bg-foreground text-background"
+                    : "bg-muted/60 text-foreground active:bg-muted"
+                )}
+                key={t.id}
+                onClick={() => {
+                  onPick(t.id);
+                  setMore(false);
+                }}
+                type="button"
+              >
+                <Icon className="size-6 shrink-0" name={t.icon} />
+                <span className="w-full truncate text-center">
+                  {tr(t.label)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
 
 function ErrorBanner() {
   const error = usePosError();
@@ -272,27 +378,7 @@ function PosApp() {
         {tab === "vouchers" ? <VouchersView /> : null}
         {tab === "settings" ? <SettingsView /> : null}
       </div>
-      <nav
-        className="grid shrink-0 border-t bg-background/80 pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.5rem))] backdrop-blur-xl md:hidden"
-        style={{
-          gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-        }}
-      >
-        {tabs.map((t) => (
-          <button
-            className={cn(
-              "flex flex-col items-center gap-1 py-2 text-[10px] transition-colors",
-              tab === t.id ? "text-foreground" : "text-muted-foreground"
-            )}
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            type="button"
-          >
-            <Icon className="size-5" name={t.icon} />
-            {tr(t.label)}
-          </button>
-        ))}
-      </nav>
+      <MobileTabBar onPick={setTab} tab={tab} tabs={tabs} />
     </div>
   );
 }
