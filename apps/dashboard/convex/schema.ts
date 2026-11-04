@@ -1348,4 +1348,73 @@ export default defineSchema({
     kind: v.union(v.literal("image"), v.literal("video")),
     createdAt: v.number(),
   }),
+  /**
+   * Wine Monitor (By The Glass dispensers) mirror, filled every 15 minutes
+   * by services/wine-monitor-sync (read-only copy of the portal).
+   * One state document per business: machines, bottle positions, wines.
+   */
+  wmState: defineTable({
+    company: v.string(),
+    takenAt: v.number(),
+    syncedAt: v.number(),
+    ms: v.number(),
+    node: v.any(),
+    dispensers: v.any(),
+    positions: v.any(),
+    wines: v.any(),
+  }).index("by_company", ["company"]),
+
+  /** Wine Monitor cards (prepaid credit / debit tab) of a business. */
+  wmCards: defineTable({
+    company: v.string(),
+    updatedAt: v.number(),
+    cards: v.any(),
+  }).index("by_company", ["company"]),
+
+  /** Every pour from the dispensers (history kept after the portal's 24 h). */
+  wmSales: defineTable({
+    company: v.string(),
+    at: v.number(),
+    cardId: v.optional(v.string()),
+    clientId: v.optional(v.string()),
+    dispenser: v.string(),
+    wine: v.string(),
+    sku: v.optional(v.string()),
+    ml: v.number(),
+    price: v.number(),
+    discount: v.number(),
+  }).index("by_company_at", ["company", "at"]),
+
+  /** Card top-ups and balance resets. */
+  wmCredits: defineTable({
+    company: v.string(),
+    record: v.string(),
+    at: v.number(),
+    cardId: v.optional(v.string()),
+    clientId: v.optional(v.string()),
+    source: v.optional(v.string()),
+    oldValue: v.number(),
+    newValue: v.number(),
+    diff: v.number(),
+  })
+    .index("by_record", ["company", "record"])
+    .index("by_company_at", ["company", "at"]),
+
+  /** Bottle changes and residue adjustments on the dispensers. */
+  wmChanges: defineTable({
+    company: v.string(),
+    key: v.string(),
+    kind: v.union(v.literal("change"), v.literal("adjust")),
+    at: v.number(),
+    since: v.optional(v.number()),
+    sku: v.optional(v.string()),
+    wine: v.string(),
+    dispenser: v.string(),
+    position: v.number(),
+    oldMl: v.number(),
+    newMl: v.number(),
+    cardId: v.optional(v.string()),
+  })
+    .index("by_key", ["company", "key"])
+    .index("by_company_at", ["company", "at"]),
 });
