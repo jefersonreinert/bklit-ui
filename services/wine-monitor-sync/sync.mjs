@@ -203,7 +203,7 @@ function tzOffset(utcMs) {
  * Portal date ("11/3/2026 08:14 PM", "2026/11/03 10:25:25 PM",
  * "10/30/2026") in Malta time → epoch ms.
  */
-function when(s) {
+function when(s, utc = false) {
   const m = String(s ?? "").match(PORTAL_DATE);
   if (!m) {
     return undefined;
@@ -215,6 +215,9 @@ function when(s) {
     hour = (hour % 12) + (ap.toUpperCase() === "PM" ? 12 : 0);
   }
   const wall = Date.UTC(y, mo - 1, d, hour, +mi, +se);
+  if (utc) {
+    return wall;
+  }
   return wall - tzOffset(wall - tzOffset(wall));
 }
 
@@ -336,7 +339,9 @@ function branchInfo(t) {
   for (const m of t.matchAll(
     /(\d{8})\s+(\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}:\d{2} [AP]M)/g
   )) {
-    seen[m[1]] = when(m[2]);
+    // The branch page prints last-seen in UTC (reports use Malta time):
+    // a pour at 21:53 UTC came after a "last seen" read as 21:15 UTC
+    seen[m[1]] = when(m[2], true);
   }
   return {
     node: {
