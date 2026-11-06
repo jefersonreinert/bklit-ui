@@ -434,7 +434,7 @@ export function HomePage() {
     }
     return () => {
       els.forEach((el, i) => {
-        el.style.backgroundColor = prev[i];
+        el.style.backgroundColor = prev[i] ?? "";
       });
     };
   }, []);
