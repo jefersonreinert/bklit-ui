@@ -30,7 +30,7 @@ export async function GET() {
 const text = (v: unknown, max: number) =>
   typeof v === "string" ? v.trim().slice(0, max) : "";
 
-/** Saves name, role and font; keeps the current icon. */
+/** Saves name, role, font and app name; keeps the uploaded images. */
 export async function POST(request: NextRequest) {
   if (isCrossSite(request)) {
     return Response.json({ error: "forbidden" }, { status: 403 });
@@ -52,10 +52,12 @@ export async function POST(request: NextRequest) {
   try {
     const current = await readSettingsSafe();
     const saved = await writeSettings({
+      ...current,
       name,
       role: text(body.role, 60),
       font,
-      icon: current?.icon,
+      appName: text(body.appName, 40) || undefined,
+      tagline: text(body.tagline, 60) || undefined,
       updatedAt: Date.now(),
     });
     return Response.json({ settings: saved }, { headers: NO_STORE });

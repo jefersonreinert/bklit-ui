@@ -15,18 +15,27 @@ import { LanguagePicker } from "./language-picker";
 import { ProfileAvatar } from "./profile-avatar";
 import { ThemeToggle } from "./theme-toggle";
 
-export function SidebarBrand() {
+/** Logo and app name; both are edited in Configurações (tap to open). */
+export function SidebarBrand({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT();
+  const { appName, tagline } = usePreferences();
   return (
-    <div className="flex items-center gap-3 px-2">
+    <Link
+      className="flex min-w-0 items-center gap-3 rounded-lg px-2 transition-opacity hover:opacity-80"
+      href="/configuracoes"
+      onClick={onNavigate}
+      title="Editar nome e ícone"
+    >
       <BrandLogo className="size-9" />
-      <div className="flex flex-col leading-tight">
-        <span className="font-semibold">{RESTAURANT_NAME}</span>
-        <span className="text-muted-foreground text-xs">
-          {t("Gestão do restaurante")}
+      <div className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate font-semibold">
+          {appName || RESTAURANT_NAME}
+        </span>
+        <span className="truncate text-muted-foreground text-xs">
+          {tagline || t("Gestão do restaurante")}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }
 

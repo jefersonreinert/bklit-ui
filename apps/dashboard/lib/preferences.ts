@@ -87,6 +87,8 @@ function adopt(server: StoredSettings) {
     name: server.name,
     role: server.role,
     font: server.font,
+    appName: server.appName,
+    tagline: server.tagline,
     icon: server.icon,
     avatar: server.avatar,
     // Local previews belong to the image version they were made from
@@ -121,13 +123,15 @@ async function send(
 
 /** Saves on this device right away, then on the server. */
 export async function savePreferences(
-  patch: Partial<Pick<Preferences, "name" | "role" | "font">>
+  patch: Partial<
+    Pick<Preferences, "name" | "role" | "font" | "appName" | "tagline">
+  >
 ): Promise<SaveResult> {
   setPreferences({ ...patch, updatedAt: Date.now() });
-  const { name, role, font } = read();
+  const { name, role, font, appName, tagline } = read();
   const { result, settings } = await send(API, {
     method: "POST",
-    body: JSON.stringify({ name, role, font }),
+    body: JSON.stringify({ name, role, font, appName, tagline }),
   });
   if (settings) {
     adopt(settings);
