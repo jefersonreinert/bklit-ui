@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { RESTAURANT_NAME } from "@/lib/data";
 import { Icon } from "@/lib/icons";
 import {
   firstName,
@@ -107,6 +108,82 @@ function ProfileCard() {
   );
 }
 
+/** App name and the line under it, shown at the top of the sidebar. */
+function BrandNameCard() {
+  const prefs = usePreferences();
+  const [appName, setAppName] = useState(prefs.appName ?? "");
+  const [tagline, setTagline] = useState(prefs.tagline ?? "");
+  const [status, setStatus] = useState<SaveResult | "saving" | null>(null);
+
+  useEffect(() => {
+    setAppName(prefs.appName ?? "");
+    setTagline(prefs.tagline ?? "");
+  }, [prefs.appName, prefs.tagline]);
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setStatus("saving");
+    setStatus(
+      await savePreferences({
+        appName: appName.trim() || undefined,
+        tagline: tagline.trim() || undefined,
+      })
+    );
+  };
+
+  const changed =
+    appName.trim() !== (prefs.appName ?? "") ||
+    tagline.trim() !== (prefs.tagline ?? "");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Nome do app</CardTitle>
+        <CardDescription>
+          Aparece no topo do menu lateral. Campos vazios voltam ao padrão.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="flex flex-col gap-4" onSubmit={save}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label
+              className="flex flex-col gap-1.5 text-sm"
+              htmlFor="pref-app-name"
+            >
+              <span className="font-medium">Nome</span>
+              <Input
+                id="pref-app-name"
+                maxLength={40}
+                onChange={(e) => setAppName(e.target.value)}
+                placeholder={RESTAURANT_NAME}
+                value={appName}
+              />
+            </label>
+            <label
+              className="flex flex-col gap-1.5 text-sm"
+              htmlFor="pref-tagline"
+            >
+              <span className="font-medium">Linha de baixo (opcional)</span>
+              <Input
+                id="pref-tagline"
+                maxLength={60}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="Gestão do restaurante"
+                value={tagline}
+              />
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button disabled={!changed || status === "saving"} type="submit">
+              {status === "saving" ? "Salvando…" : "Salvar nome"}
+            </Button>
+            <SaveStatus status={changed ? null : status} />
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TypographyCard() {
   const prefs = usePreferences();
   const [status, setStatus] = useState<SaveResult | "saving" | null>(null);
@@ -186,6 +263,7 @@ export function SettingsPage() {
         </p>
       </div>
       <ProfileCard />
+      <BrandNameCard />
       <IconCard />
       <Card>
         <CardHeader>

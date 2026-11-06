@@ -3,6 +3,10 @@ export interface StoredSettings {
   name: string;
   role: string;
   font: string;
+  /** App name in the sidebar; absent = the restaurant name. */
+  appName?: string;
+  /** Line under the app name; absent = "Gestão do restaurante". */
+  tagline?: string;
   /** Version of the uploaded app icon; absent = default icon. */
   icon?: string;
   /** Version of the uploaded profile photo; absent = initials. */

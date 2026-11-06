@@ -424,6 +424,21 @@ export function HomePage() {
   const [editing, setEditing] = useState(false);
   const close = () => setPanel(null);
 
+  // iOS blurs the strip under the status bar using the page background; with
+  // a light theme that showed a white haze over the dark wallpaper.
+  useEffect(() => {
+    const els = [document.documentElement, document.body];
+    const prev = els.map((el) => el.style.backgroundColor);
+    for (const el of els) {
+      el.style.backgroundColor = "#141413";
+    }
+    return () => {
+      els.forEach((el, i) => {
+        el.style.backgroundColor = prev[i];
+      });
+    };
+  }, []);
+
   return (
     <div className="dark relative min-h-dvh overflow-x-hidden text-white">
       <WallpaperLayer />

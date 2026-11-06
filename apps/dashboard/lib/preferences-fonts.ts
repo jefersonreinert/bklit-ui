@@ -86,6 +86,10 @@ export interface Preferences {
   name: string;
   role: string;
   font: string;
+  /** App name in the sidebar; empty = the restaurant name. */
+  appName?: string;
+  /** Line under the app name; empty = "Gestão do restaurante". */
+  tagline?: string;
   /** Version of the uploaded app icon (served by /api/brand/icon). */
   icon?: string;
   /** Local copy of the uploaded icon (data URL) for instant display. */

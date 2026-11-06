@@ -38,14 +38,14 @@ export function FloatingMenu() {
       </FloatingButton>
       <Sheet onOpenChange={setOpen} open={open}>
         <SheetContent
-          className="acrylic w-72! gap-5 bg-sidebar p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="acrylic w-72! gap-5 bg-sidebar p-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-[max(1rem,env(safe-area-inset-bottom))] [&>[data-slot=sheet-close]]:top-[calc(env(safe-area-inset-top)+1rem)]"
           side="left"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <SheetDescription className="sr-only">
             Páginas, tema e notificações
           </SheetDescription>
-          <SidebarBrand />
+          <SidebarBrand onNavigate={() => setOpen(false)} />
           <SidebarTools onNavigate={() => setOpen(false)} />
           <SidebarNav onNavigate={() => setOpen(false)} />
           <div className="shrink-0">
