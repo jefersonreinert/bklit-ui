@@ -28,6 +28,7 @@ import type * as loyalty from "../loyalty.js";
 import type * as metatrader from "../metatrader.js";
 import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
+import type * as ops from "../ops.js";
 import type * as ohlc from "../ohlc.js";
 import type * as payroll from "../payroll.js";
 import type * as pos from "../pos.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   metatrader: typeof metatrader;
   mtproto: typeof mtproto;
   notes: typeof notes;
+  ops: typeof ops;
   ohlc: typeof ohlc;
   payroll: typeof payroll;
   pos: typeof pos;
