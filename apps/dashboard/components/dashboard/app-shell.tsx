@@ -39,6 +39,10 @@ function AppFrame({ children }: { children: ReactNode }) {
   const path = normalizePath(usePathname());
   const embedded = useEmbedded();
 
+  // Public contract signing: no panel frame, no agent
+  if (path === "/assinar") {
+    return <ClientOnly>{children}</ClientOnly>;
+  }
   if (path === "/") {
     return (
       <ClientOnly fallback={<div className="min-h-dvh bg-[#141413]" />}>

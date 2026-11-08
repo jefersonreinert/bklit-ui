@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { ConvexError } from "convex/values";
 import {
   cashFromBody,
   dealsFromBody,
@@ -399,5 +400,78 @@ posRoute("/api/v1/daily", async (ctx, company, params) => {
 posRoute("/api/v1/products", async (ctx, company) =>
   json(await ctx.runQuery(internal.posapi.products, { company }))
 );
+
+/* --------------------------- contract signature --------------------------- */
+// POST /hr/sign {token, name, signature, agree} from the public signing page
+// (/assinar/?t=…, another origin); records the signer's IP and browser.
+
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "POST, OPTIONS",
+  "access-control-allow-headers": "content-type",
+};
+
+http.route({
+  path: "/hr/sign",
+  method: "OPTIONS",
+  handler: httpAction(
+    async () => new Response(null, { status: 204, headers: CORS })
+  ),
+});
+
+http.route({
+  path: "/hr/sign",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const reply = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { ...CORS, "content-type": "application/json" },
+      });
+    const raw = await request.text();
+    if (raw.length > 300_000) {
+      return reply({ error: "too large" }, 413);
+    }
+    let body: {
+      token?: unknown;
+      name?: unknown;
+      signature?: unknown;
+      agree?: unknown;
+    };
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      return reply({ error: "invalid body" }, 400);
+    }
+    if (
+      body.agree !== true ||
+      typeof body.token !== "string" ||
+      typeof body.name !== "string" ||
+      typeof body.signature !== "string"
+    ) {
+      return reply({ error: "Confirme que leu e aceita o contrato." }, 400);
+    }
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "";
+    try {
+      await ctx.runMutation(internal.contracts.signByToken, {
+        token: body.token,
+        name: body.name,
+        signature: body.signature,
+        ip,
+        agent: request.headers.get("user-agent") ?? "",
+      });
+    } catch (err) {
+      const msg =
+        err instanceof ConvexError && typeof err.data === "string"
+          ? err.data
+          : "Não foi possível assinar.";
+      return reply({ error: msg }, 400);
+    }
+    return reply({ ok: true });
+  }),
+});
 
 export default http;
