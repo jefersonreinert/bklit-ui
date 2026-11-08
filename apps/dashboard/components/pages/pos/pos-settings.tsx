@@ -6,11 +6,18 @@ import { cn } from "@/lib/utils";
 import { type PosPerm, useCan } from "./pos-auth";
 import { CompaniesSettings } from "./pos-company";
 import { PosSettingsCard } from "./pos-general";
+import { MaltaCompliance } from "./pos-malta";
 import { PrintersCard } from "./pos-printers";
 import { ReceiptDesigner } from "./pos-receipt-designer";
 import { UsersCard } from "./pos-users";
 
-type Section = "users" | "companies" | "receipt" | "printers" | "general";
+type Section =
+  | "users"
+  | "companies"
+  | "receipt"
+  | "printers"
+  | "general"
+  | "malta";
 
 const SECTIONS: { id: Section; label: string; perm: PosPerm }[] = [
   { id: "users", label: "Usuários", perm: "users" },
@@ -18,6 +25,7 @@ const SECTIONS: { id: Section; label: string; perm: PosPerm }[] = [
   { id: "receipt", label: "Recibo e fatura", perm: "settings" },
   { id: "printers", label: "Impressoras", perm: "settings" },
   { id: "general", label: "Pagamentos", perm: "settings" },
+  { id: "malta", label: "Malta (MTCA)", perm: "settings" },
 ];
 
 export function SettingsView() {
@@ -56,6 +64,7 @@ export function SettingsView() {
         </div>
       ) : null}
       {section === "receipt" ? <ReceiptDesigner /> : null}
+      {section === "malta" ? <MaltaCompliance /> : null}
       {section === "printers" ? (
         <div className="mx-auto w-full max-w-2xl">
           <PrintersCard />
