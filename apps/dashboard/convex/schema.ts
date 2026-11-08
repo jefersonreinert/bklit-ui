@@ -693,6 +693,50 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  /* ------------------------------ reservations ---------------------------- */
+  // Bookings of every venue and channel (lib/reservations/engine.ts rules).
+
+  resVenues: defineTable({
+    company: v.string(),
+    /** VenueSettings of lib/reservations/engine.ts. */
+    settings: v.any(),
+    updatedAt: v.number(),
+  }).index("by_company", ["company"]),
+
+  reservations: defineTable({
+    company: v.string(),
+    ref: v.string(),
+    name: v.string(),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    /** Service date YYYY-MM-DD and local start HH:MM. */
+    date: v.string(),
+    time: v.string(),
+    duration: v.number(),
+    party: v.number(),
+    /** POS floor plan table ids (several = combined tables). */
+    tables: v.array(v.string()),
+    source: v.string(),
+    status: v.string(),
+    requests: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    occasion: v.optional(v.string()),
+    vip: v.optional(v.boolean()),
+    /** Private event / large group. */
+    event: v.optional(v.boolean()),
+    customerId: v.optional(v.id("posCustomers")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    /** Who changed what, newest last. */
+    log: v.array(
+      v.object({ at: v.number(), by: v.string(), what: v.string() })
+    ),
+  })
+    .index("by_company_date", ["company", "date"])
+    .index("by_date", ["date"])
+    .index("by_ref", ["ref"])
+    .index("by_phone", ["phone"]),
+
   /* ------------------------------- operations ----------------------------- */
   // Departments, checklists (forms), their fillings and documents, per business.
 
