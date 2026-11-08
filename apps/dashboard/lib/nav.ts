@@ -164,6 +164,12 @@ export const navItems: NavItem[] = [
     icon: "IconPeople",
   },
   {
+    href: "/reservas",
+    label: "Reservas",
+    description: "Reservas de todos os bares e canais, mesas e walk-ins",
+    icon: "IconCalendarCheck",
+  },
+  {
     href: "/operacoes",
     label: "Operations",
     description:

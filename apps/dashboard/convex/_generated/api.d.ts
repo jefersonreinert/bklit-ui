@@ -33,6 +33,7 @@ import type * as ohlc from "../ohlc.js";
 import type * as payroll from "../payroll.js";
 import type * as pos from "../pos.js";
 import type * as posapi from "../posapi.js";
+import type * as reservations from "../reservations.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
 import type * as team from "../team.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   payroll: typeof payroll;
   pos: typeof pos;
   posapi: typeof posapi;
+  reservations: typeof reservations;
   staff: typeof staff;
   stores: typeof stores;
   team: typeof team;
