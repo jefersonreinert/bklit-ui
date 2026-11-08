@@ -263,3 +263,23 @@ describe("POS read API", () => {
     expect((await t.fetch("/api/v1/products", auth)).status).toBe(401);
   });
 });
+
+describe("Receipt setup", () => {
+  it("merges receipt details of one business", async () => {
+    const { t } = await setup();
+    await t.mutation(internal.pos.patchReceipt, {
+      company: "vinomad",
+      receipt: { address: "26, Pjazza Vittorja", taxId: "MT22891908" },
+    });
+    const meta = await t.run((ctx) =>
+      ctx.db
+        .query("posMeta")
+        .withIndex("by_key", (q) => q.eq("key", "vinomad"))
+        .unique()
+    );
+    expect(meta?.receipt).toMatchObject({
+      address: "26, Pjazza Vittorja",
+      taxId: "MT22891908",
+    });
+  });
+});
