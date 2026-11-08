@@ -1052,6 +1052,33 @@ export const bootstrap = mutation({
  * kept. Big menus go in parts: `keep` adds a part without removing the
  * products of the previous parts.
  */
+/**
+ * Setup by the administrator (npx convex run pos:patchReceipt): merges
+ * fields into a business's receipt details (name, address, VAT No.…).
+ */
+export const patchReceipt = internalMutation({
+  args: {
+    company: v.string(),
+    receipt: v.record(v.string(), v.union(v.string(), v.boolean())),
+  },
+  handler: async (ctx, { company, receipt }) => {
+    const m = await meta(ctx, company);
+    if (!m) {
+      throw new ConvexError("Empresa não encontrada.");
+    }
+    await ctx.db.patch(m._id, {
+      receipt: { ...((m.receipt ?? {}) as object), ...receipt },
+    });
+    await audit(
+      ctx,
+      null,
+      "Atualizou dados do recibo",
+      Object.keys(receipt).join(", "),
+      company
+    );
+  },
+});
+
 export const importMenu = internalMutation({
   args: {
     company: v.string(),
