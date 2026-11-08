@@ -226,6 +226,8 @@ export interface PrinterConfig {
   host: string;
   /** The printer's ePOS device id (local_printer by default). */
   deviceId: string;
+  /** Hardware (MAC) address, to find the printer when its IP changes. */
+  mac?: string;
   paper: "58" | "80";
   autoPrint: boolean;
   copies: number;

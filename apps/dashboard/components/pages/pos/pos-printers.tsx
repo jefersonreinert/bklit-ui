@@ -12,7 +12,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Icon, type IconName } from "@/lib/icons";
-import { printReceipt } from "@/lib/pos/print";
+import { eposCheck, printReceipt } from "@/lib/pos/print";
 import { sampleDoc } from "@/lib/pos/receipt";
 import {
   deletePrinter,
@@ -75,6 +75,25 @@ function PrinterForm({
   const isNew = !data.printers.some((x) => x.id === p.id);
   const hostOk = p.kind === "share" || IP.test(p.host.trim());
   const valid = p.name.trim() && hostOk;
+
+  const check = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      await eposCheck({ ...p, host: p.host.trim() });
+      setResult({
+        ok: true,
+        text: "Conectada: a impressora respondeu e está pronta (nada foi impresso).",
+      });
+    } catch (err) {
+      setResult({
+        ok: false,
+        text: err instanceof Error ? err.message : "Falhou.",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const test = async () => {
     setTesting(true);
@@ -186,6 +205,17 @@ function PrinterForm({
               {result.text}
             </p>
           ) : null}
+          {p.kind === "epos" ? (
+            <Button
+              disabled={!valid || testing}
+              onClick={check}
+              type="button"
+              variant="outline"
+            >
+              <Icon className="size-4" name="IconWifiFull" />
+              Verificar conexão (sem imprimir)
+            </Button>
+          ) : null}
           <Button
             disabled={!valid || testing}
             onClick={test}
@@ -274,6 +304,25 @@ function EposFields({
           Epson TM Utility (Configurações → Rede).
         </p>
       </div>
+      <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppr-mac">
+        Endereço de hardware (opcional)
+        <Input
+          autoCapitalize="off"
+          id="ppr-mac"
+          onChange={(e) =>
+            setP({
+              ...p,
+              mac: e.target.value.trim().toLowerCase() || undefined,
+            })
+          }
+          placeholder="a4:d7:3c:b5:d3:2d"
+          value={p.mac ?? ""}
+        />
+        <span className="text-muted-foreground text-xs">
+          Não muda nunca. Se o IP mudar, procure este endereço no Epson TM
+          Utility ou no roteador para achar o IP novo.
+        </span>
+      </label>
       <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppr-3">
         ID do dispositivo
         <Input

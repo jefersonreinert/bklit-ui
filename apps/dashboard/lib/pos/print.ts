@@ -179,6 +179,69 @@ const STATUS_HINTS: Record<string, string> = {
   EPTR_AUTOMATICAL: "Erro recuperável da impressora; tente de novo.",
 };
 
+/** Under this, a failed request was refused at once (certificate, port). */
+const FAST_FAIL_MS = 1500;
+/** Waiting longer than this for the printer means nothing answers there. */
+const REACH_TIMEOUT_MS = 12_000;
+
+const where = (p: PrinterConfig) =>
+  `${p.host.trim()}${p.mac ? `, endereço ${p.mac}` : ""}`;
+
+/**
+ * Posts an ePOS envelope and explains a failure: refused at once (this
+ * device has not accepted the printer's certificate yet) or no answer
+ * (the IP changed, the printer is off, or another Wi-Fi).
+ */
+async function eposPost(printer: PrinterConfig, xml: string) {
+  const started = Date.now();
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), REACH_TIMEOUT_MS);
+  try {
+    const res = await fetch(eposUrl(printer), {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/xml; charset=utf-8",
+        "If-Modified-Since": "Thu, 01 Jan 1970 00:00:00 GMT",
+        SOAPAction: '""',
+      },
+      body: xml,
+      signal: abort.signal,
+    });
+    return { res, body: await res.text() };
+  } catch {
+    const fast = Date.now() - started < FAST_FAIL_MS;
+    throw new Error(
+      fast
+        ? `“${printer.name}” (${printer.host.trim()}) recusou a conexão. Neste aparelho, toque em “Autorizar conexão” e aceite o certificado; se continuar, ative o ePOS-Print e o SSL no Epson TM Utility.`
+        : `Nada respondeu em ${where(printer)}. A impressora pode estar desligada, este aparelho em outro Wi-Fi, ou o IP mudou: confira o IP no Epson TM Utility${printer.mac ? ` (procure o endereço ${printer.mac})` : ""} ou segure FEED ao ligar a impressora.`
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function failure(printer: PrinterConfig, res: Response, body: string) {
+  const code = CODE.exec(body)?.[1] ?? "";
+  return new Error(
+    `${printer.name}: ${
+      STATUS_HINTS[code] ??
+      `recusou a impressão${code ? ` (${code})` : ` (HTTP ${res.status})`}`
+    }`
+  );
+}
+
+/**
+ * Checks an Epson printer without printing: an empty job only returns its
+ * status (paper, cover). Throws with the reason when it fails.
+ */
+export async function eposCheck(printer: PrinterConfig) {
+  const xml = `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"></epos-print></s:Body></s:Envelope>`;
+  const { res, body } = await eposPost(printer, xml);
+  if (!SUCCESS.test(body)) {
+    throw failure(printer, res, body);
+  }
+}
+
 /** Sends a rendered canvas to an Epson printer (raster, then cut). */
 async function eposSend(
   printer: PrinterConfig,
@@ -190,31 +253,9 @@ async function eposSend(
     drawer: opts.drawer,
     copies: opts.copies,
   });
-  let res: Response;
-  try {
-    res = await fetch(eposUrl(printer), {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        "If-Modified-Since": "Thu, 01 Jan 1970 00:00:00 GMT",
-        SOAPAction: '""',
-      },
-      body: xml,
-    });
-  } catch {
-    throw new Error(
-      `Não consegui falar com a impressora “${printer.name}” (${printer.host}). Confira se este aparelho está no mesmo Wi-Fi e toque em “Autorizar conexão” nas impressoras.`
-    );
-  }
-  const body = await res.text();
+  const { res, body } = await eposPost(printer, xml);
   if (!SUCCESS.test(body)) {
-    const code = CODE.exec(body)?.[1] ?? "";
-    throw new Error(
-      `${printer.name}: ${
-        STATUS_HINTS[code] ??
-        `recusou a impressão${code ? ` (${code})` : ` (HTTP ${res.status})`}`
-      }`
-    );
+    throw failure(printer, res, body);
   }
 }
 
