@@ -80,7 +80,7 @@ function PrinterForm({
     setTesting(true);
     setResult(null);
     try {
-      await printReceipt(p, sampleDoc(data), data.receipt);
+      await printReceipt(p, sampleDoc(data, { test: true }), data.receipt);
       setResult({ ok: true, text: "Teste enviado. Saiu o recibo?" });
     } catch (err) {
       setResult({
