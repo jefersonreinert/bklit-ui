@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { savePdf } from "@/lib/hr/contract-pdf";
-import { blankSheetPdf, fillingPdf, VENUES } from "@/lib/ops/sheet-pdf";
+import { blankSheetPdf, fillingPdf, kitPdf, VENUES } from "@/lib/ops/sheet-pdf";
 import { FREQUENCY_LABEL, type Frequency } from "@/lib/ops/templates";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../telegram/telegram-shared";
@@ -139,6 +139,24 @@ function FormsTab({ company, data }: { company: string; data: Overview }) {
     }
   };
 
+  const printKit = async () => {
+    setBusy("kit");
+    try {
+      const sections = data.departments.map((d) => ({
+        department: d.name,
+        forms: data.forms
+          .filter((f) => f.departmentId === d.id)
+          .map((f) => ({ ...f, department: d.name })),
+      }));
+      await savePdf(
+        await kitPdf(sections, venue),
+        fileName(`${venue.name} operations kit`)
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (data.forms.length === 0) {
     return (
       <div className="flex flex-col items-start gap-3 rounded-2xl border bg-card p-4">
@@ -175,7 +193,15 @@ function FormsTab({ company, data }: { company: string; data: Overview }) {
         <Button onClick={() => setEditing("new")} size="sm">
           Novo formulário
         </Button>
-        <Button onClick={() => seed({ company })} size="sm" variant="outline">
+        <Button
+          disabled={busy === "kit"}
+          onClick={printKit}
+          size="sm"
+          variant="outline"
+        >
+          {busy === "kit" ? "Montando o kit…" : "Kit completo (PDF)"}
+        </Button>
+        <Button onClick={() => seed({ company })} size="sm" variant="ghost">
           Adicionar modelos que faltam
         </Button>
       </div>
@@ -677,6 +703,39 @@ function HistoryTab({ company, data }: { company: string; data: Overview }) {
 
 /* ------------------------------- documents -------------------------------- */
 
+function HandbookCard({ company }: { company: string }) {
+  const [busy, setBusy] = useState(false);
+  const venue = VENUES[company] ?? { name: company, accent: "#333" };
+  const download = async () => {
+    setBusy(true);
+    try {
+      const { handbookPdf } = await import("@/lib/ops/handbook-pdf");
+      await savePdf(
+        await handbookPdf(venue, venue.legal ?? venue.name),
+        fileName(`${venue.name} employee handbook`)
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">Employee Handbook · {venue.name}</p>
+        <p className="text-muted-foreground text-sm">
+          Manual do funcionário em inglês (~28 páginas): valores, regras de
+          ouro, emprego e leis de Malta, passos do serviço, álcool, alergênicos,
+          segurança, caixa e gorjetas, uniforme, conduta, disciplina e página de
+          ciência para assinar.
+        </p>
+      </div>
+      <Button disabled={busy} onClick={download}>
+        {busy ? "Montando…" : "Baixar manual (PDF)"}
+      </Button>
+    </div>
+  );
+}
+
 function DocsTab({ company, data }: { company: string; data: Overview }) {
   const uploadUrl = useMutation(api.ops.uploadUrl);
   const add = useMutation(api.ops.addDocument);
@@ -727,13 +786,17 @@ function DocsTab({ company, data }: { company: string; data: Overview }) {
 
   if (data.departments.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Crie um departamento primeiro.
-      </p>
+      <div className="flex flex-col gap-4">
+        <HandbookCard company={company} />
+        <p className="text-muted-foreground text-sm">
+          Crie um departamento para guardar documentos.
+        </p>
+      </div>
     );
   }
   return (
     <div className="flex flex-col gap-4">
+      <HandbookCard company={company} />
       <form
         className="flex flex-col gap-2 rounded-2xl border bg-card p-3 text-sm"
         onSubmit={upload}
