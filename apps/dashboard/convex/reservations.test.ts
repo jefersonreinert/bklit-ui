@@ -214,3 +214,106 @@ describe("Reservations", () => {
     expect(day?.reservations[0]?.status).toBe("pending");
   });
 });
+
+describe("Guests CRM", () => {
+  it("builds one guest across venues with visits and no-shows", async () => {
+    const { t, p } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("posMeta", {
+        key: "vinomad",
+        areas: [],
+        settings: {},
+        receipt: {},
+        nextOrderNumber: 1,
+      });
+    });
+    const a = await p.mutation(api.reservations.create, { ...base });
+    await p.mutation(api.reservations.create, {
+      ...base,
+      company: "vinomad",
+      date: "2026-11-14",
+    });
+    const c = await p.mutation(api.reservations.create, {
+      ...base,
+      date: "2026-11-20",
+      email: "ANA@mail.com",
+    });
+    await p.mutation(api.reservations.setStatus, {
+      id: a.id,
+      status: "completed",
+    });
+    await p.mutation(api.reservations.setStatus, {
+      id: c.id,
+      status: "no_show",
+    });
+
+    const list = await p.query(api.guests.list, {});
+    expect(list).toHaveLength(1);
+    expect(list?.[0]).toMatchObject({
+      bookings: 3,
+      visits: 1,
+      noShows: 1,
+      favourite: "the-brew",
+    });
+
+    const known = await p.query(api.guests.byContact, {
+      phone: "+356 9999 0000",
+    });
+    expect(known).toMatchObject({
+      name: "Ana Silva",
+      email: "ana@mail.com",
+      visits: 1,
+    });
+
+    const day = await p.query(api.reservations.day, {
+      company: "the-brew",
+      date: base.date,
+    });
+    const gid = day?.reservations[0]?.guestId as string;
+    expect(day?.guests[gid]).toEqual({ visits: 1, noShows: 1 });
+
+    const week = await p.query(api.reservations.range, {
+      company: "all",
+      from: "2026-11-13",
+      to: "2026-11-19",
+    });
+    expect(week?.map((r) => r.date)).toEqual(["2026-11-13", "2026-11-14"]);
+  });
+
+  it("records consent, exports and erases a guest (GDPR)", async () => {
+    const { p } = await setup();
+    await p.mutation(api.reservations.create, {
+      ...base,
+      requests: "Nut allergy",
+    });
+    const [g] = (await p.query(api.guests.list, {})) ?? [];
+    if (!g) {
+      throw new Error("no guest");
+    }
+    await p.mutation(api.guests.save, {
+      id: g.id,
+      name: "Ana Silva",
+      phone: g.phone,
+      vip: true,
+      tags: ["regular"],
+      marketing: true,
+    });
+    const full = await p.query(api.guests.get, { id: g.id });
+    expect(full?.consentAt).toBeTypeOf("number");
+    const dump = await p.query(api.guests.exportData, { id: g.id });
+    expect(dump?.reservations[0]).toMatchObject({ requests: "Nut allergy" });
+
+    expect(await p.mutation(api.guests.forget, { id: g.id })).toBe(1);
+    expect(await p.query(api.guests.list, {})).toHaveLength(0);
+    const day = await p.query(api.reservations.day, {
+      company: "the-brew",
+      date: base.date,
+    });
+    expect(day?.reservations[0]).toMatchObject({
+      name: "Guest (data erased)",
+      phone: "",
+      requests: "",
+      guestId: null,
+    });
+  });
+});

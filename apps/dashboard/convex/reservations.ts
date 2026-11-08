@@ -20,6 +20,7 @@ import {
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { meta } from "./access";
+import { upsertGuest } from "./guests";
 import { isPanel, requirePanel } from "./lib";
 
 /**
@@ -111,6 +112,7 @@ const view = (r: Doc<"reservations">) => ({
   vip: Boolean(r.vip),
   event: Boolean(r.event),
   customerId: r.customerId ?? null,
+  guestId: r.guestId ?? null,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
   log: r.log,
@@ -125,11 +127,42 @@ export const venue = query({
       return null;
     }
     const c = company(a.company);
-    const [settings, tables] = await Promise.all([
+    const [settings, tables, m] = await Promise.all([
       settingsOf(ctx, c),
       tablesOf(ctx, c),
+      meta(ctx, c),
     ]);
-    return { settings, tables };
+    // Floor plan drawing (POS units: 1000 × 700 per area)
+    const floor = (
+      (m?.areas ?? []) as {
+        id: string;
+        name: string;
+        tables: {
+          id: string;
+          name: string;
+          seats: number;
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+          shape: string;
+        }[];
+      }[]
+    ).map((area) => ({
+      id: area.id,
+      name: area.name,
+      tables: (area.tables ?? []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        seats: t.seats,
+        x: t.x,
+        y: t.y,
+        w: t.w,
+        h: t.h,
+        round: t.shape === "round",
+      })),
+    }));
+    return { settings, tables, floor };
   },
 });
 
@@ -240,6 +273,19 @@ export const day = query({
     for (const c of companies) {
       tables[c] = await tablesOf(ctx, c);
     }
+    // Guest badges: visits and no-shows across every venue
+    const guests: Record<string, { visits: number; noShows: number }> = {};
+    for (const id of new Set(rows.map((r) => r.guestId).filter(Boolean))) {
+      const hist = await ctx.db
+        .query("reservations")
+        .withIndex("by_guest", (q) => q.eq("guestId", id))
+        .take(300);
+      guests[id as string] = {
+        visits: hist.filter((h) => ["seated", "completed"].includes(h.status))
+          .length,
+        noShows: hist.filter((h) => h.status === "no_show").length,
+      };
+    }
     return {
       reservations: rows
         .map(view)
@@ -247,7 +293,55 @@ export const day = query({
           (x, y) => x.time.localeCompare(y.time) || x.createdAt - y.createdAt
         ),
       tables,
+      guests,
     };
+  },
+});
+
+/** Bookings between two dates (inclusive, at most 62 days). */
+export const range = query({
+  args: { company: v.string(), from: v.string(), to: v.string() },
+  handler: async (ctx, a) => {
+    if (!(await isPanel(ctx))) {
+      return null;
+    }
+    if (!(isDate(a.from) && isDate(a.to)) || a.to < a.from) {
+      throw new ConvexError("Período inválido.");
+    }
+    const days = (Date.parse(a.to) - Date.parse(a.from)) / 86_400_000;
+    if (days > 62) {
+      throw new ConvexError("Período longo demais.");
+    }
+    const rows =
+      a.company === "all"
+        ? await ctx.db
+            .query("reservations")
+            .withIndex("by_date", (q) =>
+              q.gte("date", a.from).lte("date", a.to)
+            )
+            .take(8000)
+        : await ctx.db
+            .query("reservations")
+            .withIndex("by_company_date", (q) =>
+              q
+                .eq("company", company(a.company))
+                .gte("date", a.from)
+                .lte("date", a.to)
+            )
+            .take(8000);
+    return rows
+      .map((r) => ({
+        id: r._id,
+        company: r.company,
+        name: r.name,
+        date: r.date,
+        time: r.time,
+        party: r.party,
+        status: r.status as Status,
+        source: r.source as Source,
+        vip: Boolean(r.vip),
+      }))
+      .sort((x, y) => (x.date + x.time).localeCompare(y.date + y.time));
   },
 });
 
@@ -365,6 +459,10 @@ export const create = mutation({
       status = "seated";
     }
     const customer = await customerFor(ctx, who.phone);
+    const guestId = await upsertGuest(ctx, {
+      ...who,
+      vip: a.vip || (customer?.vip ?? 0) > 0,
+    });
     // Unique reference (retry on the rare collision)
     let ref = bookingRef(PREFIX[c] ?? "RS", Math.random);
     for (let i = 0; i < 5; i++) {
@@ -395,6 +493,7 @@ export const create = mutation({
       vip: a.vip || (customer?.vip ?? 0) > 0 || undefined,
       event: a.event || undefined,
       customerId: customer?._id,
+      guestId,
       createdAt: now,
       updatedAt: now,
       log: [{ at: now, by: "Painel", what: `Criada (${a.source})` }],
@@ -451,8 +550,13 @@ export const update = mutation({
       changes.push("mesa alterada");
     }
     const now = Date.now();
+    const guestId =
+      who.phone !== r.phone || who.email !== r.email || !r.guestId
+        ? await upsertGuest(ctx, { ...who, vip: a.vip })
+        : r.guestId;
     await ctx.db.patch(r._id, {
       ...who,
+      guestId,
       date: b.date,
       time: b.time,
       duration: b.duration,
