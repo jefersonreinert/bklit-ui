@@ -1,14 +1,18 @@
 /**
- * Monthly hours and gross pay from the POS time clock (Malta).
- * Overtime is counted per week (Monday to Sunday) beyond the normal weekly
- * hours; Sundays and Malta public holidays can carry their own multiplier.
- * An hour that is both (e.g. overtime on a Sunday) takes the higher one.
+ * Monthly hours and gross pay from the POS time clock, following the
+ * overtime rules for bars and restaurants in S.L. 452.66 paragraph 22:
+ * (a) hours beyond 8 a day, Monday to Saturday, at time-and-a-half;
+ * (b) all hours on Sundays and public holidays at double-time;
+ * (c) weekly hours beyond the contract's normal hours (excluding those
+ *     already paid under (a) and (b)) at time-and-a-half.
  * Gross only: tax (FSS) and social security are left to the payroll.
  */
 
 export interface PaySettings {
   /** Normal hours per week before overtime. */
   weeklyHours: number;
+  /** Normal hours per day (Monday to Saturday) before overtime. */
+  dailyHours?: number;
   overtime: number;
   sunday: number;
   holiday: number;
@@ -16,8 +20,9 @@ export interface PaySettings {
 
 export const DEFAULT_PAY: PaySettings = {
   weeklyHours: 40,
+  dailyHours: 8,
   overtime: 1.5,
-  sunday: 1,
+  sunday: 2,
   holiday: 2,
 };
 
@@ -136,32 +141,42 @@ function kindOf(date: string, holiday: string | undefined): DayLine["kind"] {
   return new Date(utc(date)).getUTCDay() === 0 ? "sunday" : "normal";
 }
 
-/** The month's days in order; weekly hours beyond the limit are overtime. */
+/**
+ * The month's days in order with their overtime: daily excess first, then
+ * weekly excess; Sundays and holidays are paid apart and not counted.
+ */
 function dayLines(input: PayInput, s: PaySettings) {
   const holidays = holidaysAround(input.month);
   const { perDay, open } = hoursPerDay(input.punches);
+  const daily = s.dailyHours ?? 8;
   const days: DayLine[] = [];
   const weekTotal = new Map<string, number>();
   for (const date of [...perDay.keys()].sort()) {
     const hours = perDay.get(date) ?? 0;
-    const week = weekOf(date);
-    const before = weekTotal.get(week) ?? 0;
-    weekTotal.set(week, before + hours);
-    if (!date.startsWith(input.month)) {
-      continue;
-    }
-    const overtime = Math.max(
-      0,
-      Math.min(hours, before + hours - s.weeklyHours)
-    );
     const holiday = holidays.get(date);
-    days.push({
-      date,
-      hours: r2(hours),
-      overtime: r2(overtime),
-      kind: kindOf(date, holiday),
-      holiday,
-    });
+    const kind = kindOf(date, holiday);
+    let overtime = 0;
+    if (kind === "normal") {
+      const dayExtra = Math.max(0, hours - daily);
+      const counted = hours - dayExtra;
+      const week = weekOf(date);
+      const before = weekTotal.get(week) ?? 0;
+      weekTotal.set(week, before + counted);
+      const weekExtra = Math.max(
+        0,
+        Math.min(counted, before + counted - s.weeklyHours)
+      );
+      overtime = dayExtra + weekExtra;
+    }
+    if (date.startsWith(input.month)) {
+      days.push({
+        date,
+        hours: r2(hours),
+        overtime: r2(overtime),
+        kind,
+        holiday,
+      });
+    }
   }
   return { days, open };
 }
@@ -172,12 +187,16 @@ const MULT: Record<DayLine["kind"], (s: PaySettings) => number> = {
   holiday: (s) => s.holiday,
 };
 
-/** Pay of one day; a monthly salary already covers the normal hours. */
+/**
+ * Pay of one day. A monthly salary covers the normal Monday–Saturday
+ * hours; overtime and every Sunday or holiday hour are paid on top.
+ */
 function dayPay(d: DayLine, rate: number, monthly: boolean, s: PaySettings) {
-  const mult = MULT[d.kind](s);
+  if (d.kind !== "normal") {
+    return d.hours * rate * MULT[d.kind](s);
+  }
   const normal = d.hours - d.overtime;
-  const overtimePay = d.overtime * rate * Math.max(mult, s.overtime);
-  return normal * rate * (monthly ? mult - 1 : mult) + overtimePay;
+  return (monthly ? 0 : normal * rate) + d.overtime * rate * s.overtime;
 }
 
 export function payFor(input: PayInput, s: PaySettings = DEFAULT_PAY) {

@@ -301,6 +301,7 @@ function ProfileForm({ data }: { data: Employee }) {
   const [f, setF] = useState({
     origin: (p?.origin ?? "") as Origin | "",
     nationality: p?.nationality ?? "",
+    gender: p?.gender ?? "",
     birthDate: p?.birthDate ?? "",
     address: p?.address ?? "",
     idNumber: p?.idNumber ?? "",
@@ -334,6 +335,7 @@ function ProfileForm({ data }: { data: Employee }) {
         userId: data.id,
         origin: f.origin,
         nationality: f.nationality,
+        gender: f.gender,
         birthDate: f.birthDate,
         address: f.address,
         idNumber: f.idNumber,
@@ -394,7 +396,20 @@ function ProfileForm({ data }: { data: Employee }) {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {text("nationality", "hr-nat", "Nacionalidade", "Ex.: Brasileira")}
+        {text("nationality", "hr-nat", "Nacionalidade", "Ex.: Brazilian")}
+        <Field id="hr-gender" label="Gênero (exigido no contrato)">
+          <select
+            className="h-9 rounded-md border bg-transparent px-2"
+            id="hr-gender"
+            onChange={(e) => set("gender")(e.target.value)}
+            value={f.gender}
+          >
+            <option value="">—</option>
+            <option value="Male">Masculino</option>
+            <option value="Female">Feminino</option>
+            <option value="Non-binary">Outro</option>
+          </select>
+        </Field>
         <Field id="hr-birth" label="Data de nascimento">
           <Input
             id="hr-birth"

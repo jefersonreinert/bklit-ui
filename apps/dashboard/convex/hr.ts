@@ -133,6 +133,7 @@ export const saveProfile = mutation({
     userId: v.id("posUsers"),
     origin: v.union(v.literal("eu"), v.literal("non-eu")),
     nationality: v.optional(v.string()),
+    gender: v.optional(v.string()),
     birthDate: v.optional(v.string()),
     address: v.optional(v.string()),
     idNumber: v.optional(v.string()),
@@ -157,6 +158,7 @@ export const saveProfile = mutation({
     const fields = {
       origin: a.origin,
       nationality: clean(a.nationality, 60),
+      gender: clean(a.gender, 20),
       birthDate: day(a.birthDate),
       address: clean(a.address),
       idNumber: clean(a.idNumber, 40),

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { buildContract } from "@/lib/hr/contract";
+import { textBlocks } from "@/lib/hr/contract";
 import { contractPdf, savePdf } from "@/lib/hr/contract-pdf";
 import { cn } from "@/lib/utils";
 import { SignaturePad } from "./signature-pad";
@@ -195,25 +195,20 @@ function CreateForm({
   );
 }
 
-function ContractText({ c }: { c: Contract }) {
-  const doc = buildContract(c.fields);
+/** The frozen, signed text (never rebuilt from the current template). */
+export function FrozenText({ text }: { text: string }) {
+  const { title, lines } = textBlocks(text);
   return (
     <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-4 font-serif text-[13px] text-black leading-relaxed">
-      <p className="mb-3 text-center font-bold">{doc.title}</p>
-      {doc.parties.map((p) => (
-        <p className="mb-2" key={p}>
-          {p}
+      <p className="mb-3 text-center font-bold">{title}</p>
+      {lines.map((l, i) => (
+        <p
+          className={l.heading ? "mt-3 font-bold" : "mb-1.5"}
+          // biome-ignore lint/suspicious/noArrayIndexKey: static text, lines may repeat
+          key={i}
+        >
+          {l.text}
         </p>
-      ))}
-      {doc.sections.map((s) => (
-        <div className="mt-3" key={s.heading}>
-          <p className="font-bold">{s.heading}</p>
-          {s.paragraphs.map((p) => (
-            <p className="mb-1.5" key={p}>
-              {p}
-            </p>
-          ))}
-        </div>
       ))}
     </div>
   );
@@ -252,7 +247,7 @@ function ContractCard({ c, userId }: { c: Contract; userId: Id<"posUsers"> }) {
           {reading ? "Esconder texto" : "Ler contrato"}
         </Button>
       )}
-      {reading && c.status !== "void" ? <ContractText c={c} /> : null}
+      {reading && c.status !== "void" ? <FrozenText text={c.text} /> : null}
       {c.status === "draft" ? <DraftActions c={c} /> : null}
       {c.status === "sent" ? <SentActions c={c} /> : null}
       {c.status === "signed" ? <SignedActions c={c} userId={userId} /> : null}
