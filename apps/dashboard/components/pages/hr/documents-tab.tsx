@@ -32,6 +32,7 @@ import {
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../telegram/telegram-shared";
+import { ContractsPanel } from "./contracts-panel";
 
 /**
  * Team documents for working legally in Malta: EU or not, the checklist
@@ -249,6 +250,9 @@ function EmployeeSheet({
         {data ? (
           <div className="flex flex-col gap-6 p-5">
             <ProfileForm data={data} key={data.profile?.updatedAt ?? 0} />
+            {data.profile ? (
+              <ContractsPanel startDate={data.startDate} userId={data.id} />
+            ) : null}
             {data.profile ? (
               <DocList data={data} origin={data.profile.origin} />
             ) : (

@@ -9,6 +9,7 @@
  */
 
 import type * as access from "../access.js";
+import type * as contracts from "../contracts.js";
 import type * as crons from "../crons.js";
 import type * as designs from "../designs.js";
 import type * as eatrade from "../eatrade.js";
@@ -28,6 +29,7 @@ import type * as metatrader from "../metatrader.js";
 import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
 import type * as ohlc from "../ohlc.js";
+import type * as payroll from "../payroll.js";
 import type * as pos from "../pos.js";
 import type * as posapi from "../posapi.js";
 import type * as staff from "../staff.js";
@@ -46,6 +48,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   access: typeof access;
+  contracts: typeof contracts;
   crons: typeof crons;
   designs: typeof designs;
   eatrade: typeof eatrade;
@@ -65,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   mtproto: typeof mtproto;
   notes: typeof notes;
   ohlc: typeof ohlc;
+  payroll: typeof payroll;
   pos: typeof pos;
   posapi: typeof posapi;
   staff: typeof staff;

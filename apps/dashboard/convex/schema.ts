@@ -691,6 +691,68 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  /** HR settings: the employer on contracts and the pay multipliers. */
+  hrSettings: defineTable({
+    key: v.string(),
+    employerName: v.string(),
+    regNo: v.string(),
+    employerAddress: v.string(),
+    signatory: v.string(),
+    signatoryTitle: v.string(),
+    weeklyHours: v.number(),
+    overtime: v.number(),
+    sunday: v.number(),
+    holiday: v.number(),
+    probationMonths: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** One employee's month: manual hour corrections and the approval. */
+  hrPayruns: defineTable({
+    userId: v.id("posUsers"),
+    /** YYYY-MM. */
+    month: v.string(),
+    adjustments: v.array(
+      v.object({ hours: v.number(), note: v.string(), at: v.number() })
+    ),
+    approvedAt: v.optional(v.number()),
+    approvedHours: v.optional(v.number()),
+    approvedGross: v.optional(v.number()),
+  })
+    .index("by_user_month", ["userId", "month"])
+    .index("by_month", ["month"]),
+
+  /**
+   * Contracts of employment (lib/hr/contract.ts) and their electronic
+   * signatures: the text is frozen with its SHA-256 when created; the
+   * employee signs through a secret link (token).
+   */
+  hrContracts: defineTable({
+    userId: v.id("posUsers"),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sent"),
+      v.literal("signed"),
+      v.literal("void")
+    ),
+    fields: v.any(),
+    text: v.string(),
+    hash: v.string(),
+    token: v.string(),
+    createdAt: v.number(),
+    employerSignature: v.optional(v.string()),
+    employerSignedAt: v.optional(v.number()),
+    sentAt: v.optional(v.number()),
+    employeeName: v.optional(v.string()),
+    employeeSignature: v.optional(v.string()),
+    employeeSignedAt: v.optional(v.number()),
+    employeeIp: v.optional(v.string()),
+    employeeAgent: v.optional(v.string()),
+    voidedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_token", ["token"]),
+
   /** Employee documents (lib/hr/malta-documents.ts kinds); files in storage. */
   hrDocuments: defineTable({
     userId: v.id("posUsers"),
