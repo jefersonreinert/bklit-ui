@@ -31,6 +31,7 @@ import {
 } from "@/lib/hr/malta-documents";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+import { Notice, TelegramProvider } from "../telegram/telegram-shared";
 
 /**
  * Team documents for working legally in Malta: EU or not, the checklist
@@ -116,7 +117,23 @@ function Chips({ s }: { s: ReturnType<typeof summary> }) {
   );
 }
 
+/** The tab needs the panel's Convex client (the HR page has no provider). */
 export function HrDocumentsTab() {
+  return (
+    <TelegramProvider
+      fallback={
+        <Notice>
+          Os documentos usam o banco central do painel (Convex), que não está
+          disponível agora.
+        </Notice>
+      }
+    >
+      <DocumentsTab />
+    </TelegramProvider>
+  );
+}
+
+function DocumentsTab() {
   const rows = useQuery(api.hr.employees, {});
   const [open, setOpen] = useState<Id<"posUsers"> | null>(null);
   const [showInactive, setShowInactive] = useState(false);
