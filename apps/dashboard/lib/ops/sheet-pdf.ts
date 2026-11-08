@@ -25,6 +25,8 @@ export interface Venue {
   accent: string;
   /** Short line under the name on the cover. */
   tagline?: string;
+  /** Legal employer (handbook). */
+  legal?: string;
 }
 
 export const VENUES: Record<string, Venue> = {
@@ -33,18 +35,21 @@ export const VENUES: Record<string, Venue> = {
     logo: "/brands/the-brew.png",
     accent: "#e30613",
     tagline: "Grill & Brewery · Sliema",
+    legal: "Tolok (Malta) Limited",
   },
   "ribs-house": {
     name: "Ribs House by The Brew",
     logo: "/brands/ribs-house.png",
     accent: "#e30613",
     tagline: "Naxxar",
+    legal: "Tolok (Malta) Limited",
   },
   vinomad: {
     name: "Vinomad",
     logo: "/brands/vinomad.png",
     accent: "#7b1e2b",
     tagline: "Wine · Grill · Gather — Valletta Waterfront",
+    legal: "Tolok (Malta) Limited",
   },
   main: { name: "Casa Brasa", accent: "#c96442" },
 };
@@ -924,3 +929,30 @@ export async function kitPdf(sections: KitSection[], venue: Venue) {
   }
   return pdf.output("blob");
 }
+
+/* ---------------------- shared with the handbook PDF ----------------------- */
+
+export const pdfKit = {
+  rgb,
+  tint,
+  INK,
+  MUTED,
+  LINE,
+  SOFT,
+  WHITE,
+  GREEN,
+  RED,
+  M,
+  fill,
+  stroke,
+  ink,
+  font,
+  card,
+  pill,
+  label,
+  wrap,
+  image,
+  drawFit,
+  newPdf,
+};
+export type { Pdf, RGB };
