@@ -15,6 +15,7 @@ import type * as eatrade from "../eatrade.js";
 import type * as files from "../files.js";
 import type * as guardian from "../guardian.js";
 import type * as home from "../home.js";
+import type * as hr from "../hr.js";
 import type * as http from "../http.js";
 import type * as i18n from "../i18n.js";
 import type * as inventory from "../inventory.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   guardian: typeof guardian;
   home: typeof home;
+  hr: typeof hr;
   http: typeof http;
   i18n: typeof i18n;
   inventory: typeof inventory;

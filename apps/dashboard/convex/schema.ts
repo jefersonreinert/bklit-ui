@@ -668,6 +668,46 @@ export default defineSchema({
   /* --------------------------------- team --------------------------------- */
   // Rota and time clock of the POS users, per business.
 
+  /**
+   * HR file of a POS user (panel only): origin (EU or not), identity and
+   * pay. Personal data, kept apart from the POS users the devices read.
+   */
+  hrProfiles: defineTable({
+    userId: v.id("posUsers"),
+    origin: v.union(v.literal("eu"), v.literal("non-eu")),
+    nationality: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
+    address: v.optional(v.string()),
+    idNumber: v.optional(v.string()),
+    passportNumber: v.optional(v.string()),
+    tin: v.optional(v.string()),
+    ssn: v.optional(v.string()),
+    iban: v.optional(v.string()),
+    /** Paid by the hour (clock) or a monthly salary plus overtime. */
+    payType: v.union(v.literal("hourly"), v.literal("monthly")),
+    monthlySalary: v.optional(v.number()),
+    /** Business where the person normally works (contract workplace). */
+    workplace: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /** Employee documents (lib/hr/malta-documents.ts kinds); files in storage. */
+  hrDocuments: defineTable({
+    userId: v.id("posUsers"),
+    kind: v.string(),
+    label: v.optional(v.string()),
+    number: v.optional(v.string()),
+    /** YYYY-MM-DD. */
+    expiresAt: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
+    fileName: v.optional(v.string()),
+    mimeType: v.optional(v.string()),
+    note: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_expires", ["expiresAt"]),
+
   staffShifts: defineTable({
     company: v.string(),
     userId: v.id("posUsers"),
