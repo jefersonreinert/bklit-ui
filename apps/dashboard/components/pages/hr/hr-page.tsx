@@ -16,6 +16,7 @@ import {
 } from "@/lib/hr-data";
 import { Icon } from "@/lib/icons";
 import { HrDevelopmentTab } from "./development-tab";
+import { HrDocumentsTab } from "./documents-tab";
 import { HrOverviewTab } from "./overview-tab";
 import { HrPeopleTab, NewEmployeeSheet } from "./people-tab";
 import { HrRecruitmentTab } from "./recruitment-tab";
@@ -24,6 +25,7 @@ import { HrScheduleTab } from "./schedule-tab";
 const TABS = [
   { value: "geral", label: "Visão geral" },
   { value: "colaboradores", label: "Colaboradores" },
+  { value: "documentos", label: "Equipe & documentos" },
   { value: "escala", label: "Escala & ponto" },
   { value: "recrutamento", label: "Recrutamento" },
   { value: "desenvolvimento", label: "Desenvolvimento" },
@@ -153,6 +155,9 @@ export function HrPage() {
         </TabsContent>
         <TabsContent className="pt-4" value="colaboradores">
           <HrPeopleTab people={people} />
+        </TabsContent>
+        <TabsContent className="pt-4" value="documentos">
+          <HrDocumentsTab />
         </TabsContent>
         <TabsContent className="pt-4" value="escala">
           <HrScheduleTab />
