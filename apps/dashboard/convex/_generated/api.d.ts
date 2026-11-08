@@ -28,6 +28,7 @@ import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
 import type * as ohlc from "../ohlc.js";
 import type * as pos from "../pos.js";
+import type * as posapi from "../posapi.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
 import type * as team from "../team.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   notes: typeof notes;
   ohlc: typeof ohlc;
   pos: typeof pos;
+  posapi: typeof posapi;
   staff: typeof staff;
   stores: typeof stores;
   team: typeof team;

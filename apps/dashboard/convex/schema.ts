@@ -729,6 +729,24 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_created", ["createdAt"]),
 
+  /**
+   * Read-only POS API keys (convex/posapi.ts). Only the SHA-256 of the key
+   * is kept; the key itself is shown once, in the browser that made it.
+   */
+  posApiKeys: defineTable({
+    company: v.string(),
+    name: v.string(),
+    /** First characters, to tell keys apart ("cb_live_ab12…"). */
+    prefix: v.string(),
+    hash: v.string(),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    lastUsedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_hash", ["hash"])
+    .index("by_company", ["company"]),
+
   posAudit: defineTable({
     userName: v.string(),
     action: v.string(),

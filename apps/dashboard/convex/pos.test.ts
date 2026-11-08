@@ -220,3 +220,46 @@ describe("Malta fiscal receipts", () => {
     expect(byId).toEqual({ c: 1, a: 2, b: undefined });
   });
 });
+
+describe("POS read API", () => {
+  const sha = async (text: string) =>
+    [
+      ...new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+      ),
+    ]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+  it("reads with a valid key and refuses a missing or revoked one", async () => {
+    const { t, token } = await setup();
+    const key = "cb_live_test_key_123";
+    await t.mutation(api.posapi.createKey, {
+      session: token,
+      name: "Contador",
+      prefix: key.slice(0, 14),
+      hash: await sha(key),
+    });
+    const auth = { headers: { authorization: `Bearer ${key}` } };
+    const ok = await t.fetch("/api/v1/products", auth);
+    expect(ok.status).toBe(200);
+    const body = await ok.json();
+    expect(body.products.map((p: { id: string }) => p.id)).toEqual([
+      "caipirinha",
+    ]);
+    const orders = await t.fetch(
+      "/api/v1/orders?from=2026-11-01&to=2026-11-07",
+      auth
+    );
+    expect(orders.status).toBe(200);
+    expect((await t.fetch("/api/v1/products")).status).toBe(401);
+    expect((await t.fetch("/api/v1/orders", auth)).status).toBe(400);
+
+    const [k] = (await t.query(api.posapi.keys, { session: token })) ?? [];
+    if (!k) {
+      throw new Error("key not listed");
+    }
+    await t.mutation(api.posapi.revokeKey, { session: token, id: k.id });
+    expect((await t.fetch("/api/v1/products", auth)).status).toBe(401);
+  });
+});
