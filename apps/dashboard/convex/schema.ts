@@ -415,6 +415,8 @@ export default defineSchema({
     /** Guest book customer of this order (loyalty). */
     customerId: v.optional(v.id("posCustomers")),
     customerName: v.optional(v.string()),
+    /** Fiscal receipt number, given on payment (consecutive, no gaps). */
+    fiscalNumber: v.optional(v.number()),
   })
     .index("by_cid", ["cid"])
     .index("by_customer", ["customerId", "closedAt"])
@@ -434,6 +436,8 @@ export default defineSchema({
     /** Printers and their routing, shared by every device. */
     printers: v.optional(v.any()),
     nextOrderNumber: v.number(),
+    /** Next fiscal receipt number (Malta: consecutive, only paid orders). */
+    nextFiscalNumber: v.optional(v.number()),
     failedLogins: v.optional(v.number()),
     lockedUntil: v.optional(v.number()),
   }).index("by_key", ["key"]),

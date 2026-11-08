@@ -35,8 +35,23 @@ export function itemDetail(i: Pick<OrderItem, "mods" | "note">) {
     .join(" · ");
 }
 
+/** Malta standard VAT rate, used until the POS has its own. */
+export const DEFAULT_VAT_RATE = 18;
+
+/** VAT contained in a VAT-inclusive amount. */
+export function vatIncluded(gross: number, rate: number) {
+  return rate > 0 ? Math.round(((gross * rate) / (100 + rate)) * 100) / 100 : 0;
+}
+
 export interface ReceiptDoc {
   number: number;
+  /** Fiscal receipt number (paid orders; absent on older ones). */
+  fiscalNumber?: number;
+  /** Not paid yet: a pre-bill, never a fiscal receipt. */
+  prebill: boolean;
+  /** VAT percent included in the prices and the VAT in this sale. */
+  vatRate: number;
+  vat: number;
   date: Date;
   table: string;
   customer: string;
@@ -61,6 +76,7 @@ export interface ReceiptDoc {
 export function receiptDoc(order: PosOrder, data: PosData): ReceiptDoc {
   const t = orderTotals(order);
   const tip = order.payment?.tip ?? 0;
+  const vatRate = data.settings.vatRate ?? DEFAULT_VAT_RATE;
   const table = order.tableId
     ? data.areas
         .flatMap((a) => a.tables.map((tb) => ({ tb, area: a.name })))
@@ -68,6 +84,11 @@ export function receiptDoc(order: PosOrder, data: PosData): ReceiptDoc {
     : undefined;
   return {
     number: order.number,
+    fiscalNumber: order.fiscalNumber,
+    prebill: order.status !== "paid",
+    vatRate,
+    // Tips are the staff's, outside the sale and its VAT
+    vat: vatIncluded(t.total, vatRate),
     date: new Date(order.payment?.at ?? order.updatedAt),
     table: table ? `Mesa ${table.tb.name} · ${table.area}` : "",
     customer: order.name,
@@ -89,8 +110,11 @@ export function receiptDoc(order: PosOrder, data: PosData): ReceiptDoc {
   };
 }
 
-/** A sample sale for the designer preview. */
-export function sampleDoc(data: PosData): ReceiptDoc {
+/** A sample sale for the designer preview (and the MTCA models). */
+export function sampleDoc(
+  data: PosData,
+  { prebill = false }: { prebill?: boolean } = {}
+): ReceiptDoc {
   const items = data.products.slice(0, 4);
   const lines = items.map((p, i) => ({
     name: p.name,
@@ -100,8 +124,13 @@ export function sampleDoc(data: PosData): ReceiptDoc {
   }));
   const subtotal = lines.reduce((a, l) => a + l.total, 0);
   const tax = Math.round(subtotal * data.settings.taxRate) / 100;
+  const vatRate = data.settings.vatRate ?? DEFAULT_VAT_RATE;
   return {
     number: 128,
+    fiscalNumber: prebill ? undefined : 1024,
+    prebill,
+    vatRate,
+    vat: vatIncluded(subtotal + tax, vatRate),
     date: new Date(),
     table: "Mesa 7 · Salão",
     customer: "",
@@ -111,8 +140,8 @@ export function sampleDoc(data: PosData): ReceiptDoc {
     tax,
     tip: 0,
     total: subtotal + tax,
-    payment: "Cartão",
-    ref: "TX4F9K2",
+    payment: prebill ? "" : "Cartão",
+    ref: prebill ? "" : "TX4F9K2",
     currency: data.settings.currency,
   };
 }
@@ -303,7 +332,9 @@ function header(x: Ctx, doc: ReceiptDoc) {
     s.address,
     [s.phone, s.email].filter(Boolean).join(" · "),
     s.website,
-    s.showTaxId && s.taxId ? `NIF ${s.taxId}` : "",
+    s.showTaxId && s.taxId ? `VAT No. ${s.taxId}` : "",
+    // Malta: the approved POS's EXO number goes on every receipt
+    s.exoNumber ? `EXO No. ${s.exoNumber}` : "",
   ].filter(Boolean);
   for (const line of info) {
     text(x, line, { size: 9.5, color: MUTED, align });
@@ -314,6 +345,16 @@ function header(x: Ctx, doc: ReceiptDoc) {
   }
   x.y += 6 * x.u;
   meta(x, doc);
+}
+
+/** "FISCAL RECEIPT Nº 1024", "PRE-BILL" or, on older orders, "RECIBO Nº 7". */
+function title(doc: ReceiptDoc) {
+  if (doc.prebill) {
+    return "PRE-BILL";
+  }
+  return doc.fiscalNumber
+    ? `FISCAL RECEIPT Nº ${doc.fiscalNumber}`
+    : `RECIBO Nº ${doc.number}`;
 }
 
 function meta(x: Ctx, doc: ReceiptDoc) {
@@ -332,11 +373,7 @@ function meta(x: Ctx, doc: ReceiptDoc) {
       font(x, 11, 700);
       x.c.fillStyle = "#ffffff";
       x.c.textAlign = "left";
-      x.c.fillText(
-        `RECIBO Nº ${doc.number}`,
-        x.pad + 12 * x.u,
-        x.y + 21.5 * x.u
-      );
+      x.c.fillText(title(doc), x.pad + 12 * x.u, x.y + 21.5 * x.u);
       x.c.textAlign = "right";
       font(x, 10, 600);
       x.c.fillText(when, x.w - x.pad - 12 * x.u, x.y + 21.5 * x.u);
@@ -344,7 +381,13 @@ function meta(x: Ctx, doc: ReceiptDoc) {
     x.y += h + 10 * x.u;
   } else {
     rule(x, x.s.template === "classic" ? "dotted" : "dashed");
-    row(x, `Recibo nº ${doc.number}`, when, { size: 10, weight: 700 });
+    row(x, title(doc), when, { size: 10, weight: 700 });
+  }
+  if (doc.prebill) {
+    text(x, "NOT A FISCAL RECEIPT", { size: 11, weight: 800, align: "center" });
+  }
+  if (doc.prebill || doc.fiscalNumber) {
+    text(x, `Order nº ${doc.number}`, { size: 10, color: MUTED });
   }
   if (x.s.showTable && doc.table) {
     text(x, doc.table, { size: 10, color: MUTED });
@@ -406,6 +449,17 @@ function totals(x: Ctx, doc: ReceiptDoc) {
   } else {
     row(x, "TOTAL", m(doc.total), { size: 15, weight: 800 });
   }
+  if (doc.vatRate > 0) {
+    const sale = doc.total - doc.tip;
+    row(x, `VAT ${doc.vatRate}% included`, m(doc.vat), {
+      size: 10,
+      color: MUTED,
+    });
+    row(x, "Net amount (excl. VAT)", m(sale - doc.vat), {
+      size: 10,
+      color: MUTED,
+    });
+  }
   if (x.s.showPayment && doc.payment) {
     text(x, `Pago com ${doc.payment}${doc.ref ? ` · ${doc.ref}` : ""}`, {
       size: 9.5,
@@ -438,7 +492,15 @@ function qr(x: Ctx) {
   x.y += px + 4 * x.u;
 }
 
-function footer(x: Ctx) {
+function footer(x: Ctx, doc: ReceiptDoc) {
+  if (doc.prebill) {
+    x.y += 6 * x.u;
+    text(x, "Pre-bill only. Ask for your fiscal receipt after payment.", {
+      size: 9.5,
+      weight: 700,
+      align: "center",
+    });
+  }
   qr(x);
   if (x.s.footer) {
     x.y += 4 * x.u;
@@ -456,7 +518,7 @@ function layout(x: Ctx, doc: ReceiptDoc, img: HTMLImageElement | null) {
   header(x, doc);
   items(x, doc);
   totals(x, doc);
-  footer(x);
+  footer(x, doc);
   return Math.ceil(x.y);
 }
 

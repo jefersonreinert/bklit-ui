@@ -163,6 +163,8 @@ export interface PosOrder {
   /** Guest book customer (loyalty). */
   customerId?: string;
   customerName?: string;
+  /** Fiscal receipt number, given on payment (absent on older orders). */
+  fiscalNumber?: number;
 }
 
 export interface PosSettings {
@@ -175,6 +177,8 @@ export interface PosSettings {
   paymentLink: string;
   /** Lock every device after these idle minutes (0 = never). */
   autoLockMin?: number;
+  /** VAT percent included in the prices (Malta standard rate: 18). */
+  vatRate?: number;
 }
 
 export type ReceiptTemplate = "modern" | "classic" | "compact";
@@ -204,6 +208,8 @@ export interface ReceiptSettings {
   /** Legal line, e.g. "Este documento não serve de fatura". */
   legalNote: string;
   showTaxId: boolean;
+  /** Malta VAT EXO number of the approved POS (printed on every receipt). */
+  exoNumber?: string;
   showTable: boolean;
   showPayment: boolean;
   /** QR with the business site or review link at the bottom. */

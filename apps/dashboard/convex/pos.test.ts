@@ -170,3 +170,53 @@ describe("POS businesses", () => {
     expect(mainDays).toEqual([]);
   });
 });
+
+describe("Malta fiscal receipts", () => {
+  it("numbers only paid orders, in sequence, with no gaps", async () => {
+    const { t, token } = await setup();
+    for (const cid of ["a", "b", "c"]) {
+      await t.mutation(api.pos.createOrder, {
+        session: token,
+        cid,
+        tableId: null,
+        name: "",
+      });
+      await t.mutation(api.pos.addItem, {
+        session: token,
+        orderId: cid,
+        item: {
+          id: `${cid}1`,
+          productId: "caipirinha",
+          name: "caipirinha",
+          price: 10,
+          qty: 1,
+          sent: false,
+        },
+      });
+    }
+    await t.mutation(api.pos.setStatus, {
+      session: token,
+      orderId: "b",
+      status: "void",
+    });
+    for (const cid of ["c", "a"]) {
+      await t.mutation(api.pos.pay, {
+        session: token,
+        orderId: cid,
+        payment: { method: "card", amount: 10, tip: 0 },
+        day: "2026-11-08",
+        hour: "20",
+      });
+    }
+    const rows = await t.query(api.pos.journal, {
+      session: token,
+      from: 0,
+      to: Date.now() + 1000,
+    });
+    const byId = Object.fromEntries(
+      (rows ?? []).map((o) => [o.id, o.fiscalNumber])
+    );
+    expect(rows).toHaveLength(3);
+    expect(byId).toEqual({ c: 1, a: 2, b: undefined });
+  });
+});

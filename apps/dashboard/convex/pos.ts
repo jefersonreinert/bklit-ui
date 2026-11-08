@@ -284,6 +284,43 @@ export const closedOrders = query({
   },
 });
 
+/**
+ * Fiscal journal: paid and cancelled orders closed in [from, to), oldest
+ * first (Z report and the export for the MTCA / auditor).
+ */
+export const journal = query({
+  args: {
+    session: v.optional(v.string()),
+    from: v.number(),
+    to: v.number(),
+    ...companyArg,
+  },
+  handler: async (ctx, { session, from, to, company = MAIN }) => {
+    await requireStaff(ctx, session, ["reports", "settings"], company);
+    const range = (status: Doc<"posOrders">["status"]) =>
+      inCompany(company, (key) =>
+        ctx.db
+          .query("posOrders")
+          .withIndex("by_company_status_closed", (q) =>
+            q
+              .eq("company", key)
+              .eq("status", status)
+              .gte("closedAt", from)
+              .lt("closedAt", to)
+          )
+          .take(5000)
+      );
+    const [paid, voided] = await Promise.all([range("paid"), range("void")]);
+    return [...paid, ...voided]
+      .sort((a, b) => a.closedAt - b.closedAt)
+      .map((o) => ({
+        ...toOrder(o),
+        closedAt: o.closedAt,
+        closedBy: o.closedBy,
+      }));
+  },
+});
+
 /** Daily totals between two local days (YYYY-MM-DD, inclusive). */
 export const daily = query({
   args: {
@@ -794,7 +831,15 @@ export const pay = mutation({
     } else {
       await ctx.db.insert("posDaily", d);
     }
+    // Fiscal receipt number: only paid orders take one, so the sequence has
+    // no gaps (cancelled orders keep just their order number)
+    const m = await meta(ctx, company);
+    const fiscalNumber = m ? (m.nextFiscalNumber ?? 1) : undefined;
+    if (m && fiscalNumber !== undefined) {
+      await ctx.db.patch(m._id, { nextFiscalNumber: fiscalNumber + 1 });
+    }
     await ctx.db.patch(order._id, {
+      fiscalNumber,
       status: "paid",
       payment: { ...payment, at: now },
       updatedAt: now,
