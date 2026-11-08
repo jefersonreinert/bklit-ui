@@ -1053,6 +1053,53 @@ export const bootstrap = mutation({
  * products of the previous parts.
  */
 /**
+ * Setup by the administrator (npx convex run pos:relabelTables): renames
+ * tables and sets their seats, keeping ids and positions (open orders stay
+ * on their table). Unknown ids are reported, nothing else changes.
+ */
+interface RelabelArea {
+  tables: { id: string; name: string; seats: number }[];
+}
+
+export const relabelTables = internalMutation({
+  args: {
+    company: v.string(),
+    tables: v.array(
+      v.object({ id: v.string(), name: v.string(), seats: v.number() })
+    ),
+  },
+  handler: async (ctx, { company, tables }) => {
+    const m = await meta(ctx, company);
+    if (!m) {
+      throw new ConvexError("Empresa não encontrada.");
+    }
+    const byId = new Map(tables.map((t) => [t.id, t]));
+    const seen = new Set<string>();
+    const areas = ((m.areas ?? []) as RelabelArea[]).map((area) => ({
+      ...area,
+      tables: area.tables.map((t) => {
+        const next = byId.get(t.id);
+        if (!next) {
+          return t;
+        }
+        seen.add(t.id);
+        return {
+          ...t,
+          name: next.name.trim().slice(0, 12),
+          seats: Math.max(1, Math.min(30, Math.round(next.seats))),
+        };
+      }),
+    }));
+    await ctx.db.patch(m._id, { areas });
+    await audit(ctx, null, "Renomeou mesas", `${seen.size} mesas`, company);
+    return {
+      updated: seen.size,
+      missing: tables.filter((t) => !seen.has(t.id)).map((t) => t.id),
+    };
+  },
+});
+
+/**
  * Setup by the administrator (npx convex run pos:patchReceipt): merges
  * fields into a business's receipt details (name, address, VAT No.…).
  */

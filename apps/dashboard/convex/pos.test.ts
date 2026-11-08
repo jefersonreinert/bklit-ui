@@ -283,3 +283,52 @@ describe("Receipt setup", () => {
     });
   });
 });
+
+describe("Table labels", () => {
+  it("renames tables and seats, keeping ids and positions", async () => {
+    const { t, token } = await setup();
+    await t.mutation(api.pos.saveMeta, {
+      session: token,
+      areas: [
+        {
+          id: "a",
+          name: "Rooftop",
+          tables: [
+            {
+              id: "t1",
+              name: "33",
+              x: 40,
+              y: 40,
+              w: 90,
+              h: 90,
+              shape: "square",
+              seats: 4,
+              color: "#000",
+            },
+          ],
+        },
+      ],
+    });
+    const res = await t.mutation(internal.pos.relabelTables, {
+      company: "main",
+      tables: [
+        { id: "t1", name: "100", seats: 2 },
+        { id: "nope", name: "1", seats: 2 },
+      ],
+    });
+    expect(res).toEqual({ updated: 1, missing: ["nope"] });
+    const meta = await t.run((ctx) =>
+      ctx.db
+        .query("posMeta")
+        .withIndex("by_key", (q) => q.eq("key", "main"))
+        .unique()
+    );
+    expect(meta?.areas[0].tables[0]).toMatchObject({
+      id: "t1",
+      name: "100",
+      seats: 2,
+      x: 40,
+      y: 40,
+    });
+  });
+});
