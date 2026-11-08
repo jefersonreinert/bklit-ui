@@ -164,6 +164,13 @@ export const navItems: NavItem[] = [
     icon: "IconPeople",
   },
   {
+    href: "/operacoes",
+    label: "Operations",
+    description:
+      "Departamentos, checklists de limpeza e fechamento, documentos",
+    icon: "IconChecklist",
+  },
+  {
     href: "/cardapio",
     label: "Cardápio",
     description: "Pratos, vendas e margens",

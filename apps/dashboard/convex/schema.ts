@@ -693,6 +693,60 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  /* ------------------------------- operations ----------------------------- */
+  // Departments, checklists (forms), their fillings and documents, per business.
+
+  opsDepartments: defineTable({
+    company: v.string(),
+    name: v.string(),
+    order: v.number(),
+    createdAt: v.number(),
+  }).index("by_company", ["company"]),
+
+  opsForms: defineTable({
+    company: v.string(),
+    departmentId: v.id("opsDepartments"),
+    title: v.string(),
+    frequency: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly"),
+      v.literal("log")
+    ),
+    items: v.array(v.object({ id: v.string(), text: v.string() })),
+    /** Time slots of a log sheet ("10:00", "11:00"…). */
+    slots: v.optional(v.array(v.string())),
+    note: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_company", ["company"])
+    .index("by_department", ["departmentId"]),
+
+  opsSubmissions: defineTable({
+    company: v.string(),
+    formId: v.id("opsForms"),
+    /** Who did it (name typed or picked). */
+    by: v.string(),
+    at: v.number(),
+    /** Local day YYYY-MM-DD the checklist refers to. */
+    day: v.string(),
+    slot: v.optional(v.string()),
+    done: v.array(v.string()),
+    notes: v.optional(v.string()),
+  })
+    .index("by_form_at", ["formId", "at"])
+    .index("by_company_at", ["company", "at"]),
+
+  opsDocuments: defineTable({
+    company: v.string(),
+    departmentId: v.id("opsDepartments"),
+    title: v.string(),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    mimeType: v.string(),
+    updatedAt: v.number(),
+  }).index("by_company", ["company"]),
+
   /** HR settings: the employer on contracts and the pay multipliers. */
   hrSettings: defineTable({
     key: v.string(),
