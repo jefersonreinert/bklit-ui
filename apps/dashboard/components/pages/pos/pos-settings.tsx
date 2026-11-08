@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePos } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
+import { PosApiSettings } from "./pos-api";
 import { type PosPerm, useCan } from "./pos-auth";
 import { CompaniesSettings } from "./pos-company";
 import { PosSettingsCard } from "./pos-general";
@@ -17,7 +18,8 @@ type Section =
   | "receipt"
   | "printers"
   | "general"
-  | "malta";
+  | "malta"
+  | "api";
 
 const SECTIONS: { id: Section; label: string; perm: PosPerm }[] = [
   { id: "users", label: "Usuários", perm: "users" },
@@ -26,6 +28,7 @@ const SECTIONS: { id: Section; label: string; perm: PosPerm }[] = [
   { id: "printers", label: "Impressoras", perm: "settings" },
   { id: "general", label: "Pagamentos", perm: "settings" },
   { id: "malta", label: "Malta (MTCA)", perm: "settings" },
+  { id: "api", label: "API", perm: "settings" },
 ];
 
 export function SettingsView() {
@@ -65,6 +68,7 @@ export function SettingsView() {
       ) : null}
       {section === "receipt" ? <ReceiptDesigner /> : null}
       {section === "malta" ? <MaltaCompliance /> : null}
+      {section === "api" ? <PosApiSettings /> : null}
       {section === "printers" ? (
         <div className="mx-auto w-full max-w-2xl">
           <PrintersCard />

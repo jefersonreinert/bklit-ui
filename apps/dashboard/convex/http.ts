@@ -279,4 +279,125 @@ http.route({
   }),
 });
 
+/* ------------------------------ POS read API ------------------------------ */
+// GET /api/v1/{orders,daily,products,me} with "Authorization: Bearer <key>"
+// (keys: POS → Configurações → API). Read-only; see convex/posapi.ts.
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const HOUR = 3_600_000;
+const MAX_RANGE = 93 * 24 * HOUR;
+
+/** Last Sunday of a month at 01:00 UTC (EU summer time switch). */
+function lastSunday(year: number, month: number) {
+  const end = new Date(Date.UTC(year, month + 1, 0, 1));
+  end.setUTCDate(end.getUTCDate() - end.getUTCDay());
+  return end.getTime();
+}
+
+/** Malta's UTC offset in hours at a UTC instant (CET/CEST). */
+function maltaOffset(ms: number) {
+  const y = new Date(ms).getUTCFullYear();
+  return ms >= lastSunday(y, 2) && ms < lastSunday(y, 9) ? 2 : 1;
+}
+
+/** "2026-11-08" → Malta midnight; anything else is parsed as a timestamp. */
+function instant(value: string | null, endOfDay = false) {
+  if (!value) {
+    return null;
+  }
+  if (DAY.test(value)) {
+    const [y = 0, m = 1, d = 1] = value.split("-").map(Number);
+    const utc = Date.UTC(y, m - 1, d + (endOfDay ? 1 : 0));
+    return utc - maltaOffset(utc) * HOUR;
+  }
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+async function sha256(text: string) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text)
+  );
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+const BEARER = /^Bearer\s+(\S+)$/i;
+
+async function apiKey(ctx: ActionCtx, request: Request) {
+  const key = BEARER.exec(request.headers.get("authorization") ?? "")?.[1];
+  if (!key || key.length > 200) {
+    return null;
+  }
+  const found = await ctx.runQuery(internal.posapi.keyByHash, {
+    hash: await sha256(key),
+  });
+  if (found && Date.now() - (found.lastUsedAt ?? 0) > 5 * 60_000) {
+    await ctx.runMutation(internal.posapi.touchKey, { id: found.id });
+  }
+  return found;
+}
+
+function posRoute(
+  path: string,
+  run: (
+    ctx: ActionCtx,
+    company: string,
+    params: URLSearchParams
+  ) => Promise<Response>
+) {
+  http.route({
+    path,
+    method: "GET",
+    handler: httpAction(async (ctx, request) => {
+      const key = await apiKey(ctx, request);
+      if (!key) {
+        return json({ error: "unauthorized" }, 401);
+      }
+      return await run(ctx, key.company, new URL(request.url).searchParams);
+    }),
+  });
+}
+
+posRoute("/api/v1/me", async (_ctx, company) => json({ company }));
+
+posRoute("/api/v1/orders", async (ctx, company, params) => {
+  const from = instant(params.get("from"));
+  const to = instant(params.get("to"), true);
+  if (from === null || to === null || to <= from) {
+    return json(
+      { error: "from and to are required (YYYY-MM-DD or ISO 8601)" },
+      400
+    );
+  }
+  if (to - from > MAX_RANGE) {
+    return json({ error: "range too long (max 93 days)" }, 400);
+  }
+  const body = await ctx.runQuery(internal.posapi.orders, {
+    company,
+    from,
+    to,
+  });
+  return json({
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+    ...body,
+  });
+});
+
+posRoute("/api/v1/daily", async (ctx, company, params) => {
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? from;
+  if (!(DAY.test(from) && DAY.test(to)) || to < from) {
+    return json({ error: "from and to are required (YYYY-MM-DD)" }, 400);
+  }
+  return json(await ctx.runQuery(internal.posapi.daily, { company, from, to }));
+});
+
+posRoute("/api/v1/products", async (ctx, company) =>
+  json(await ctx.runQuery(internal.posapi.products, { company }))
+);
+
 export default http;
