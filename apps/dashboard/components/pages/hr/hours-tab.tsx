@@ -491,7 +491,8 @@ export function SettingsSheet({
           </div>
           <p className="text-muted-foreground text-xs">
             1 = sem adicional. Confirme com o contador o que vale para a sua
-            categoria (Wage Regulation Order de hotelaria, S.L. 452.19).
+            categoria (S.L. 452.66, Parte III: bares e restaurantes — domingo e
+            feriado ×2, extra acima de 8 h/dia ou das horas da semana ×1,5).
           </p>
           <div className="flex items-center gap-3">
             <Button type="submit">Salvar</Button>

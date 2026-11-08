@@ -1,5 +1,11 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
+import {
+  belowMinimum,
+  buildContract,
+  contractText,
+  textBlocks,
+} from "../lib/hr/contract";
 import { docStatus } from "../lib/hr/malta-documents";
 import { easter, maltaHolidays, payFor } from "../lib/hr/pay";
 import { api } from "./_generated/api";
@@ -99,45 +105,51 @@ describe("Pay (Malta)", () => {
   });
 
   it("pays hourly with weekly overtime, Sundays and holidays", () => {
-    // Mon 2 Nov 2026 … Sat 7: 6 × 8 h = 48 h → 8 h overtime on Saturday
+    // Mon 2 Nov 2026 … Sat 7: 6 × 8 h = 48 h → 8 h weekly overtime
     const punches = [2, 3, 4, 5, 6, 7].map((d) =>
       h(`2026-11-${String(d).padStart(2, "0")}`, 10, 8)
     );
-    punches.push(h("2026-11-08", 10, 4)); // Sunday, still the same week
-    const r = payFor(
-      {
-        month: "2026-11",
-        punches,
-        payType: "hourly",
-        hourlyRate: 10,
-        adjustHours: 0,
-      },
-      { weeklyHours: 40, overtime: 1.5, sunday: 1, holiday: 2 }
-    );
+    punches.push(h("2026-11-08", 10, 4)); // Sunday: double-time, apart
+    const r = payFor({
+      month: "2026-11",
+      punches,
+      payType: "hourly",
+      hourlyRate: 10,
+      adjustHours: 0,
+    });
     expect(r.hours).toBe(52);
-    expect(r.overtime).toBe(12);
+    expect(r.overtime).toBe(8);
     expect(r.sunday).toBe(4);
-    // 40 h × 10 + 12 h × 15
-    expect(r.gross).toBe(580);
+    // 40 h × 10 + 8 h × 15 + 4 h × 20
+    expect(r.gross).toBe(600);
   });
 
-  it("monthly salary pays only premiums and overtime on top", () => {
+  it("counts hours beyond 8 a day as overtime (S.L. 452.66 22(a))", () => {
+    const r = payFor({
+      month: "2026-11",
+      punches: [h("2026-11-02", 10, 10)],
+      payType: "hourly",
+      hourlyRate: 10,
+      adjustHours: 0,
+    });
+    expect(r.overtime).toBe(2);
+    expect(r.gross).toBe(110);
+  });
+
+  it("monthly salary pays overtime and every holiday hour on top", () => {
     const punches = [h("2026-12-08", 10, 8)]; // Immaculate Conception
-    const r = payFor(
-      {
-        month: "2026-12",
-        punches,
-        payType: "monthly",
-        monthlySalary: 1600,
-        hourlyRate: 10,
-        adjustHours: 1,
-      },
-      { weeklyHours: 40, overtime: 1.5, sunday: 1, holiday: 2 }
-    );
+    const r = payFor({
+      month: "2026-12",
+      punches,
+      payType: "monthly",
+      monthlySalary: 1600,
+      hourlyRate: 10,
+      adjustHours: 1,
+    });
     expect(r.holiday).toBe(8);
-    // salary + 8 h × 10 × (2 − 1) + 1 h adjustment × 10
-    expect(r.gross).toBe(1690);
-    expect(r.extras).toBe(90);
+    // salary + 8 h × 10 × 2 + 1 h adjustment × 10
+    expect(r.gross).toBe(1770);
+    expect(r.extras).toBe(170);
   });
 
   it("ignores open punches and days of the previous month", () => {
@@ -264,5 +276,85 @@ describe("Payroll month", () => {
     await p.mutation(api.payroll.reopen, { userId, month: "2026-11" });
     rows = await p.query(api.payroll.month, { month: "2026-11" });
     expect(rows?.[0]?.approvedAt).toBeUndefined();
+  });
+});
+
+describe("Contract template (Malta, bars and restaurants)", () => {
+  const base = {
+    employer: {
+      name: "Tolok (Malta) Limited",
+      regNo: "C 72800",
+      address: "74, The Strand, Sliema",
+      signatory: "A. Director",
+      signatoryTitle: "Director",
+    },
+    employee: {
+      name: "Ana Silva",
+      idLabel: "passport",
+      idNumber: "FX123",
+      address: "Sliema",
+      nationality: "Brazilian",
+      gender: "Female",
+    },
+    origin: "non-eu" as const,
+    jobTitle: "Bartender",
+    workplace: { name: "The Brew", address: "74, The Strand, Sliema" },
+    date: "2026-11-08",
+    startDate: "2026-12-01",
+    probationMonths: 6,
+    weeklyHours: 40,
+    payType: "hourly" as const,
+    hourlyRate: 9,
+    overtime: 1.5,
+    sunday: 2,
+    holiday: 2,
+  };
+
+  it("covers the S.L. 452.126 items and the sector rules", () => {
+    const text = contractText(buildContract(base));
+    for (const must of [
+      "C 72800",
+      "female",
+      "preparing and serving drinks",
+      "probationary period",
+      "Training",
+      "roster",
+      "double-time for all hours worked on Sundays and public holidays",
+      "eight (8) hours on any day",
+      "S.L. 452.66",
+      "one hundred and ninety-two (192) hours",
+      "Sick leave",
+      "Bereavement",
+      "Marriage leave",
+      "does not impose fines",
+      "No collective agreement",
+      "Department of Social Security",
+      "Single Permit",
+      "article 36",
+      "Electronic Commerce Act",
+    ]) {
+      expect(text).toContain(must);
+    }
+    expect(
+      contractText(buildContract({ ...base, origin: "eu" }))
+    ).not.toContain("Single Permit");
+  });
+
+  it("refuses pay below the sector minimum", () => {
+    expect(belowMinimum({ ...base, hourlyRate: 5 })).toBe(true);
+    expect(belowMinimum({ ...base, hourlyRate: 6 })).toBe(false);
+    expect(
+      belowMinimum({ ...base, payType: "monthly", monthlySalary: 900 })
+    ).toBe(true);
+    expect(
+      belowMinimum({ ...base, payType: "monthly", monthlySalary: 1100 })
+    ).toBe(false);
+  });
+
+  it("shows a stored text exactly as signed", () => {
+    const text = contractText(buildContract(base));
+    const { title, lines } = textBlocks(text);
+    expect(title).toBe("CONTRACT OF EMPLOYMENT");
+    expect(lines.some((l) => l.heading && l.text.startsWith("1. "))).toBe(true);
   });
 });

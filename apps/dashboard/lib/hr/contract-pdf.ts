@@ -1,10 +1,12 @@
 "use client";
 
-import { buildContract, type ContractFields } from "./contract";
+import { type ContractFields, textBlocks } from "./contract";
 
 /** What the PDF needs from a stored contract. */
 export interface ContractPdfInput {
   fields: ContractFields;
+  /** The frozen text that was signed. */
+  text: string;
   hash: string;
   employerSignature: string | null;
   employerSignedAt: number | null;
@@ -25,7 +27,7 @@ const stamp = (ms: number | null) =>
 export async function contractPdf(c: ContractPdfInput) {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "a4" });
-  const doc = buildContract(c.fields);
+  const doc = textBlocks(c.text);
   const margin = 20;
   const width = 210 - margin * 2;
   let y = margin;
@@ -50,14 +52,12 @@ export async function contractPdf(c: ContractPdfInput) {
   pdf.setFontSize(14);
   pdf.text(doc.title, 105, y, { align: "center" });
   y += 10;
-  for (const p of doc.parties) {
-    para(p, 10.5, false, 3);
-  }
-  for (const s of doc.sections) {
-    y += 2;
-    para(s.heading, 11, true, 1);
-    for (const p of s.paragraphs) {
-      para(p);
+  for (const l of doc.lines) {
+    if (l.heading) {
+      y += 2;
+      para(l.text, 11, true, 1);
+    } else {
+      para(l.text);
     }
   }
 

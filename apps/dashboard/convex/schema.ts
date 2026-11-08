@@ -676,6 +676,8 @@ export default defineSchema({
     userId: v.id("posUsers"),
     origin: v.union(v.literal("eu"), v.literal("non-eu")),
     nationality: v.optional(v.string()),
+    /** Required on the contract (S.L. 452.126 reg. 5(1)(a)). */
+    gender: v.optional(v.string()),
     birthDate: v.optional(v.string()),
     address: v.optional(v.string()),
     idNumber: v.optional(v.string()),

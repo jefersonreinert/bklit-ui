@@ -1,8 +1,10 @@
 import { ConvexError, v } from "convex/values";
 import {
+  belowMinimum,
   buildContract,
   type ContractFields,
   contractText,
+  MIN_WEEKLY_WAGE,
   sha256Hex,
 } from "../lib/hr/contract";
 import type { Doc } from "./_generated/dataModel";
@@ -45,6 +47,8 @@ const summary = (c: Doc<"hrContracts">) => ({
   hash: c.hash,
   token: c.status === "void" ? null : c.token,
   fields: c.fields as ContractFields,
+  /** The frozen text that is signed (show and print this, not the template). */
+  text: c.text,
   employerSignature: c.employerSignature ?? null,
   employerSignedAt: c.employerSignedAt ?? null,
   sentAt: c.sentAt ?? null,
@@ -115,6 +119,7 @@ export const create = mutation({
         idNumber: (useId ? profile.idNumber : profile.passportNumber) ?? "",
         address: profile.address ?? "",
         nationality: profile.nationality ?? "",
+        gender: profile.gender,
       },
       origin: profile.origin,
       jobTitle: user.jobTitle ?? "",
@@ -131,7 +136,14 @@ export const create = mutation({
       monthlySalary: profile.monthlySalary,
       hourlyRate: user.hourlyRate,
       overtime: s.overtime,
+      sunday: s.sunday,
+      holiday: s.holiday,
     };
+    if (belowMinimum(fields)) {
+      throw new ConvexError(
+        `Pagamento abaixo do mínimo legal para bares e restaurantes (S.L. 452.66: €${MIN_WEEKLY_WAGE} por semana de 40 h). Corrija o salário ou o valor da hora na ficha.`
+      );
+    }
     const text = contractText(buildContract(fields));
     return await ctx.db.insert("hrContracts", {
       userId: a.userId,

@@ -6,7 +6,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
-import { buildContract } from "@/lib/hr/contract";
+import { textBlocks } from "@/lib/hr/contract";
 import { contractPdf, savePdf } from "@/lib/hr/contract-pdf";
 import { SignaturePad } from "./signature-pad";
 
@@ -111,7 +111,7 @@ export function SignPage() {
     );
   }
 
-  const doc = buildContract(c.fields);
+  const doc = textBlocks(c.text);
   const pdfName = `contract-${c.fields.startDate}.pdf`;
   return (
     <Frame>
@@ -123,20 +123,14 @@ export function SignPage() {
       </div>
       <article className="max-h-[55dvh] overflow-y-auto rounded-xl border bg-white p-4 font-serif text-[14px] text-black leading-relaxed">
         <p className="mb-3 text-center font-bold">{doc.title}</p>
-        {doc.parties.map((p) => (
-          <p className="mb-2" key={p}>
-            {p}
+        {doc.lines.map((l, i) => (
+          <p
+            className={l.heading ? "mt-3 font-bold" : "mb-1.5"}
+            // biome-ignore lint/suspicious/noArrayIndexKey: static text, lines may repeat
+            key={i}
+          >
+            {l.text}
           </p>
-        ))}
-        {doc.sections.map((s) => (
-          <div className="mt-3" key={s.heading}>
-            <p className="font-bold">{s.heading}</p>
-            {s.paragraphs.map((p) => (
-              <p className="mb-1.5" key={p}>
-                {p}
-              </p>
-            ))}
-          </div>
         ))}
       </article>
       {c.status === "signed" ? (
