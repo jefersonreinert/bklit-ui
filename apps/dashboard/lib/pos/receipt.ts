@@ -49,6 +49,8 @@ export interface ReceiptDoc {
   fiscalNumber?: number;
   /** Not paid yet: a pre-bill, never a fiscal receipt. */
   prebill: boolean;
+  /** Printer test page: no fiscal or accounting value. */
+  test?: boolean;
   /** VAT percent included in the prices and the VAT in this sale. */
   vatRate: number;
   vat: number;
@@ -113,8 +115,12 @@ export function receiptDoc(order: PosOrder, data: PosData): ReceiptDoc {
 /** A sample sale for the designer preview (and the MTCA models). */
 export function sampleDoc(
   data: PosData,
-  { prebill = false }: { prebill?: boolean } = {}
+  { prebill = false, test = false }: { prebill?: boolean; test?: boolean } = {}
 ): ReceiptDoc {
+  // A test page is printed like a pre-bill: no fiscal number, no payment
+  if (test) {
+    return { ...sampleDoc(data, { prebill: true }), test: true };
+  }
   const items = data.products.slice(0, 4);
   const lines = items.map((p, i) => ({
     name: p.name,
@@ -349,6 +355,9 @@ function header(x: Ctx, doc: ReceiptDoc) {
 
 /** "FISCAL RECEIPT Nº 1024", "PRE-BILL" or, on older orders, "RECIBO Nº 7". */
 function title(doc: ReceiptDoc) {
+  if (doc.test) {
+    return "TEST PRINT";
+  }
   if (doc.prebill) {
     return "PRE-BILL";
   }
@@ -495,7 +504,10 @@ function qr(x: Ctx) {
 function footer(x: Ctx, doc: ReceiptDoc) {
   if (doc.prebill) {
     x.y += 6 * x.u;
-    text(x, "Pre-bill only. Ask for your fiscal receipt after payment.", {
+    const note = doc.test
+      ? "Printer test. No fiscal or accounting value."
+      : "Pre-bill only. Ask for your fiscal receipt after payment.";
+    text(x, note, {
       size: 9.5,
       weight: 700,
       align: "center",
