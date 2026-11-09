@@ -44,6 +44,8 @@ interface Props {
   booking?: Reservation;
   /** Start as a walk-in (now, seated). */
   walkin?: boolean;
+  /** Time and tables picked on the floor plan. */
+  preset?: { time: string; tables: string[] };
   onClose: () => void;
 }
 
@@ -70,7 +72,12 @@ interface Form {
   override: boolean;
 }
 
-function initial(date: string, booking?: Reservation, walkin?: boolean): Form {
+function initial(
+  date: string,
+  booking?: Reservation,
+  walkin?: boolean,
+  preset?: { time: string; tables: string[] }
+): Form {
   if (booking) {
     return {
       date: booking.date,
@@ -91,7 +98,7 @@ function initial(date: string, booking?: Reservation, walkin?: boolean): Form {
   }
   return {
     date: walkin ? localDay() : date,
-    time: walkin ? nowTime() : "",
+    time: preset?.time ?? (walkin ? nowTime() : ""),
     party: 2,
     name: walkin ? "Walk-in" : "",
     phone: "",
@@ -102,7 +109,7 @@ function initial(date: string, booking?: Reservation, walkin?: boolean): Form {
     notes: "",
     vip: false,
     event: false,
-    tables: [],
+    tables: preset?.tables ?? [],
     override: false,
   };
 }
@@ -131,6 +138,7 @@ export function BookingSheet({
   date,
   booking,
   walkin,
+  preset,
   onClose,
 }: Props) {
   const create = useMutation(api.reservations.create);
@@ -138,7 +146,9 @@ export function BookingSheet({
   const [venue, setVenue] = useState(
     booking?.company ?? (company === "all" ? "the-brew" : company)
   );
-  const [f, setF] = useState<Form>(() => initial(date, booking, walkin));
+  const [f, setF] = useState<Form>(() =>
+    initial(date, booking, walkin, preset)
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set: Setter = (k, v) => setF((cur) => ({ ...cur, [k]: v }));
@@ -234,6 +244,7 @@ export function BookingSheet({
           {info?.tables.length ? (
             <TablePicker f={f} set={set} tables={info.tables} />
           ) : null}
+          {booking ? null : <GuestHint f={f} setF={setF} />}
           <GuestFields editing={Boolean(booking)} f={f} set={set} />
           {error ? (
             <p className="rounded-xl bg-destructive/10 p-3 text-destructive">
@@ -502,5 +513,67 @@ function GuestFields({
         </label>
       </div>
     </>
+  );
+}
+
+const PHONE_JUNK = /[^\d+]/g;
+
+/** Recognises a returning guest from the phone or e-mail typed. */
+function GuestHint({ f, setF }: { f: Form; setF: (f: Form) => void }) {
+  const phone = f.phone.replace(PHONE_JUNK, "");
+  const ready = phone.length >= 6 || f.email.includes("@");
+  const g = useQuery(
+    api.guests.byContact,
+    ready ? { phone: phone || undefined, email: f.email || undefined } : "skip"
+  );
+  if (!g) {
+    return null;
+  }
+  const s = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-2 rounded-2xl border p-3",
+        g.noShows >= 2
+          ? "border-destructive/40 bg-destructive/5"
+          : "bg-muted/50"
+      )}
+    >
+      <p className="font-medium">
+        {g.vip ? "★ " : ""}Cliente conhecido: {g.name}
+      </p>
+      <p className="text-muted-foreground text-xs">
+        {[
+          s(g.visits, "visita"),
+          s(g.bookings, "reserva"),
+          g.noShows ? s(g.noShows, "no-show") : null,
+          g.lastVisit ? `última ${g.lastVisit}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+      {g.preferences ? (
+        <p className="text-xs">Preferências: {g.preferences}</p>
+      ) : null}
+      {g.occasions ? <p className="text-xs">Ocasiões: {g.occasions}</p> : null}
+      <Button
+        className="self-start"
+        onClick={() =>
+          setF({
+            ...f,
+            name: g.name,
+            email: f.email || g.email,
+            phone: f.phone || g.phone,
+            vip: f.vip || g.vip,
+            requests: f.requests || g.preferences,
+          })
+        }
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        Usar dados do cliente
+      </Button>
+    </div>
   );
 }

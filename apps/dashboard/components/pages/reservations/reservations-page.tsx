@@ -25,6 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Notice, TelegramProvider } from "../telegram/telegram-shared";
 import { BookingSheet, type Reservation } from "./booking-sheet";
+import { MonthView, WeekView } from "./calendar-views";
+import { FloorView } from "./floor-view";
+import { GuestsView } from "./guests-view";
 import {
   errText,
   localDay,
@@ -61,6 +64,7 @@ type Sheetstate =
   | { kind: "walkin" }
   | { kind: "edit"; booking: Reservation }
   | { kind: "settings" }
+  | { kind: "preset"; time: string; tables: string[] }
   | null;
 
 function Reservations() {
@@ -72,6 +76,7 @@ function Reservations() {
   const [sourceFilter, setSourceFilter] = useState<Source | "all">("all");
   const [q, setQ] = useState("");
   const [sheet, setSheet] = useState<Sheetstate>(null);
+  const [view, setView] = useState<View>("day");
   const day = useQuery(api.reservations.day, { company, date });
   const found = useQuery(
     api.reservations.search,
@@ -199,28 +204,127 @@ function Reservations() {
         ))}
       </div>
 
-      <Filters
-        setSource={setSourceFilter}
-        setStatus={setStatusFilter}
-        source={sourceFilter}
-        status={statusFilter}
-      />
+      <ViewTabs setView={setView} view={view} />
 
-      {day === undefined ? (
-        <p className="text-muted-foreground text-sm">Carregando…</p>
+      {view === "day" ? (
+        <>
+          <Filters
+            setSource={setSourceFilter}
+            setStatus={setStatusFilter}
+            source={sourceFilter}
+            status={statusFilter}
+          />
+
+          {day === undefined ? (
+            <p className="text-muted-foreground text-sm">Carregando…</p>
+          ) : null}
+          {day && list.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-6 text-center text-muted-foreground text-sm">
+              Nenhuma reserva {q ? "encontrada" : "neste dia com esses filtros"}
+              .
+            </div>
+          ) : null}
+          <DayList
+            company={company}
+            guests={day?.guests ?? {}}
+            list={list}
+            onEdit={(b) => setSheet({ kind: "edit", booking: b })}
+            tables={day?.tables ?? {}}
+          />
+        </>
       ) : null}
-      {day && list.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-6 text-center text-muted-foreground text-sm">
-          Nenhuma reserva {q ? "encontrada" : "neste dia com esses filtros"}.
-        </div>
-      ) : null}
-      <DayList
+      <OtherViews
         company={company}
-        list={list}
-        onEdit={(b) => setSheet({ kind: "edit", booking: b })}
-        tables={day?.tables ?? {}}
+        date={date}
+        setDate={setDate}
+        setSheet={setSheet}
+        setView={setView}
+        view={view}
       />
 
+      <Sheets company={company} date={date} setSheet={setSheet} sheet={sheet} />
+    </div>
+  );
+}
+
+function OtherViews({
+  view,
+  setView,
+  company,
+  date,
+  setDate,
+  setSheet,
+}: {
+  view: View;
+  setView: (v: View) => void;
+  company: string;
+  date: string;
+  setDate: (d: string) => void;
+  setSheet: (s: Sheetstate) => void;
+}) {
+  return (
+    <>
+      {view === "week" ? (
+        <WeekView
+          company={company}
+          date={date}
+          onPick={(d) => {
+            setDate(d);
+            setView("day");
+          }}
+        />
+      ) : null}
+      {view === "month" ? (
+        <MonthView
+          company={company}
+          date={date}
+          onPick={(d) => {
+            setDate(d);
+            setView("day");
+          }}
+        />
+      ) : null}
+      {view === "floor" && company === "all" ? (
+        <p className="rounded-2xl border bg-card p-6 text-center text-muted-foreground text-sm">
+          Escolha um bar acima para ver o mapa das mesas.
+        </p>
+      ) : null}
+      {view === "floor" && company !== "all" ? (
+        <FloorView
+          company={company}
+          date={date}
+          onBook={(time, tableId) =>
+            setSheet({ kind: "preset", time, tables: [tableId] })
+          }
+          onOpen={(b) => setSheet({ kind: "edit", booking: b })}
+        />
+      ) : null}
+      {view === "guests" ? <GuestsView /> : null}
+    </>
+  );
+}
+
+function Sheets({
+  sheet,
+  setSheet,
+  company,
+  date,
+}: {
+  sheet: Sheetstate;
+  setSheet: (s: Sheetstate) => void;
+  company: string;
+  date: string;
+}) {
+  return (
+    <>
+      {sheet?.kind === "preset" ? (
+        <BookingSheet
+          company={company}
+          date={date}
+          onClose={() => setSheet(null)}
+          preset={{ time: sheet.time, tables: sheet.tables }}
+        />
+      ) : null}
       {sheet?.kind === "new" || sheet?.kind === "walkin" ? (
         <BookingSheet
           company={company}
@@ -240,7 +344,7 @@ function Reservations() {
       {sheet?.kind === "settings" ? (
         <SettingsSheet company={company} onClose={() => setSheet(null)} />
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -320,11 +424,13 @@ function Filters({
 function DayList({
   list,
   tables,
+  guests,
   company,
   onEdit,
 }: {
   list: Reservation[];
   tables: Record<string, { id: string; name: string }[]>;
+  guests: Record<string, { visits: number; noShows: number }>;
   company: string;
   onEdit: (b: Reservation) => void;
 }) {
@@ -342,6 +448,7 @@ function DayList({
               .map((r) => (
                 <BookingCard
                   b={r}
+                  guest={r.guestId ? guests[r.guestId] : undefined}
                   key={r.id}
                   onEdit={() => onEdit(r)}
                   showVenue={company === "all"}
@@ -360,6 +467,65 @@ function DayList({
   );
 }
 
+type View = "day" | "week" | "month" | "floor" | "guests";
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: "day", label: "Dia" },
+  { id: "week", label: "Semana" },
+  { id: "month", label: "Mês" },
+  { id: "floor", label: "Mapa" },
+  { id: "guests", label: "Clientes" },
+];
+
+function ViewTabs({
+  view,
+  setView,
+}: {
+  view: View;
+  setView: (v: View) => void;
+}) {
+  return (
+    <div className="flex gap-1 self-start overflow-x-auto rounded-full bg-muted p-1">
+      {VIEWS.map((v) => (
+        <button
+          className={cn(
+            "shrink-0 rounded-full px-3.5 py-1.5 text-sm",
+            view === v.id ? "bg-background shadow-sm" : "text-muted-foreground"
+          )}
+          key={v.id}
+          onClick={() => setView(v.id)}
+          type="button"
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** "1ª visita", "4 visitas" or a no-show warning next to the name. */
+function GuestBadge({
+  guest,
+}: {
+  guest?: { visits: number; noShows: number };
+}) {
+  if (!guest) {
+    return null;
+  }
+  if (guest.noShows > 0) {
+    return (
+      <span className="ml-1.5 rounded-full bg-destructive/15 px-1.5 text-destructive text-xs">
+        ⚠ {guest.noShows} no-show
+      </span>
+    );
+  }
+  return (
+    <span className="ml-1.5 rounded-full bg-muted px-1.5 text-muted-foreground text-xs">
+      {guest.visits === 0 ? "1ª visita" : `${guest.visits + 1}ª visita`}
+    </span>
+  );
+}
+
 const NEXT: Partial<Record<Status, { to: Status; label: string }>> = {
   pending: { to: "confirmed", label: "Confirmar" },
   confirmed: { to: "seated", label: "Sentar" },
@@ -368,11 +534,13 @@ const NEXT: Partial<Record<Status, { to: Status; label: string }>> = {
 
 function BookingCard({
   b,
+  guest,
   tableNames,
   showVenue,
   onEdit,
 }: {
   b: Reservation;
+  guest?: { visits: number; noShows: number };
   tableNames: string;
   showVenue: boolean;
   onEdit: () => void;
@@ -411,6 +579,7 @@ function BookingCard({
                 Evento
               </span>
             ) : null}
+            <GuestBadge guest={guest} />
           </p>
           <p className="truncate text-muted-foreground text-xs">
             <span

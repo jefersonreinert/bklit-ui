@@ -725,6 +725,8 @@ export default defineSchema({
     /** Private event / large group. */
     event: v.optional(v.boolean()),
     customerId: v.optional(v.id("posCustomers")),
+    /** Guest profile in the reservations CRM (resGuests). */
+    guestId: v.optional(v.id("resGuests")),
     createdAt: v.number(),
     updatedAt: v.number(),
     /** Who changed what, newest last. */
@@ -735,7 +737,33 @@ export default defineSchema({
     .index("by_company_date", ["company", "date"])
     .index("by_date", ["date"])
     .index("by_ref", ["ref"])
-    .index("by_phone", ["phone"]),
+    .index("by_phone", ["phone"])
+    .index("by_guest", ["guestId", "date"]),
+
+  /**
+   * Guests of every venue (CRM), keyed by phone or e-mail. Visit and
+   * no-show figures are computed from their reservations.
+   */
+  resGuests: defineTable({
+    name: v.string(),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    vip: v.optional(v.boolean()),
+    tags: v.optional(v.array(v.string())),
+    /** Allergies, favourite table, drinks… */
+    preferences: v.optional(v.string()),
+    /** Birthday "MM-DD" or anniversary etc. */
+    occasions: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    /** GDPR marketing consent and when it was given or withdrawn. */
+    marketing: v.optional(v.boolean()),
+    consentAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_phone", ["phone"])
+    .index("by_email", ["email"])
+    .index("by_updated", ["updatedAt"]),
 
   /* ------------------------------- operations ----------------------------- */
   // Departments, checklists (forms), their fillings and documents, per business.
