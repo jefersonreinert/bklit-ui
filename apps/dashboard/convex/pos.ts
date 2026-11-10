@@ -1100,6 +1100,89 @@ export const relabelTables = internalMutation({
   },
 });
 
+const floorTable = v.object({
+  id: v.string(),
+  name: v.string(),
+  seats: v.number(),
+  x: v.number(),
+  y: v.number(),
+  w: v.number(),
+  h: v.number(),
+  shape: v.union(v.literal("round"), v.literal("square"), v.literal("rect")),
+  color: v.string(),
+});
+
+/**
+ * Setup by the administrator (scripts/pos-floors/apply.mjs): replaces a
+ * business's floor plan (areas and tables), which the POS and the
+ * reservations use. Refused when an open order or an upcoming booking
+ * is on a table that would disappear, so nothing is left orphaned.
+ */
+export const setFloor = internalMutation({
+  args: {
+    company: v.string(),
+    areas: v.array(
+      v.object({ id: v.string(), name: v.string(), tables: v.array(floorTable) })
+    ),
+  },
+  handler: async (ctx, { company, areas }) => {
+    const m = await meta(ctx, company);
+    if (!m) {
+      throw new ConvexError("Empresa não encontrada.");
+    }
+    const ids = new Set<string>();
+    for (const a of areas) {
+      for (const t of a.tables) {
+        if (ids.has(t.id)) {
+          throw new ConvexError(`Mesa repetida: ${t.id}`);
+        }
+        ids.add(t.id);
+        if (t.x < 0 || t.y < 0 || t.x + t.w > 1000 || t.y + t.h > 700) {
+          throw new ConvexError(`Mesa ${t.name} fora da área (1000 × 700).`);
+        }
+      }
+    }
+    const open = [
+      ...(await ordersOf(ctx, company, "open", 0, 1000)),
+      ...(await ordersOf(ctx, company, "paying", 0, 1000)),
+    ];
+    const stranded = open.filter((o) => o.tableId && !ids.has(o.tableId));
+    if (stranded.length) {
+      throw new ConvexError(
+        `Há ${stranded.length} pedido(s) aberto(s) em mesas que sairiam do mapa. Feche-os antes.`
+      );
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const bookings = await ctx.db
+      .query("reservations")
+      .withIndex("by_company_date", (q) => q.eq("company", company).gte("date", today))
+      .take(2000);
+    const booked = bookings.filter(
+      (r) =>
+        r.status !== "cancelled" &&
+        r.status !== "no_show" &&
+        r.tables.some((id) => !ids.has(id))
+    );
+    if (booked.length) {
+      throw new ConvexError(
+        `Há ${booked.length} reserva(s) futuras em mesas que sairiam do mapa.`
+      );
+    }
+    await ctx.db.patch(m._id, {
+      areas: areas.map((a) => ({
+        ...a,
+        tables: a.tables.map((t) => ({
+          ...t,
+          name: t.name.trim().slice(0, 12),
+          seats: Math.max(1, Math.min(30, Math.round(t.seats))),
+        })),
+      })),
+    });
+    await audit(ctx, null, "Novo mapa de mesas", `${areas.length} áreas, ${ids.size} mesas`, company);
+    return { areas: areas.length, tables: ids.size };
+  },
+});
+
 /**
  * Setup by the administrator (npx convex run pos:patchReceipt): merges
  * fields into a business's receipt details (name, address, VAT No.…).

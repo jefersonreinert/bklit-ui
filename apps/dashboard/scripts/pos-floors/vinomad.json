@@ -1,0 +1,551 @@
+{
+ "company": "vinomad",
+ "areas": [
+  {
+   "id": "vn-beer-garden",
+   "name": "Beer Garden",
+   "tables": [
+    {
+     "id": "vn-bg-20",
+     "name": "20",
+     "seats": 2,
+     "x": 40,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-21",
+     "name": "21",
+     "seats": 3,
+     "x": 158,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-22",
+     "name": "22",
+     "seats": 2,
+     "x": 276,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-23",
+     "name": "23",
+     "seats": 2,
+     "x": 394,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-24",
+     "name": "24",
+     "seats": 2,
+     "x": 512,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-25",
+     "name": "25",
+     "seats": 3,
+     "x": 630,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-26",
+     "name": "26",
+     "seats": 3,
+     "x": 748,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-27",
+     "name": "27",
+     "seats": 2,
+     "x": 866,
+     "y": 60,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-40",
+     "name": "40",
+     "seats": 2,
+     "x": 512,
+     "y": 300,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-41",
+     "name": "41",
+     "seats": 2,
+     "x": 718,
+     "y": 300,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-42",
+     "name": "42",
+     "seats": 2,
+     "x": 866,
+     "y": 300,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-30",
+     "name": "30",
+     "seats": 4,
+     "x": 40,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-31",
+     "name": "31",
+     "seats": 4,
+     "x": 158,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-32",
+     "name": "32",
+     "seats": 4,
+     "x": 276,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-33",
+     "name": "33",
+     "seats": 4,
+     "x": 394,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-34",
+     "name": "34",
+     "seats": 4,
+     "x": 512,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-35",
+     "name": "35",
+     "seats": 4,
+     "x": 630,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-36",
+     "name": "36",
+     "seats": 4,
+     "x": 748,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-bg-37",
+     "name": "37",
+     "seats": 4,
+     "x": 866,
+     "y": 540,
+     "w": 86,
+     "h": 86,
+     "shape": "square",
+     "color": "#e8dccb"
+    }
+   ]
+  },
+  {
+   "id": "vn-inside",
+   "name": "Inside",
+   "tables": [
+    {
+     "id": "vn-in-1",
+     "name": "1",
+     "seats": 4,
+     "x": 80,
+     "y": 90,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-2",
+     "name": "2",
+     "seats": 3,
+     "x": 80,
+     "y": 280,
+     "w": 100,
+     "h": 100,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-3",
+     "name": "3",
+     "seats": 3,
+     "x": 80,
+     "y": 470,
+     "w": 100,
+     "h": 100,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-8",
+     "name": "8",
+     "seats": 3,
+     "x": 330,
+     "y": 90,
+     "w": 100,
+     "h": 100,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-9",
+     "name": "9",
+     "seats": 3,
+     "x": 330,
+     "y": 280,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-10",
+     "name": "10",
+     "seats": 3,
+     "x": 330,
+     "y": 470,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-7",
+     "name": "7",
+     "seats": 2,
+     "x": 580,
+     "y": 40,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-6",
+     "name": "6",
+     "seats": 2,
+     "x": 580,
+     "y": 200,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-5",
+     "name": "5",
+     "seats": 2,
+     "x": 580,
+     "y": 360,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-in-4",
+     "name": "4",
+     "seats": 2,
+     "x": 580,
+     "y": 520,
+     "w": 100,
+     "h": 100,
+     "shape": "round",
+     "color": "#e8dccb"
+    }
+   ]
+  },
+  {
+   "id": "vn-upstairs",
+   "name": "Upstairs",
+   "tables": [
+    {
+     "id": "vn-up-78",
+     "name": "78",
+     "seats": 6,
+     "x": 40,
+     "y": 50,
+     "w": 140,
+     "h": 230,
+     "shape": "rect",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-75",
+     "name": "75",
+     "seats": 4,
+     "x": 215,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-74",
+     "name": "74",
+     "seats": 4,
+     "x": 343,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-73",
+     "name": "73",
+     "seats": 4,
+     "x": 471,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-72",
+     "name": "72",
+     "seats": 4,
+     "x": 599,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-71",
+     "name": "71",
+     "seats": 4,
+     "x": 727,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-70",
+     "name": "70",
+     "seats": 2,
+     "x": 855,
+     "y": 60,
+     "w": 95,
+     "h": 95,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-64",
+     "name": "64",
+     "seats": 2,
+     "x": 215,
+     "y": 320,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-63",
+     "name": "63",
+     "seats": 2,
+     "x": 375,
+     "y": 320,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-62",
+     "name": "62",
+     "seats": 2,
+     "x": 535,
+     "y": 320,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-61",
+     "name": "61",
+     "seats": 2,
+     "x": 695,
+     "y": 320,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-60",
+     "name": "60",
+     "seats": 2,
+     "x": 855,
+     "y": 320,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-66",
+     "name": "66",
+     "seats": 6,
+     "x": 40,
+     "y": 330,
+     "w": 120,
+     "h": 200,
+     "shape": "rect",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-65",
+     "name": "65",
+     "seats": 6,
+     "x": 175,
+     "y": 450,
+     "w": 70,
+     "h": 70,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-54",
+     "name": "54",
+     "seats": 2,
+     "x": 300,
+     "y": 590,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-53",
+     "name": "53",
+     "seats": 2,
+     "x": 440,
+     "y": 590,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-52",
+     "name": "52",
+     "seats": 2,
+     "x": 580,
+     "y": 590,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-51",
+     "name": "51",
+     "seats": 2,
+     "x": 720,
+     "y": 590,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    },
+    {
+     "id": "vn-up-50",
+     "name": "50",
+     "seats": 2,
+     "x": 860,
+     "y": 590,
+     "w": 85,
+     "h": 85,
+     "shape": "square",
+     "color": "#e8dccb"
+    }
+   ]
+  }
+ ]
+}

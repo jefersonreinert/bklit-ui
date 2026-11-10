@@ -26,3 +26,15 @@ apagados.
   champanhes e vinhos. Gins e destilados são vendidos por dose; champanhes e
   vinhos por garrafa (magnum = 1500 ml). Gerado dos PDFs com
   `pdftotext -bbox-layout` (duas colunas lidas pela posição na página).
+
+## Mapas de mesas (`scripts/pos-floors/`)
+
+Substitui as áreas e mesas de uma empresa (usadas pelo POS e pelas Reservas).
+Recusa se houver pedido aberto ou reserva futura numa mesa que sairia do mapa.
+
+```bash
+node scripts/pos-floors/apply.mjs scripts/pos-floors/vinomad.json
+```
+
+- `vinomad.json`: Beer Garden, Inside e Upstairs, desenhados das plantas à mão
+  (número dentro = mesa, número fora = lugares; círculo = redonda).
