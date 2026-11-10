@@ -367,6 +367,8 @@ export default defineSchema({
     cid: v.string(),
     name: v.string(),
     category: v.string(),
+    /** Optional second level under the category ("Cervejas" › "IPA"). */
+    subcategory: v.optional(v.string()),
     price: v.number(),
     color: v.string(),
     available: v.boolean(),
@@ -389,7 +391,94 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_cid", ["cid"])
-    .index("by_company", ["company"]),
+    .index("by_company", ["company"])
+    .index("by_barcode", ["barcode"]),
+
+  /**
+   * Category tree of a business: top categories (no parent) and their
+   * subcategories. Products keep the names (category / subcategory), so
+   * older products without a row here still show up.
+   */
+  posCategories: defineTable({
+    company: v.string(),
+    name: v.string(),
+    /** Name of the parent category; missing = top level. */
+    parent: v.optional(v.string()),
+    color: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    sort: v.number(),
+    updatedAt: v.number(),
+  }).index("by_company", ["company", "sort"]),
+
+  /* ------------------------------ AI providers ----------------------------- */
+  // Written only by the app's server (AI router); keys are sealed with
+  // AES-GCM on the server and never sent to browsers.
+
+  aiProviders: defineTable({
+    provider: v.string(),
+    enabled: v.boolean(),
+    model: v.string(),
+    keySealed: v.optional(v.string()),
+    keyLast4: v.optional(v.string()),
+    status: v.object({
+      state: v.union(v.literal("ok"), v.literal("error"), v.literal("unknown")),
+      kind: v.optional(v.string()),
+      message: v.optional(v.string()),
+      checkedAt: v.optional(v.number()),
+      latencyMs: v.optional(v.number()),
+    }),
+    cooldownUntil: v.optional(v.number()),
+    models: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.optional(v.string()),
+          vision: v.optional(v.boolean()),
+        })
+      )
+    ),
+    modelsAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_provider", ["provider"]),
+
+  aiSettings: defineTable({
+    key: v.string(),
+    order: v.array(v.string()),
+    fallbackEnabled: v.boolean(),
+    fallbackOn: v.array(v.string()),
+    allowAmbiguous: v.boolean(),
+    notifySwitch: v.boolean(),
+    timeoutMs: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** One row per AI request: who answered, every attempt, cached result. */
+  aiRequests: defineTable({
+    requestId: v.string(),
+    hash: v.string(),
+    task: v.string(),
+    status: v.union(v.literal("running"), v.literal("ok"), v.literal("failed")),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    attempts: v.array(
+      v.object({
+        provider: v.string(),
+        model: v.string(),
+        ok: v.boolean(),
+        kind: v.optional(v.string()),
+        message: v.optional(v.string()),
+        ms: v.number(),
+        skipped: v.optional(v.string()),
+      })
+    ),
+    result: v.optional(v.string()),
+    cached: v.optional(v.boolean()),
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_requestId", ["requestId"])
+    .index("by_hash", ["hash", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
 
   posOrders: defineTable({
     cid: v.string(),

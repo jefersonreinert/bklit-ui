@@ -4,6 +4,8 @@ export interface PosProduct {
   id: string;
   name: string;
   category: string;
+  /** Second level under the category ("Cervejas" › "IPA"). */
+  subcategory?: string;
   price: number;
   /** Tile color in the register grid. */
   color: string;

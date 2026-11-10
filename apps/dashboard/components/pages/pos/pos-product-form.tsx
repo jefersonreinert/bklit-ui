@@ -1,16 +1,17 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
+import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import type { CategoryNode } from "@/lib/pos/categories";
 import { api } from "@/convex/_generated/api";
+import {
+  AI_PROVIDERS,
+  type AiProviderId,
+  type RecognizedProduct,
+} from "@/lib/ai/providers-meta";
 import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { periodFor, productStats, usePosDaily } from "@/lib/pos/analytics";
@@ -29,6 +30,7 @@ import type { PosProduct, StockMove, StockMoveKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { cleanModifiers, ModifiersEditor } from "./pos-modifiers";
 import { WineEditor } from "./pos-wine";
+import { BarcodeScanner } from "./scan/barcode-scanner";
 
 const UNITS = ["un", "kg", "g", "L", "ml", "garrafa", "lata", "dose", "porção"];
 
@@ -317,13 +319,188 @@ function ProductExtras({
   );
 }
 
+/** Native select (the iPhone shows its wheel picker). */
+const SELECT =
+  "h-10 w-full rounded-lg border bg-background px-3 text-base sm:text-sm";
+const NEW = "__new__";
+
+function CategoryFields({
+  p,
+  tree,
+  onChange,
+}: {
+  p: PosProduct;
+  tree: CategoryNode[];
+  onChange: (patch: Partial<PosProduct>) => void;
+}) {
+  const known = tree.some((c) => c.name === p.category);
+  const [typingCat, setTypingCat] = useState(tree.length === 0);
+  const node = tree.find((c) => c.name === p.category);
+  const subs = node?.subs ?? [];
+  const subKnown = !p.subcategory || subs.some((s) => s.name === p.subcategory);
+  const [typingSub, setTypingSub] = useState(false);
+  const catOptions = known || !p.category ? tree.map((c) => c.name) : [p.category, ...tree.map((c) => c.name)];
+  const subOptions = subKnown || !p.subcategory ? subs.map((s) => s.name) : [p.subcategory, ...subs.map((s) => s.name)];
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-cat">
+        Categoria
+        {typingCat ? (
+          <Input
+            autoFocus={tree.length > 0}
+            id="ppf-cat"
+            onBlur={() => p.category && setTypingCat(false)}
+            onChange={(e) => onChange({ category: e.target.value, subcategory: undefined })}
+            placeholder="Ex.: Cervejas"
+            value={p.category}
+          />
+        ) : (
+          <select
+            className={SELECT}
+            id="ppf-cat"
+            onChange={(e) => {
+              if (e.target.value === NEW) {
+                setTypingCat(true);
+                onChange({ category: "", subcategory: undefined });
+              } else {
+                onChange({ category: e.target.value, subcategory: undefined });
+              }
+            }}
+            value={p.category}
+          >
+            {catOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value={NEW}>+ Nova categoria…</option>
+          </select>
+        )}
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-sub">
+        Subcategoria
+        {typingSub ? (
+          <Input
+            autoFocus
+            id="ppf-sub"
+            onBlur={() => setTypingSub(false)}
+            onChange={(e) => onChange({ subcategory: e.target.value || undefined })}
+            placeholder="Ex.: IPA"
+            value={p.subcategory ?? ""}
+          />
+        ) : (
+          <select
+            className={SELECT}
+            id="ppf-sub"
+            onChange={(e) => {
+              if (e.target.value === NEW) {
+                setTypingSub(true);
+                onChange({ subcategory: undefined });
+              } else {
+                onChange({ subcategory: e.target.value || undefined });
+              }
+            }}
+            value={p.subcategory ?? ""}
+          >
+            <option value="">Nenhuma</option>
+            {subOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+            <option value={NEW}>+ Nova subcategoria…</option>
+          </select>
+        )}
+      </label>
+    </div>
+  );
+}
+
+function AiNote({ ai }: { ai: AiSuggestion }) {
+  const meta = ai.provider ? AI_PROVIDERS[ai.provider] : null;
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-sm">
+      <Icon className="mt-0.5 size-4 shrink-0 text-primary" name="IconSparkle" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">
+          Preenchido pela IA{meta ? ` · ${meta.product}` : ""}
+          {ai.cached ? " (resultado já pago, reutilizado)" : ""}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Confiança {Math.round(ai.product.confidence * 100)}%
+          {ai.product.brand ? ` · ${ai.product.brand}` : ""}
+          {ai.product.size ? ` · ${ai.product.size}` : ""}. Confira antes de salvar.
+        </p>
+        {ai.switched ? (
+          <p className="mt-1 text-amber-700 text-xs dark:text-amber-300">
+            O provedor principal falhou; a resposta veio de {meta?.label ?? "outro provedor"}.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export interface AiSuggestion {
+  product: RecognizedProduct;
+  provider?: AiProviderId;
+  cached?: boolean;
+  switched?: boolean;
+}
+
+/**
+ * The item page: a full screen (not a sheet) with every field of the
+ * product, the category tree pickers, barcode scanning and, for new
+ * items, what the AI recognized from the photo.
+ */
 export function ProductForm({
   product,
-  categories,
+  tree,
+  ai,
+  onClose,
+}: {
+  product: PosProduct | null;
+  tree: CategoryNode[];
+  ai?: AiSuggestion | null;
+  onClose: () => void;
+}) {
+  const data = usePos();
+  const isNew = product ? !data.products.some((x) => x.id === product.id) : false;
+  return (
+    <FullPage
+      backLabel="Itens"
+      footer={
+        product ? (
+          <Button className="h-12 w-full text-base" form="pos-product-form" type="submit">
+            {isNew ? "Criar item" : "Salvar alterações"}
+          </Button>
+        ) : null
+      }
+      onClose={onClose}
+      open={product !== null}
+      subtitle={
+        product && !isNew
+          ? [product.category, product.subcategory].filter(Boolean).join(" › ")
+          : undefined
+      }
+      title={product ? (isNew ? "Novo item" : product.name || "Item") : ""}
+    >
+      {product ? (
+        <ProductEditor ai={ai} key={product.id} onClose={onClose} product={product} tree={tree} />
+      ) : null}
+    </FullPage>
+  );
+}
+
+function ProductEditor({
+  product,
+  tree,
+  ai,
   onClose,
 }: {
   product: PosProduct;
-  categories: string[];
+  tree: CategoryNode[];
+  ai?: AiSuggestion | null;
   onClose: () => void;
 }) {
   const data = usePos();
@@ -336,6 +513,7 @@ export function ProductForm({
   const [cost, setCost] = useState(money2(product.cost));
   const [stock, setStock] = useState(fix(product.stock ?? 0));
   const [minStock, setMinStock] = useState(fix(product.minStock ?? 0));
+  const [scanning, setScanning] = useState(false);
   const value = num(price);
   const costValue = cost ? num(cost) : undefined;
   const valid =
@@ -344,6 +522,10 @@ export function ProductForm({
     value >= 0 &&
     (costValue === undefined || Number.isFinite(costValue));
   const isNew = !data.products.some((x) => x.id === product.id);
+  const barcode = p.barcode?.trim();
+  const duplicate = barcode
+    ? data.products.find((x) => x.id !== p.id && x.barcode?.trim() === barcode)
+    : undefined;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,6 +537,8 @@ export function ProductForm({
       ...p,
       name: p.name.trim(),
       category: p.category.trim() || "Outros",
+      subcategory: p.subcategory?.trim() || undefined,
+      barcode: barcode || undefined,
       price: value,
       cost: costValue,
       // Stock is edited here only for new products; later through movements
@@ -369,39 +553,29 @@ export function ProductForm({
   };
 
   return (
-    <Sheet onOpenChange={(o) => (o ? null : onClose())} open>
-      <SheetContent
-        className="acrylic w-full! gap-0 overflow-y-auto bg-popover sm:max-w-lg!"
-        side="right"
-      >
-        <SheetHeader className="border-b p-5">
-          <SheetTitle>{isNew ? "Novo produto" : p.name}</SheetTitle>
-        </SheetHeader>
-        <form className="flex flex-col gap-4 p-4" onSubmit={submit}>
-          <Group title="Produto">
+    <div className="mx-auto w-full max-w-2xl">
+        <form className="flex flex-col gap-4 p-4" id="pos-product-form" onSubmit={submit}>
+          {ai && isNew ? <AiNote ai={ai} /> : null}
+          <Group title="Item">
             <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-1">
               Nome
               <Input
-                autoFocus={isNew}
+                autoFocus={isNew && !p.name}
                 id="ppf-1"
                 onChange={(e) => setP({ ...p, name: e.target.value })}
                 value={p.name}
               />
             </label>
+            <CategoryFields onChange={(patch) => setP({ ...p, ...patch })} p={p} tree={tree} />
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-2">
-                Categoria
+              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-4">
+                Código (SKU)
                 <Input
-                  id="ppf-2"
-                  list="pos-categories"
-                  onChange={(e) => setP({ ...p, category: e.target.value })}
-                  value={p.category}
+                  autoCapitalize="characters"
+                  id="ppf-4"
+                  onChange={(e) => setP({ ...p, sku: e.target.value })}
+                  value={p.sku ?? ""}
                 />
-                <datalist id="pos-categories">
-                  {categories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
               </label>
               <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-3">
                 Unidade
@@ -418,32 +592,55 @@ export function ProductForm({
                 </datalist>
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-4">
-                Código (SKU)
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-5">
+              Código de barras
+              <span className="flex gap-2">
                 <Input
-                  autoCapitalize="characters"
-                  id="ppf-4"
-                  onChange={(e) => setP({ ...p, sku: e.target.value })}
-                  value={p.sku ?? ""}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-5">
-                Código de barras
-                <Input
+                  className="flex-1 font-mono tabular-nums"
                   id="ppf-5"
                   inputMode="numeric"
                   onChange={(e) => setP({ ...p, barcode: e.target.value })}
+                  placeholder="Escaneie ou digite"
                   value={p.barcode ?? ""}
                 />
+                <Button
+                  aria-label="Escanear com a câmera"
+                  className="h-10 shrink-0"
+                  onClick={() => setScanning(true)}
+                  type="button"
+                  variant="outline"
+                >
+                  <Icon className="size-4" name="IconBarcode" />
+                  <span className="hidden sm:inline">Escanear</span>
+                </Button>
+              </span>
+              {duplicate ? (
+                <span className="text-destructive text-xs" role="alert">
+                  Este código já está em “{duplicate.name}”.
+                </span>
+              ) : (
+                <span className="text-muted-foreground text-xs">
+                  Também funciona com leitor Bluetooth/USB: toque no campo e leia o código.
+                </span>
+              )}
+            </label>
+            {p.description !== undefined || isNew ? (
+              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-desc">
+                Descrição
+                <Input
+                  id="ppf-desc"
+                  onChange={(e) => setP({ ...p, description: e.target.value || undefined })}
+                  value={p.description ?? ""}
+                />
               </label>
-            </div>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {TILE_COLORS.map((c) => (
                 <button
                   aria-label={`Cor ${c}`}
+                  aria-pressed={p.color === c}
                   className={cn(
-                    "size-7 rounded-full border-2",
+                    "size-8 rounded-full border-2",
                     p.color === c
                       ? "scale-110 border-foreground"
                       : "border-transparent"
@@ -464,7 +661,6 @@ export function ProductForm({
               />
             </span>
           </Group>
-
           <Group title="Preço e custo">
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-6">
@@ -559,12 +755,17 @@ export function ProductForm({
             )}
           </Group>
 
-          <Button className="h-11" disabled={!valid} type="submit">
-            Salvar
-          </Button>
         </form>
         {isNew ? null : <ProductExtras onClose={onClose} product={p} />}
-      </SheetContent>
-    </Sheet>
+      <BarcodeScanner
+        onClose={() => setScanning(false)}
+        onCode={(r) => {
+          setP((cur) => ({ ...cur, barcode: r.code }));
+          setScanning(false);
+        }}
+        open={scanning}
+        title="Código do item"
+      />
+    </div>
   );
 }
