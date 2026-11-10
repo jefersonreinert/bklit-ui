@@ -6,3 +6,4 @@ next-env.d.ts
 .dev.vars
 
 .env.local
+public/vendor/zxing/

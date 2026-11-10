@@ -1,14 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -216,7 +211,7 @@ function Overview({ onReorder }: { onReorder: () => void }) {
       </div>
       {data.items.length === 0 ? (
         <p className={cn(CARD, "text-muted-foreground text-sm")}>
-          Nenhum produto com controle de estoque. Ative "Controlar estoque" em
+          Nenhum produto com controle de estoque. Ative “Controlar estoque” em
           Produtos, ou receba uma compra — os produtos comprados passam a ser
           controlados.
         </p>
@@ -390,18 +385,18 @@ function Suppliers() {
           fazer pedidos de compra.
         </p>
       )}
-      <Sheet onOpenChange={(o) => !o && setEdit(null)} open={edit !== null}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>
-              {edit === "new" ? "Novo fornecedor" : "Fornecedor"}
-            </SheetTitle>
-          </SheetHeader>
-          {edit ? (
-            <SupplierForm onClose={() => setEdit(null)} supplier={edit} />
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <FullPage
+        backLabel="Estoque"
+        onClose={() => setEdit(null)}
+        open={edit !== null}
+        title={edit === "new" ? "Novo fornecedor" : "Fornecedor"}
+      >
+        <div className="mx-auto w-full max-w-2xl p-4 pb-10">
+        {edit ? (
+          <SupplierForm onClose={() => setEdit(null)} supplier={edit} />
+        ) : null}
+        </div>
+      </FullPage>
     </div>
   );
 }
@@ -711,24 +706,24 @@ function Purchases() {
           mercadoria chegar, toque em Receber para lançar no estoque.
         </p>
       )}
-      <Sheet onOpenChange={(o) => !o && setOpen(null)} open={open !== null}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>
-              {open === "new" || open === null
+      <FullPage
+        backLabel="Estoque"
+        onClose={() => setOpen(null)}
+        open={open !== null}
+        title={open === "new" || open === null
                 ? "Nova compra"
                 : `Compra #${open.number} · ${STATUS[open.status].label}`}
-            </SheetTitle>
-          </SheetHeader>
-          {open ? (
-            <PurchaseEditor
-              onClose={() => setOpen(null)}
-              purchase={open === "new" ? null : open}
-              suppliers={suppliers}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      >
+        <div className="mx-auto w-full max-w-2xl p-4 pb-10">
+        {open ? (
+          <PurchaseEditor
+            onClose={() => setOpen(null)}
+            purchase={open === "new" ? null : open}
+            suppliers={suppliers}
+          />
+        ) : null}
+        </div>
+      </FullPage>
     </div>
   );
 }
@@ -981,22 +976,22 @@ function Counts() {
           em dinheiro.
         </p>
       )}
-      <Sheet onOpenChange={(o) => !o && setOpenId(null)} open={open !== null}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-          <SheetHeader>
-            <SheetTitle>
-              {open ? `Contagem #${open.number} · ${open.name}` : ""}
-            </SheetTitle>
-          </SheetHeader>
-          {open ? (
-            <CountSheet
-              count={open}
-              key={open.id}
-              onClose={() => setOpenId(null)}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <FullPage
+        backLabel="Estoque"
+        onClose={() => setOpenId(null)}
+        open={open !== null}
+        title={open ? `Contagem #${open.number} · ${open.name}` : ""}
+      >
+        <div className="mx-auto w-full max-w-2xl p-4 pb-10">
+        {open ? (
+          <CountSheet
+            count={open}
+            key={open.id}
+            onClose={() => setOpenId(null)}
+          />
+        ) : null}
+        </div>
+      </FullPage>
     </div>
   );
 }
@@ -1163,20 +1158,22 @@ function Recipes() {
           );
         })}
       </div>
-      <Sheet onOpenChange={(o) => !o && setEdit(null)} open={edit !== null}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Ficha técnica · {edit?.name}</SheetTitle>
-          </SheetHeader>
-          {edit ? (
-            <RecipeEditor
-              key={edit.id}
-              onClose={() => setEdit(null)}
-              product={edit}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <FullPage
+        backLabel="Estoque"
+        onClose={() => setEdit(null)}
+        open={edit !== null}
+        title={`Ficha técnica · ${edit?.name ?? ""}`}
+      >
+        <div className="mx-auto w-full max-w-2xl p-4 pb-10">
+        {edit ? (
+          <RecipeEditor
+            key={edit.id}
+            onClose={() => setEdit(null)}
+            product={edit}
+          />
+        ) : null}
+        </div>
+      </FullPage>
     </div>
   );
 }

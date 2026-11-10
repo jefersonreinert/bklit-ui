@@ -36,6 +36,7 @@ const item = posItem;
 const productFields = {
   name: v.string(),
   category: v.string(),
+  subcategory: v.optional(v.string()),
   price: v.number(),
   color: v.string(),
   available: v.boolean(),

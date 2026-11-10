@@ -22,6 +22,7 @@ import {
 } from "@/lib/preferences";
 import { DEFAULT_PREFERENCES, FONTS } from "@/lib/preferences-fonts";
 import { cn } from "@/lib/utils";
+import { AiProvidersCard } from "./settings-ai-providers";
 import { IconCard, PhotoPicker } from "./settings-images";
 import { SaveStatus } from "./settings-status";
 
@@ -259,7 +260,7 @@ export function SettingsPage() {
       <div>
         <h2 className="font-semibold text-xl tracking-tight">Configurações</h2>
         <p className="text-muted-foreground text-sm">
-          Personalize o seu nome, o ícone, o tema e a tipografia do painel.
+          Personalize o seu nome, o ícone, o tema e a tipografia do painel, e configure os provedores de IA.
         </p>
       </div>
       <ProfileCard />
@@ -275,6 +276,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
       <TypographyCard />
+      <AiProvidersCard />
     </div>
   );
 }
