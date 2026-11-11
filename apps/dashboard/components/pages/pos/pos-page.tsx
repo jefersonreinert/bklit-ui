@@ -24,6 +24,12 @@ import { cn } from "@/lib/utils";
 import { PosGate, type PosPerm, UserChip, useCan } from "./pos-auth";
 import { CompanySwitcher } from "./pos-company";
 import { CustomersView } from "./pos-customers";
+import {
+  LightspeedApp,
+  ModeSwitch,
+  useLightspeedLink,
+  usePosMode,
+} from "./pos-lightspeed";
 import { OrdersView } from "./pos-orders";
 import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
@@ -289,6 +295,8 @@ function PosApp() {
   const tr = useT();
   const can = useCan();
   const company = useCurrentCompany();
+  const link = useLightspeedLink();
+  const lightspeed = usePosMode(company?.key ?? "main") === "lightspeed" && Boolean(link);
   const tabs = TABS.filter(
     (t) =>
       can(t.perm) &&
@@ -311,11 +319,12 @@ function PosApp() {
       {/* Company and user stay put; the tabs scroll sideways when they
           don't fit (no more overlap with the sidebar) */}
       <nav className="hidden shrink-0 items-center gap-2 border-b px-4 py-2 md:flex">
-        <span className="shrink-0">
+        <span className="flex shrink-0 items-center gap-2">
           <CompanySwitcher />
+          <ModeSwitch />
         </span>
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="mx-auto flex w-max items-center gap-1">
+          <div className={cn("mx-auto flex w-max items-center gap-1", lightspeed && "hidden")}>
             {tabs.map((t) => (
               <button
                 className={cn(
@@ -340,6 +349,7 @@ function PosApp() {
       </nav>
       <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 md:hidden">
         <CompanySwitcher />
+        <ModeSwitch />
         <span className="ml-auto">
           <UserChip />
         </span>
@@ -360,25 +370,33 @@ function PosApp() {
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === "register" ? (
-          <RegisterView
-            activeOrderId={activeOrderId}
-            onActiveOrder={setActiveOrderId}
-          />
-        ) : null}
-        {tab === "tables" ? <TablesView onOpenOrder={openOrder} /> : null}
-        {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
-        {tab === "wines" ? <WinesView /> : null}
-        {tab === "winemonitor" ? <WineMonitorView /> : null}
-        {tab === "team" ? <TeamView /> : null}
-        {tab === "products" ? <ProductsView /> : null}
-        {tab === "stock" ? <StockView /> : null}
-        {tab === "customers" ? <CustomersView /> : null}
-        {tab === "reports" ? <ReportsView /> : null}
-        {tab === "vouchers" ? <VouchersView /> : null}
-        {tab === "settings" ? <SettingsView /> : null}
+        {lightspeed ? (
+          <LightspeedApp />
+        ) : (
+          <>
+          {tab === "register" ? (
+            <RegisterView
+              activeOrderId={activeOrderId}
+              onActiveOrder={setActiveOrderId}
+            />
+          ) : null}
+          {tab === "tables" ? <TablesView onOpenOrder={openOrder} /> : null}
+          {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
+          {tab === "wines" ? <WinesView /> : null}
+          {tab === "winemonitor" ? <WineMonitorView /> : null}
+          {tab === "team" ? <TeamView /> : null}
+          {tab === "products" ? <ProductsView /> : null}
+          {tab === "stock" ? <StockView /> : null}
+          {tab === "customers" ? <CustomersView /> : null}
+          {tab === "reports" ? <ReportsView /> : null}
+          {tab === "vouchers" ? <VouchersView /> : null}
+          {tab === "settings" ? <SettingsView /> : null}
+          </>
+        )}
       </div>
-      <MobileTabBar onPick={setTab} tab={tab} tabs={tabs} />
+      {lightspeed ? null : (
+        <MobileTabBar onPick={setTab} tab={tab} tabs={tabs} />
+      )}
     </div>
   );
 }
