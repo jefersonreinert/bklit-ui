@@ -480,6 +480,102 @@ export default defineSchema({
     .index("by_hash", ["hash", "createdAt"])
     .index("by_createdAt", ["createdAt"]),
 
+  /* --------------------------- Lightspeed K-Series -------------------------- */
+  // Connection to the Lightspeed POS (OAuth). Only internal functions read
+  // the secret and tokens; the panel sees whether they exist.
+
+  lskAuth: defineTable({
+    key: v.string(),
+    env: v.string(),
+    clientId: v.string(),
+    clientSecret: v.string(),
+    accessToken: v.optional(v.string()),
+    refreshToken: v.optional(v.string()),
+    accessExpiresAt: v.optional(v.number()),
+    refreshExpiresAt: v.optional(v.number()),
+    scope: v.optional(v.string()),
+    lockUntil: v.optional(v.number()),
+    connectedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    lastSyncAt: v.optional(v.number()),
+    syncError: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  lskStates: defineTable({
+    state: v.string(),
+    returnTo: v.string(),
+    createdAt: v.number(),
+  }).index("by_state", ["state"]),
+
+  /** Lightspeed business locations, each linked to one of our businesses. */
+  lskLocations: defineTable({
+    locationId: v.number(),
+    businessId: v.number(),
+    businessName: v.string(),
+    name: v.string(),
+    company: v.optional(v.string()),
+    enabled: v.boolean(),
+    salesCursor: v.optional(v.number()),
+    menuAt: v.optional(v.number()),
+    floorAt: v.optional(v.number()),
+    checksAt: v.optional(v.number()),
+    salesAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_location", ["locationId"])
+    .index("by_company", ["company"]),
+
+  lskItems: defineTable({
+    locationId: v.number(),
+    sku: v.string(),
+    name: v.string(),
+    price: v.number(),
+    group: v.string(),
+    subgroup: v.optional(v.string()),
+    color: v.optional(v.string()),
+    taxPct: v.optional(v.number()),
+    menu: v.string(),
+    modifierGroups: v.number(),
+  }).index("by_location", ["locationId"]),
+
+  lskFloors: defineTable({
+    locationId: v.number(),
+    floors: v.any(),
+    checks: v.any(),
+    floorsAt: v.number(),
+    checksAt: v.number(),
+  }).index("by_location", ["locationId"]),
+
+  lskSales: defineTable({
+    locationId: v.number(),
+    receiptId: v.string(),
+    closedAt: v.number(),
+    openedAt: v.number(),
+    cancelled: v.boolean(),
+    table: v.string(),
+    covers: v.number(),
+    staff: v.string(),
+    total: v.number(),
+    tax: v.number(),
+    tips: v.number(),
+    payments: v.array(
+      v.object({ code: v.string(), name: v.string(), amount: v.number(), tip: v.number() })
+    ),
+    lines: v.array(
+      v.object({
+        sku: v.string(),
+        name: v.string(),
+        qty: v.number(),
+        total: v.number(),
+        group: v.string(),
+      })
+    ),
+  })
+    .index("by_location_closed", ["locationId", "closedAt"])
+    .index("by_receipt", ["locationId", "receiptId"]),
+
   posOrders: defineTable({
     cid: v.string(),
     number: v.number(),

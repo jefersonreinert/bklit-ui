@@ -16,4 +16,10 @@ crons.interval("ict monitor", { minutes: 5 }, internal.ict.tick, {});
  */
 crons.interval("ohlc compact", { minutes: 10 }, internal.ohlc.compact, {});
 
+/**
+ * Lightspeed mode (convex/lightspeed.ts): menu, floor plans, open checks
+ * and sales of the linked locations. Does nothing until connected.
+ */
+crons.interval("lightspeed sync", { minutes: 10 }, internal.lightspeed.syncAll, {});
+
 export default crons;

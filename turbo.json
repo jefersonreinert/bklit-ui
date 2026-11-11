@@ -6,7 +6,8 @@
     "OPENPANEL_CLIENT_ID",
     "OPENPANEL_CLIENT_SECRET",
     "CLIENT_ID",
-    "CLIENT_SECRET"
+    "CLIENT_SECRET",
+    "CONVEX_SITE_URL"
   ],
   "tasks": {
     "build": {

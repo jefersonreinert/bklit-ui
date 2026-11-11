@@ -23,6 +23,7 @@ import {
 import { DEFAULT_PREFERENCES, FONTS } from "@/lib/preferences-fonts";
 import { cn } from "@/lib/utils";
 import { AiProvidersCard } from "./settings-ai-providers";
+import { LightspeedCard } from "./settings-lightspeed";
 import { IconCard, PhotoPicker } from "./settings-images";
 import { SaveStatus } from "./settings-status";
 
@@ -277,6 +278,7 @@ export function SettingsPage() {
       </Card>
       <TypographyCard />
       <AiProvidersCard />
+      <LightspeedCard />
     </div>
   );
 }

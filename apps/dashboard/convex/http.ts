@@ -14,6 +14,7 @@ import { parseOhlcFeed } from "../lib/metatrader/ohlc-feed";
 import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction } from "./_generated/server";
 import { syncArgs } from "./eatrade";
+import { callback as lightspeedCallback } from "./lightspeed";
 import { ingestOhlc } from "./ohlc";
 
 /**
@@ -472,6 +473,13 @@ http.route({
     }
     return reply({ ok: true });
   }),
+});
+
+/** Lightspeed K-Series OAuth redirect (convex/lightspeed.ts). */
+http.route({
+  path: "/lightspeed/callback",
+  method: "GET",
+  handler: lightspeedCallback,
 });
 
 export default http;
