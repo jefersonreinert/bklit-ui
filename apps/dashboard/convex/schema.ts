@@ -1861,6 +1861,58 @@ export default defineSchema({
     wines: v.any(),
   }).index("by_company", ["company"]),
 
+  /** AI sommelier of a wine bar: settings and the guests' public link. */
+  sommelierSettings: defineTable({
+    company: v.string(),
+    enabled: v.boolean(),
+    /** Secret of the public link (/sommelier/?t=…); rotating it kills old QR codes. */
+    token: v.string(),
+    greeting: v.optional(v.string()),
+    /** Owner's instructions for the AI ("push the Maltese wines"…). */
+    notes: v.optional(v.string()),
+    voice: v.union(v.literal("browser"), v.literal("openai")),
+    openaiVoice: v.optional(v.string()),
+    model: v.optional(v.string()),
+    /** Questions per 24 h for the whole business (cost cap). */
+    dailyLimit: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company", ["company"])
+    .index("by_token", ["token"]),
+
+  /** Every guest question and the sommelier's answer. */
+  sommelierChats: defineTable({
+    company: v.string(),
+    /** Anonymous id of the guest's browser. */
+    sid: v.string(),
+    /** Hash of the network address (limits, never the address itself). */
+    ip: v.string(),
+    at: v.number(),
+    lang: v.string(),
+    question: v.string(),
+    answer: v.optional(v.string()),
+    ok: v.optional(v.boolean()),
+    ms: v.optional(v.number()),
+    model: v.optional(v.string()),
+    inTokens: v.optional(v.number()),
+    outTokens: v.optional(v.number()),
+    cacheRead: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_company_at", ["company", "at"])
+    .index("by_sid", ["sid", "at"])
+    .index("by_ip", ["ip", "at"]),
+
+  /** Voice clips made with the OpenAI voice (limit per guest). */
+  sommelierSpeech: defineTable({
+    company: v.string(),
+    sid: v.string(),
+    ip: v.string(),
+    at: v.number(),
+  })
+    .index("by_sid", ["sid", "at"])
+    .index("by_ip", ["ip", "at"]),
+
   /** Wine Monitor cards (prepaid credit / debit tab) of a business. */
   wmCards: defineTable({
     company: v.string(),

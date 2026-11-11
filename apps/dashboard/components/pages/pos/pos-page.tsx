@@ -40,6 +40,7 @@ import { TablesView } from "./pos-tables";
 import { TeamView } from "./pos-team";
 import { VouchersView } from "./pos-vouchers";
 import { WinesView } from "./pos-wine";
+import { SommelierView } from "./pos-sommelier";
 import { WineMonitorView } from "./pos-wine-monitor";
 
 export type PosTab =
@@ -48,6 +49,7 @@ export type PosTab =
   | "orders"
   | "wines"
   | "winemonitor"
+  | "sommelier"
   | "team"
   | "products"
   | "stock"
@@ -81,6 +83,12 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     label: "Wine Monitor",
     icon: "IconBottle",
     perm: ["products", "stock", "reports"],
+  },
+  {
+    id: "sommelier",
+    label: "Sommelier IA",
+    icon: "IconSparklesSoft",
+    perm: ["settings", "products", "reports"],
   },
   {
     id: "team",
@@ -300,7 +308,7 @@ function PosApp() {
   const tabs = TABS.filter(
     (t) =>
       can(t.perm) &&
-      ((t.id !== "wines" && t.id !== "winemonitor") || company?.wine)
+      (!["wines", "winemonitor", "sommelier"].includes(t.id) || company?.wine)
   );
   const [picked, setTab] = useState<PosTab>("register");
   const tab = tabs.some((t) => t.id === picked)
@@ -384,6 +392,7 @@ function PosApp() {
           {tab === "orders" ? <OrdersView onOpenOrder={openOrder} /> : null}
           {tab === "wines" ? <WinesView /> : null}
           {tab === "winemonitor" ? <WineMonitorView /> : null}
+          {tab === "sommelier" ? <SommelierView /> : null}
           {tab === "team" ? <TeamView /> : null}
           {tab === "products" ? <ProductsView /> : null}
           {tab === "stock" ? <StockView /> : null}

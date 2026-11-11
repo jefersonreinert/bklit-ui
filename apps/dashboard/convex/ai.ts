@@ -10,7 +10,7 @@ import { mutation, type QueryCtx, query } from "./_generated/server";
 
 export const AI_SUBJECT = "ai-router";
 
-async function requireRouter(ctx: Pick<QueryCtx, "auth">) {
+export async function requireRouter(ctx: Pick<QueryCtx, "auth">) {
   const identity = await ctx.auth.getUserIdentity();
   if (identity?.subject !== AI_SUBJECT) {
     throw new ConvexError("Unauthenticated");
