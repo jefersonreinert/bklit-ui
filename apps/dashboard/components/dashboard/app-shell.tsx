@@ -39,8 +39,8 @@ function AppFrame({ children }: { children: ReactNode }) {
   const path = normalizePath(usePathname());
   const embedded = useEmbedded();
 
-  // Public contract signing: no panel frame, no agent
-  if (path === "/assinar") {
+  // Public pages (contract signing, AI sommelier): no panel frame, no agent
+  if (path === "/assinar" || path === "/sommelier") {
     return <ClientOnly>{children}</ClientOnly>;
   }
   if (path === "/") {

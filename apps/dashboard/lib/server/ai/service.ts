@@ -406,3 +406,16 @@ export async function recognize(input: {
     switched: switched && router.notifySwitch,
   };
 }
+
+/** Convex client signed as the AI router (server-only functions). */
+export const routerClient = db;
+
+/** Key and model of one provider, when it is turned on and has a key. */
+export async function providerKey(id: AiProviderId) {
+  const { byId } = await loadAll(await db());
+  const doc = byId.get(id);
+  const key = doc?.enabled ? await keyOf(doc) : null;
+  return key
+    ? { key, model: doc?.model || AI_PROVIDERS[id].suggested[0] || "" }
+    : null;
+}

@@ -1,0 +1,771 @@
+"use client";
+
+import { ConvexHttpClient } from "convex/browser";
+import type { FunctionReturnType } from "convex/server";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { mentioned, type PublicWine } from "@/lib/sommelier/catalog";
+import { langOf, SOMMELIER_LANGS, takeSentences } from "@/lib/sommelier/prompt";
+import { canListen, ListenError, listenOnce, Speaker } from "@/lib/sommelier/voice";
+import { BASE_PATH } from "@/lib/use-connectors";
+import { cn } from "@/lib/utils";
+import { guestStrings } from "./sommelier-strings";
+
+/**
+ * Public page of the AI sommelier (/sommelier/?t=<token>): the guest
+ * talks by voice (or types) and hears the answer. No login: the link on
+ * the venue's QR code is the access.
+ */
+
+type Venue = NonNullable<FunctionReturnType<typeof api.sommelier.venue>>;
+type Phase = "idle" | "listening" | "thinking" | "speaking";
+
+interface Turn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+const SID_KEY = "casa.sommelier.sid";
+const LANG_KEY = "casa.sommelier.lang";
+const FREE_KEY = "casa.sommelier.handsfree";
+
+function stored(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function store(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // private mode: only for this visit
+  }
+}
+
+function guestId() {
+  const old = stored(SID_KEY);
+  if (old && /^[\w-]{8,64}$/.test(old)) {
+    return old;
+  }
+  const id = `g-${crypto.randomUUID()}`;
+  store(SID_KEY, id);
+  return id;
+}
+
+function firstLang() {
+  const saved = stored(LANG_KEY);
+  if (saved && SOMMELIER_LANGS.some((l) => l.code === saved)) {
+    return saved;
+  }
+  const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+  return SOMMELIER_LANGS.some((l) => l.code === nav) ? nav : "en";
+}
+
+const SWATCH: Record<string, string> = {
+  red: "#8e2436",
+  white: "#e2cf7d",
+  rose: "#eaa0ae",
+  orange: "#dd8e3c",
+  sparkling: "#d9cc98",
+  dessert: "#a8682b",
+  "": "#9a8f86",
+};
+
+const money = (n: number) =>
+  `€${n.toLocaleString("en-GB", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+export function SommelierGuest() {
+  const [token, setToken] = useState<string | null>(null);
+  const [venue, setVenue] = useState<Venue | null | undefined>(undefined);
+  const [lang, setLangState] = useState("en");
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [interim, setInterim] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [typing, setTyping] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [handsFree, setHandsFreeState] = useState(true);
+  const [showList, setShowList] = useState(false);
+
+  const sid = useRef("");
+  const langRef = useRef("en");
+  const handsFreeRef = useRef(true);
+  const turnsRef = useRef<Turn[]>([]);
+  const speaker = useRef<Speaker | null>(null);
+  const unlocked = useRef(false);
+  const listenCtl = useRef<AbortController | null>(null);
+  const askCtl = useRef<AbortController | null>(null);
+  const bottom = useRef<HTMLDivElement | null>(null);
+
+  const t = guestStrings(lang);
+  const micOk = useMemo(() => (typeof window === "undefined" ? true : canListen()), []);
+
+  useEffect(() => {
+    sid.current = guestId();
+    const l = firstLang();
+    langRef.current = l;
+    setLangState(l);
+    const free = stored(FREE_KEY) !== "0";
+    handsFreeRef.current = free;
+    setHandsFreeState(free);
+    const tok = new URLSearchParams(window.location.search).get("t");
+    setToken(tok);
+    const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!(tok && url)) {
+      setVenue(null);
+      return;
+    }
+    new ConvexHttpClient(url)
+      .query(api.sommelier.venue, { token: tok })
+      .then((v) => setVenue(v))
+      .catch(() => setVenue(null));
+  }, []);
+
+  useEffect(() => {
+    if (!(venue && token)) {
+      return;
+    }
+    const s = new Speaker({
+      token,
+      sid: sid.current,
+      lang: () => {
+        const l = langOf(langRef.current);
+        return { code: l.code, speech: l.speech };
+      },
+      natural: venue.voice === "openai",
+      onSpeaking: (on) =>
+        setPhase((p) => (on ? "speaking" : p === "speaking" ? "idle" : p)),
+    });
+    speaker.current = s;
+    // Voices load late on some phones
+    window.speechSynthesis?.getVoices();
+    return () => s.stop();
+  }, [venue, token]);
+
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [turns, interim]);
+
+  const setLang = (code: string) => {
+    langRef.current = code;
+    setLangState(code);
+    store(LANG_KEY, code);
+  };
+
+  const setHandsFree = (on: boolean) => {
+    handsFreeRef.current = on;
+    setHandsFreeState(on);
+    store(FREE_KEY, on ? "1" : "0");
+  };
+
+  const updateTurns = (next: Turn[]) => {
+    turnsRef.current = next;
+    setTurns(next);
+  };
+
+  const stopAll = () => {
+    listenCtl.current?.abort();
+    askCtl.current?.abort();
+    speaker.current?.stop();
+  };
+
+  const unlock = () => {
+    if (!unlocked.current) {
+      unlocked.current = true;
+      speaker.current?.unlock();
+    }
+  };
+
+  // listen() and ask() call each other (conversation mode)
+  const listenRef = useRef<() => void>(() => undefined);
+
+  const ask = useCallback(
+    async (question: string) => {
+      const text = question.trim().slice(0, 600);
+      if (!(text && token)) {
+        return;
+      }
+      stopAll();
+      setNotice(null);
+      const ctl = new AbortController();
+      askCtl.current = ctl;
+      const history = [...turnsRef.current, { role: "user" as const, content: text }];
+      updateTurns([...history, { role: "assistant", content: "" }]);
+      setPhase("thinking");
+      const say = (s: string) => speaker.current?.say(s);
+      let answer = "";
+      try {
+        const res = await fetch(`${BASE_PATH}/api/sommelier/`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            t: token,
+            sid: sid.current,
+            lang: langRef.current,
+            turns: history.slice(-12),
+          }),
+          signal: ctl.signal,
+        });
+        if (!(res.ok && res.body)) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          answer = body?.error ?? guestStrings(langRef.current).error;
+          updateTurns([...history, { role: "assistant", content: answer }]);
+          say(answer);
+        } else {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let pending = "";
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            const chunk = decoder.decode(value, { stream: true });
+            answer += chunk;
+            pending += chunk;
+            updateTurns([...history, { role: "assistant", content: answer }]);
+            const { sentences, rest } = takeSentences(pending);
+            pending = rest;
+            for (const s of sentences) {
+              say(s);
+            }
+          }
+          if (pending.trim()) {
+            say(pending);
+          }
+        }
+      } catch {
+        if (ctl.signal.aborted) {
+          return;
+        }
+        answer = guestStrings(langRef.current).error;
+        updateTurns([...history, { role: "assistant", content: answer }]);
+      }
+      if (ctl.signal.aborted) {
+        return;
+      }
+      setPhase((p) => (p === "thinking" ? "idle" : p));
+      await speaker.current?.drained();
+      if (!ctl.signal.aborted && handsFreeRef.current && micOk) {
+        listenRef.current();
+      }
+    },
+    // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
+    [token, micOk]
+  );
+
+  const listen = useCallback(async () => {
+    stopAll();
+    setNotice(null);
+    const ctl = new AbortController();
+    listenCtl.current = ctl;
+    setPhase("listening");
+    setInterim("");
+    try {
+      const text = await listenOnce(langOf(langRef.current).speech, setInterim, ctl.signal);
+      setInterim("");
+      if (text) {
+        ask(text);
+      } else {
+        setPhase("idle");
+      }
+    } catch (err) {
+      setInterim("");
+      setPhase("idle");
+      const s = guestStrings(langRef.current);
+      const code = err instanceof ListenError ? err.code : "";
+      if (code === "not-allowed" || code === "service-not-allowed") {
+        setNotice(s.micDenied);
+        setTyping(true);
+      } else if (code === "unsupported") {
+        setNotice(s.noMic);
+        setTyping(true);
+      }
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
+  }, [ask]);
+
+  listenRef.current = listen;
+
+  const onOrb = () => {
+    unlock();
+    if (!micOk) {
+      setTyping(true);
+      setNotice(t.noMic);
+      return;
+    }
+    if (phase === "listening") {
+      // Done talking: what was heard so far is sent
+      listenCtl.current?.abort();
+      return;
+    }
+    listen();
+  };
+
+  const onSend = (e: FormEvent) => {
+    e.preventDefault();
+    unlock();
+    const text = draft;
+    setDraft("");
+    ask(text);
+  };
+
+  const onIdea = (text: string) => {
+    unlock();
+    setShowList(false);
+    ask(text);
+  };
+
+  const restart = () => {
+    stopAll();
+    setPhase("idle");
+    updateTurns([]);
+  };
+
+  if (venue === undefined) {
+    return (
+      <Shell>
+        <div className="flex flex-1 items-center justify-center">
+          <span className="size-10 animate-spin rounded-full border-2 border-white/20 border-t-[#e8c48a]" />
+        </div>
+      </Shell>
+    );
+  }
+  if (venue === null) {
+    return (
+      <Shell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
+          <span className="text-5xl">🍷</span>
+          <p className="text-lg text-white/80">{t.closed}</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  const onTap = venue.wines.filter((w) => w.onTap);
+  const lastAnswer = [...turns].reverse().find((x) => x.role === "assistant");
+  const label =
+    phase === "listening"
+      ? t.listening
+      : phase === "thinking"
+        ? t.thinking
+        : phase === "speaking"
+          ? t.speaking
+          : t.tap;
+
+  return (
+    <Shell>
+      <header className="flex items-center gap-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
+        <Logo company={venue.company} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] text-[#e8c48a] uppercase tracking-[0.18em]">
+            AI Sommelier
+          </p>
+          <h1 className="truncate font-serif text-xl text-white">{venue.name}</h1>
+        </div>
+        <label className="relative">
+          <span className="sr-only">Language</span>
+          <select
+            className="h-9 appearance-none rounded-full border border-white/15 bg-white/5 pr-3 pl-3 text-sm text-white outline-none"
+            onChange={(e) => setLang(e.target.value)}
+            value={lang}
+          >
+            {SOMMELIER_LANGS.map((l) => (
+              <option className="text-black" key={l.code} value={l.code}>
+                {l.flag} {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+        <Bubble role="assistant" text={venue.greeting || t.hello} />
+        {turns.length === 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {t.ideas.map((idea) => (
+              <button
+                className="rounded-full border border-[#e8c48a]/30 bg-[#e8c48a]/10 px-3 py-1.5 text-left text-[#f3dfbd] text-sm active:scale-95"
+                key={idea}
+                onClick={() => onIdea(idea)}
+                type="button"
+              >
+                {idea}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {turns.map((turn, i) => (
+          <div key={`${i}-${turn.role}`}>
+            <Bubble
+              pending={turn.role === "assistant" && !turn.content}
+              role={turn.role}
+              text={turn.content}
+            />
+            {turn.role === "assistant" && turn.content && turn === lastAnswer ? (
+              <WineCards t={t} wines={mentioned(turn.content, venue.wines).slice(0, 4)} />
+            ) : null}
+          </div>
+        ))}
+        {interim ? <Bubble role="user" text={interim} faded /> : null}
+        {notice ? (
+          <p className="mt-3 rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/70">
+            {notice}
+          </p>
+        ) : null}
+        <div ref={bottom} />
+      </main>
+
+      <footer className="border-white/10 border-t bg-black/30 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+        {typing ? (
+          <form className="mb-3 flex gap-2" onSubmit={onSend}>
+            <input
+              className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-white/5 px-4 text-[16px] text-white outline-none placeholder:text-white/40 focus:border-[#e8c48a]/60"
+              enterKeyHint="send"
+              maxLength={600}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t.type}
+              value={draft}
+            />
+            <button
+              className="h-11 rounded-full bg-[#e8c48a] px-4 font-medium text-[#2a1016] disabled:opacity-40"
+              disabled={!draft.trim()}
+              type="submit"
+            >
+              {t.send}
+            </button>
+          </form>
+        ) : null}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex w-24 flex-col items-start gap-2">
+            <RoundButton
+              active={typing}
+              label="⌨︎"
+              onClick={() => setTyping((v) => !v)}
+              title={t.type}
+            />
+            {turns.length ? (
+              <button className="text-[11px] text-white/50" onClick={restart} type="button">
+                {t.newChat}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex flex-col items-center gap-1.5">
+            <Orb onClick={onOrb} phase={phase} />
+            <span className="text-white/70 text-xs">{label}</span>
+          </div>
+          <div className="flex w-24 flex-col items-end gap-2">
+            <RoundButton
+              active={showList}
+              label="🍷"
+              onClick={() => setShowList((v) => !v)}
+              title={t.onTap}
+            />
+            {micOk ? (
+              <button
+                className={cn(
+                  "text-right text-[11px]",
+                  handsFree ? "text-[#e8c48a]" : "text-white/50"
+                )}
+                onClick={() => setHandsFree(!handsFree)}
+                type="button"
+              >
+                {handsFree ? "● " : "○ "}
+                {t.handsFree}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <p className="mt-2 text-center text-[10px] text-white/30">{t.privacy}</p>
+      </footer>
+
+      {showList ? (
+        <WineList
+          onAsk={(w) => onIdea(t.askAbout(w.name))}
+          onClose={() => setShowList(false)}
+          t={t}
+          wines={onTap.length ? onTap : venue.wines}
+        />
+      ) : null}
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_80%_at_50%_0%,#4a1522_0%,#1c0a10_55%,#0f0709_100%)] text-white">
+      {children}
+    </div>
+  );
+}
+
+function Logo({ company }: { company: string }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) {
+    return <span className="text-3xl">🍷</span>;
+  }
+  return (
+    // biome-ignore lint/performance/noImgElement: tiny static logo
+    <img
+      alt=""
+      className="size-11 rounded-full bg-white/90 object-contain p-1"
+      height={44}
+      onError={() => setOk(false)}
+      src={`${BASE_PATH}/brands/${company}.png`}
+      width={44}
+    />
+  );
+}
+
+function Bubble({
+  role,
+  text,
+  pending,
+  faded,
+}: {
+  role: Turn["role"];
+  text: string;
+  pending?: boolean;
+  faded?: boolean;
+}) {
+  const mine = role === "user";
+  return (
+    <div className={cn("mt-3 flex", mine ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
+          mine
+            ? "rounded-br-md bg-[#e8c48a] text-[#2a1016]"
+            : "rounded-bl-md border border-white/10 bg-white/[0.07] text-white/90",
+          faded && "opacity-60"
+        )}
+      >
+        {pending ? (
+          <span className="inline-flex gap-1 py-1">
+            <Dot delay="0ms" />
+            <Dot delay="150ms" />
+            <Dot delay="300ms" />
+          </span>
+        ) : (
+          text
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Dot({ delay }: { delay: string }) {
+  return (
+    <span
+      className="size-1.5 animate-bounce rounded-full bg-white/60"
+      style={{ animationDelay: delay }}
+    />
+  );
+}
+
+function Orb({ phase, onClick }: { phase: Phase; onClick: () => void }) {
+  const active = phase !== "idle";
+  return (
+    <button
+      aria-label="Microphone"
+      className="relative flex size-20 items-center justify-center rounded-full outline-none active:scale-95"
+      onClick={onClick}
+      type="button"
+    >
+      {phase === "listening" || phase === "speaking" ? (
+        <>
+          <span className="absolute inset-0 animate-ping rounded-full bg-[#e8c48a]/25" />
+          <span className="absolute -inset-2 animate-pulse rounded-full border border-[#e8c48a]/30" />
+        </>
+      ) : null}
+      <span
+        className={cn(
+          "relative flex size-20 items-center justify-center rounded-full shadow-[0_10px_40px_-10px_rgba(232,196,138,0.6)] transition-colors",
+          active
+            ? "bg-gradient-to-b from-[#f3d9a6] to-[#c99a55]"
+            : "bg-gradient-to-b from-[#a83246] to-[#6d1626]"
+        )}
+      >
+        {phase === "thinking" ? (
+          <span className="size-8 animate-spin rounded-full border-[3px] border-[#2a1016]/30 border-t-[#2a1016]" />
+        ) : phase === "speaking" ? (
+          <Bars />
+        ) : (
+          <MicIcon dark={active} />
+        )}
+      </span>
+    </button>
+  );
+}
+
+function Bars() {
+  return (
+    <span className="flex h-8 items-center gap-1">
+      {[0, 120, 240, 360, 120].map((d, i) => (
+        <span
+          className="w-1.5 animate-pulse rounded-full bg-[#2a1016]"
+          key={`${i}-${d}`}
+          style={{ height: `${[14, 26, 18, 28, 12][i]}px`, animationDelay: `${d}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function MicIcon({ dark }: { dark: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={cn("size-8", dark ? "text-[#2a1016]" : "text-white")}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
+      <rect height="12" rx="3" width="6" x="9" y="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  );
+}
+
+function RoundButton({
+  label,
+  onClick,
+  active,
+  title,
+}: {
+  label: string;
+  onClick: () => void;
+  active: boolean;
+  title: string;
+}) {
+  return (
+    <button
+      aria-label={title}
+      className={cn(
+        "flex size-11 items-center justify-center rounded-full border text-lg",
+        active
+          ? "border-[#e8c48a]/60 bg-[#e8c48a]/15"
+          : "border-white/15 bg-white/5"
+      )}
+      onClick={onClick}
+      title={title}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+type Strings = ReturnType<typeof guestStrings>;
+
+function priceLine(w: PublicWine, t: Strings) {
+  const glass = w.pours.find((p) => p.ml >= 100) ?? w.pours.at(-1);
+  return [
+    glass ? `${glass.ml} ml ${money(glass.price)}` : "",
+    w.bottle ? `${t.bottle} ${money(w.bottle)}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function WineCards({ wines, t }: { wines: PublicWine[]; t: Strings }) {
+  if (!wines.length) {
+    return null;
+  }
+  return (
+    <div className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
+      {wines.map((w) => (
+        <div
+          className="w-56 shrink-0 snap-start rounded-2xl border border-white/10 bg-white/[0.06] p-3"
+          key={w.id}
+        >
+          <div className="flex items-start gap-2">
+            <span
+              className="mt-1 size-3 shrink-0 rounded-full"
+              style={{ background: SWATCH[w.color] ?? SWATCH[""] }}
+            />
+            <div className="min-w-0">
+              <p className="font-medium text-sm leading-snug">{w.name}</p>
+              <p className="truncate text-white/50 text-xs">
+                {[w.grape, w.region || w.country].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+          {w.onTap ? (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {w.pours.map((p) => (
+                <span
+                  className="rounded-full bg-[#e8c48a]/15 px-2 py-0.5 text-[#f3dfbd] text-[11px]"
+                  key={p.ml}
+                >
+                  {p.ml} ml · {money(p.price)}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-white/60 text-xs">{priceLine(w, t)}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WineList({
+  wines,
+  t,
+  onAsk,
+  onClose,
+}: {
+  wines: PublicWine[];
+  t: Strings;
+  onAsk: (w: PublicWine) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-20 flex flex-col bg-[#14080c]/95 backdrop-blur">
+      <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3">
+        <h2 className="font-serif text-xl">{t.onTap}</h2>
+        <button
+          aria-label={t.stop}
+          className="flex size-10 items-center justify-center rounded-full bg-white/10 text-lg"
+          onClick={onClose}
+          type="button"
+        >
+          ✕
+        </button>
+      </div>
+      <ul className="flex-1 space-y-2 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        {wines.map((w) => (
+          <li key={w.id}>
+            <button
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3 text-left active:scale-[0.99]"
+              onClick={() => onAsk(w)}
+              type="button"
+            >
+              <span
+                className="size-3 shrink-0 rounded-full"
+                style={{ background: SWATCH[w.color] ?? SWATCH[""] }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-sm">{w.name}</span>
+                <span className="block truncate text-white/50 text-xs">
+                  {[w.grape, w.country].filter(Boolean).join(" · ")}
+                </span>
+                <span className="block text-[#f3dfbd] text-xs">{priceLine(w, t)}</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-[#e8c48a] px-3 py-1 font-medium text-[#2a1016] text-xs">
+                {t.ask}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

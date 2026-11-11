@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as ai from "../ai.js";
+import type * as sommelier from "../sommelier.js";
 import type * as categories from "../categories.js";
 import type * as contracts from "../contracts.js";
 import type * as crons from "../crons.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   pos: typeof pos;
   posapi: typeof posapi;
   reservations: typeof reservations;
+  sommelier: typeof sommelier;
   staff: typeof staff;
   stores: typeof stores;
   team: typeof team;
