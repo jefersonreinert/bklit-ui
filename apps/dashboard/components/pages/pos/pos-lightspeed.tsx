@@ -2,20 +2,26 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
-import { fold } from "@/lib/pos/categories";
 import { money, sendPos, useCompany, usePos, usePosQuery } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import { useCan } from "./pos-auth";
+import {
+  ActivityControl,
+  ItemsControl,
+  LastOp,
+  StockControl,
+  TablesControl,
+} from "./pos-lightspeed-control";
 
 /**
- * POS "Lightspeed" mode: the same app reading the business's Lightspeed
- * K-Series POS (synced every 10 minutes): today's sales, receipts, open
- * checks on the floor plan and the menu. Read-only; the menu and tables
- * can be copied into the independent system.
+ * POS "Lightspeed" mode: the same app driving the business's Lightspeed
+ * K-Series POS: tables with open checks (order, add items, close with a
+ * payment), sales and receipts, back-office items, stock moved by
+ * Lightspeed sales, the activity log and imports into the independent
+ * system. Data is synced every 10 minutes and after each send.
  */
 
 export type PosMode = "own" | "lightspeed";
@@ -100,19 +106,21 @@ const ago = (t: number | null) => {
   return min < 1 ? "agora" : min < 60 ? `há ${min} min` : `há ${Math.round(min / 60)} h`;
 };
 
-type Tab = "today" | "receipts" | "tables" | "menu" | "import";
+type Tab = "today" | "tables" | "receipts" | "items" | "stock" | "activity" | "import";
 
 const TABS: { id: Tab; label: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
+  { id: "tables", label: "Mesas", icon: "IconTable" },
   { id: "today", label: "Vendas", icon: "IconChart1" },
   { id: "receipts", label: "Recibos", icon: "IconReceiptBill" },
-  { id: "tables", label: "Mesas", icon: "IconTable" },
-  { id: "menu", label: "Cardápio", icon: "IconTag" },
+  { id: "items", label: "Itens", icon: "IconTag" },
+  { id: "stock", label: "Estoque", icon: "IconArchive" },
+  { id: "activity", label: "Atividade", icon: "IconListBullets" },
   { id: "import", label: "Importar", icon: "IconArrowInbox" },
 ];
 
 export function LightspeedApp() {
   const link = useLightspeedLink();
-  const [tab, setTab] = useState<Tab>("today");
+  const [tab, setTab] = useState<Tab>("tables");
   if (!link) {
     return null;
   }
@@ -126,7 +134,7 @@ export function LightspeedApp() {
             <span className="font-normal text-muted-foreground"> ({link.businessName})</span>
           </p>
           <p className="text-muted-foreground text-xs">
-            Somente leitura · vendas {ago(link.salesAt)} · contas abertas {ago(link.checksAt)}
+            Controle pelo app · vendas {ago(link.salesAt)} · contas abertas {ago(link.checksAt)}
           </p>
           {link.error ? <p className="text-destructive text-xs">{link.error}</p> : null}
         </div>
@@ -148,10 +156,13 @@ export function LightspeedApp() {
           </button>
         ))}
       </nav>
+      <LastOp />
+      {tab === "tables" ? <TablesControl /> : null}
       {tab === "today" ? <Sales /> : null}
       {tab === "receipts" ? <Receipts /> : null}
-      {tab === "tables" ? <Tables /> : null}
-      {tab === "menu" ? <Menu /> : null}
+      {tab === "items" ? <ItemsControl /> : null}
+      {tab === "stock" ? <StockControl onImport={() => setTab("import")} /> : null}
+      {tab === "activity" ? <ActivityControl /> : null}
       {tab === "import" ? <Import /> : null}
     </div>
   );
@@ -330,128 +341,6 @@ function Receipts() {
           Voltar aos mais recentes
         </Button>
       ) : null}
-    </div>
-  );
-}
-
-function Tables() {
-  const company = useCompany();
-  const cur = usePos().settings.currency;
-  const data = usePosQuery(api.lightspeed.floor, { company });
-  if (data === undefined) {
-    return <p className="text-muted-foreground text-sm">Carregando…</p>;
-  }
-  if (!data) {
-    return null;
-  }
-  const byTable = new Map(data.checks.filter((c) => c.table !== null).map((c) => [c.table, c]));
-  const loose = data.checks.filter((c) => c.table === null);
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-muted-foreground text-xs">
-        {data.checks.length} contas abertas · total{" "}
-        {money(data.checks.reduce((a, c) => a + c.total - c.paid, 0), cur)}
-      </p>
-      {data.floors.map((f) => (
-        <section className="flex flex-col gap-2" key={f.id}>
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">{f.name}</h3>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {f.tables.map((t) => {
-              const c = byTable.get(t.number);
-              return (
-                <div
-                  className={cn(
-                    "flex min-h-20 flex-col justify-between rounded-2xl border p-2",
-                    c ? "border-primary/40 bg-primary/10" : "bg-card"
-                  )}
-                  key={t.id}
-                >
-                  <span className="flex items-center justify-between font-semibold text-sm">
-                    {t.number || t.name}
-                    <span className="font-normal text-muted-foreground text-xs">{t.seats}p</span>
-                  </span>
-                  {c ? (
-                    <span className="text-xs">
-                      <b className="tabular-nums">{money(c.total - c.paid, cur)}</b>
-                      <span className="block truncate text-muted-foreground">
-                        {c.staff} · {c.covers || "?"} pax
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">livre</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-      {loose.length ? (
-        <section className="flex flex-col gap-2">
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">Sem mesa</h3>
-          <ul className="divide-y rounded-2xl border bg-card text-sm">
-            {loose.map((c) => (
-              <li className="flex justify-between gap-3 px-3 py-2" key={c.id}>
-                <span className="truncate">#{c.number} {c.name}</span>
-                <span className="tabular-nums">{money(c.total - c.paid, cur)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      {data.floors.length === 0 ? (
-        <p className="py-8 text-center text-muted-foreground text-sm">Nenhuma planta sincronizada.</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Menu() {
-  const company = useCompany();
-  const cur = usePos().settings.currency;
-  const items = usePosQuery(api.lightspeed.menu, { company });
-  const [q, setQ] = useState("");
-  if (items === undefined) {
-    return <p className="text-muted-foreground text-sm">Carregando…</p>;
-  }
-  if (!items?.length) {
-    return <p className="py-8 text-center text-muted-foreground text-sm">Cardápio ainda não sincronizado.</p>;
-  }
-  const f = fold(q.trim());
-  const shown = items.filter((i) => !f || fold(`${i.name} ${i.sku} ${i.group} ${i.subgroup ?? ""}`).includes(f));
-  const groups = [...new Set(shown.map((i) => i.group))];
-  return (
-    <div className="flex flex-col gap-4">
-      <Input
-        aria-label="Buscar no cardápio do Lightspeed"
-        className="h-11 text-base sm:text-sm"
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={`Buscar em ${items.length} itens…`}
-        type="search"
-        value={q}
-      />
-      {groups.map((g) => (
-        <section className="flex flex-col gap-2" key={g}>
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">{g}</h3>
-          <ul className="divide-y rounded-2xl border bg-card text-sm">
-            {shown
-              .filter((i) => i.group === g)
-              .map((i) => (
-                <li className="flex items-center justify-between gap-3 px-3 py-2" key={i._id}>
-                  <span className="min-w-0">
-                    <span className="block truncate">{i.name}</span>
-                    <span className="block truncate text-muted-foreground text-xs">
-                      {[i.subgroup, i.sku && `SKU ${i.sku}`, i.modifierGroups ? `${i.modifierGroups} opções` : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <span className="shrink-0 tabular-nums">{money(i.price, cur)}</span>
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
     </div>
   );
 }

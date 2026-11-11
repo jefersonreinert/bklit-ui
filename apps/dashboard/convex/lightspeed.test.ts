@@ -75,6 +75,9 @@ function fakeLightspeed() {
         });
       }
       if (url.pathname === "/o/op/data/businesses") return json(BUSINESSES);
+      if (url.pathname === "/items/v1/items") return json([]);
+      if (url.pathname.startsWith("/f/finance/")) return json({});
+      if (url.pathname.startsWith("/o/wh/1/webhook")) return json({});
       if (url.pathname === "/o/op/1/menu/list") return json(MENUS);
       if (url.pathname === "/o/op/2/menu/load/11") return json(MENU);
       if (url.pathname === "/o/op/data/4242/floorplans") return json(FLOORS);

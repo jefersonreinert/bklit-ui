@@ -209,6 +209,8 @@ export function parseFloors(raw: unknown): LskFloor[] {
 
 export interface LskCheck {
   id: string;
+  /** Account identifier ("A1234.56"): adds items and payments to it. */
+  identifier: string;
   number: number;
   table: number | null;
   name: string;
@@ -223,6 +225,7 @@ export interface LskCheck {
 export function parseChecks(raw: unknown): LskCheck[] {
   return ((Array.isArray(raw) ? raw : []) as Record<string, unknown>[]).map((c) => ({
     id: String(c.uuid ?? c.id ?? c.identifier ?? c.number),
+    identifier: String(c.identifier ?? ""),
     number: num(c.number),
     table: c.tableNumber === undefined || c.tableNumber === null ? null : num(c.tableNumber),
     name: String(c.name ?? ""),
@@ -306,6 +309,70 @@ export function parseSale(raw: unknown): LskSale | null {
       group: l.group,
     })),
   };
+}
+
+/* ------------------------- back-office items (Items API) ------------------ */
+
+export interface LskCatalogItem {
+  itemId: number;
+  name: string;
+  sku: string;
+  barcode?: string;
+  price: number;
+  cost?: number;
+  active: boolean;
+  groupId?: number;
+  group?: string;
+  itemType?: string;
+}
+
+/** GET /items/v1/items: sellable items only (no modifiers or groups). */
+export function parseCatalog(raw: unknown): LskCatalogItem[] {
+  const list = (Array.isArray(raw) ? raw : []) as Record<string, unknown>[];
+  return list
+    .filter((i) => {
+      const t = String(i.itemType ?? "ITEM");
+      return (t === "ITEM" || t === "SEQUENCE") && Number.isFinite(Number(i.id));
+    })
+    .map((i) => {
+      const group = i.accountingGroup as { id?: number; name?: string } | undefined;
+      const prices = (i.prices ?? []) as { amount?: number }[];
+      return {
+        itemId: Number(i.id),
+        name: String(i.name ?? ""),
+        sku: String(i.sku ?? ""),
+        barcode: i.barcode ? String(i.barcode) : undefined,
+        price: num(prices[0]?.amount),
+        cost: i.costPrice === undefined || i.costPrice === null ? undefined : num(i.costPrice),
+        active: i.active !== false && i.disabled !== true,
+        groupId: group?.id === undefined ? undefined : Number(group.id),
+        group: group?.name,
+        itemType: i.itemType ? String(i.itemType) : undefined,
+      };
+    });
+}
+
+/** GET /f/finance/{id}/paymentMethods */
+export function parseMethods(raw: unknown): { code: string; name: string }[] {
+  const list = (Array.isArray(raw)
+    ? raw
+    : ((raw as { _embedded?: { paymentMethodList?: unknown[] } })?._embedded?.paymentMethodList ??
+      [])) as Record<string, unknown>[];
+  return list
+    .map((m) => ({ code: String(m.code ?? ""), name: String(m.name ?? m.description ?? m.code ?? "") }))
+    .filter((m) => m.code);
+}
+
+/** GET /f/finance/{id}/accountingGroups */
+export function parseGroups(raw: unknown): { id: number; name: string }[] {
+  const list = (Array.isArray(raw)
+    ? raw
+    : ((raw as { _embedded?: { accountingGroupList?: unknown[] } })?._embedded?.accountingGroupList ??
+      (raw as { accountingGroups?: unknown[] })?.accountingGroups ??
+      [])) as Record<string, unknown>[];
+  return list
+    .map((g) => ({ id: Number(g.accountingGroupId ?? g.id), name: String(g.name ?? "") }))
+    .filter((g) => Number.isFinite(g.id) && g.name);
 }
 
 /* ------------------------- import into the own POS ------------------------ */

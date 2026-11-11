@@ -15,6 +15,7 @@ import { internal } from "./_generated/api";
 import { type ActionCtx, httpAction } from "./_generated/server";
 import { syncArgs } from "./eatrade";
 import { callback as lightspeedCallback } from "./lightspeed";
+import { webhook as lightspeedWebhook } from "./lightspeedops";
 import { ingestOhlc } from "./ohlc";
 
 /**
@@ -480,6 +481,13 @@ http.route({
   path: "/lightspeed/callback",
   method: "GET",
   handler: lightspeedCallback,
+});
+
+/** Lightspeed order/payment confirmations (convex/lightspeedops.ts). */
+http.route({
+  path: "/lightspeed/webhook",
+  method: "POST",
+  handler: lightspeedWebhook,
 });
 
 export default http;

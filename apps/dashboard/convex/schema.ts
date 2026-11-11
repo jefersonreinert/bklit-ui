@@ -499,6 +499,8 @@ export default defineSchema({
     error: v.optional(v.string()),
     lastSyncAt: v.optional(v.number()),
     syncError: v.optional(v.string()),
+    /** Secret in the order/payment webhook URL given to Lightspeed. */
+    webhookSecret: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
@@ -522,10 +524,68 @@ export default defineSchema({
     checksAt: v.optional(v.number()),
     salesAt: v.optional(v.number()),
     error: v.optional(v.string()),
+    /** Lightspeed sales take stock out of the independent inventory. */
+    stockFromSales: v.optional(v.boolean()),
+    /** The location receives our order/payment webhook. */
+    webhookAt: v.optional(v.number()),
+    paymentMethods: v.optional(v.any()),
+    accountingGroups: v.optional(v.any()),
+    catalogAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_location", ["locationId"])
     .index("by_company", ["company"]),
+
+  /** Back-office items (Items API): editable name, price, cost, barcode. */
+  lskCatalog: defineTable({
+    locationId: v.number(),
+    itemId: v.number(),
+    name: v.string(),
+    sku: v.string(),
+    barcode: v.optional(v.string()),
+    price: v.number(),
+    cost: v.optional(v.number()),
+    active: v.boolean(),
+    groupId: v.optional(v.number()),
+    group: v.optional(v.string()),
+    itemType: v.optional(v.string()),
+  })
+    .index("by_location", ["locationId"])
+    .index("by_item", ["locationId", "itemId"]),
+
+  /**
+   * Everything the app sends to Lightspeed (orders, payments, items,
+   * messages) with its result; a unique reference makes each send happen
+   * once even after a retry or a double tap.
+   */
+  lskOps: defineTable({
+    locationId: v.number(),
+    company: v.string(),
+    ref: v.string(),
+    kind: v.union(
+      v.literal("order"),
+      v.literal("payment"),
+      v.literal("item"),
+      v.literal("message")
+    ),
+    /** sending → sent (waiting for the POS) → done | failed */
+    status: v.union(
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("done"),
+      v.literal("failed")
+    ),
+    summary: v.string(),
+    payload: v.any(),
+    table: v.optional(v.string()),
+    account: v.optional(v.string()),
+    result: v.optional(v.string()),
+    by: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_ref", ["ref"])
+    .index("by_location_created", ["locationId", "createdAt"]),
 
   lskItems: defineTable({
     locationId: v.number(),
