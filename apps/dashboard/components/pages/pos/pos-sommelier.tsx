@@ -124,7 +124,7 @@ export function SommelierView() {
     <div className="mx-auto w-full max-w-3xl space-y-4 p-4">
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#6d1626] text-white">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#e6c88d] to-[#b0803f] text-[#2a1c08]">
             <Icon className="size-5" name="IconSparklesSoft" />
           </span>
           <div className="min-w-0 flex-1">
