@@ -7,7 +7,10 @@ import {
   LSK_ENVS,
   type LskEnv,
   parseBusinesses,
+  parseCatalog,
   parseChecks,
+  parseGroups,
+  parseMethods,
   parseFloors,
   parseSale,
   parseTokens,
@@ -19,6 +22,7 @@ import type { Doc } from "./_generated/dataModel";
 import {
   type ActionCtx,
   httpAction,
+  type MutationCtx,
   internalAction,
   internalMutation,
   internalQuery,
@@ -40,6 +44,8 @@ import { inCompany } from "./pos";
  */
 
 const KEY = "main";
+/** Our webhook endpoint at Lightspeed (orders and payments). */
+export const ENDPOINT_ID = "casa-brasa";
 const SITE = () =>
   (process.env.CONVEX_SITE_URL ?? "https://site.reinert1996.duckdns.org").replace(/\/$/, "");
 export const redirectUri = () => `${SITE()}/lightspeed/callback`;
@@ -392,7 +398,13 @@ async function accessToken(ctx: ActionCtx, force = false): Promise<{ token: stri
   throw new Error("Não consegui renovar o acesso ao Lightspeed.");
 }
 
-async function lskGet(ctx: ActionCtx, path: string, query: Record<string, string> = {}) {
+export async function lskCall(
+  ctx: ActionCtx,
+  method: "GET" | "POST" | "PUT",
+  path: string,
+  query: Record<string, string> = {},
+  body?: unknown
+) {
   let auth = await accessToken(ctx);
   for (let attempt = 0; attempt < 3; attempt++) {
     const url = new URL(`${LSK_ENVS[auth.env].api}${path}`);
@@ -402,25 +414,42 @@ async function lskGet(ctx: ActionCtx, path: string, query: Record<string, string
       }
     }
     const res = await fetch(url, {
-      headers: { authorization: `Bearer ${auth.token}`, accept: "application/json" },
+      method,
+      headers: {
+        authorization: `Bearer ${auth.token}`,
+        accept: "application/json",
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (res.status === 401 && attempt === 0) {
       auth = await accessToken(ctx, true);
       continue;
     }
-    if (res.status === 429 && attempt < 2) {
+    // Only reads are retried on 429: a write is never sent twice
+    if (res.status === 429 && method === "GET" && attempt < 2) {
       const wait = Math.min(15_000, (Number(res.headers.get("retry-after")) || 3) * 1000);
       await sleep(wait);
       continue;
     }
+    const text = await res.text().catch(() => "");
     if (!res.ok) {
-      const text = (await res.text().catch(() => "")).slice(0, 200);
-      throw new Error(`Lightspeed ${res.status} em ${path}${text ? `: ${text}` : ""}`);
+      let msg = text.slice(0, 300);
+      try {
+        const j = JSON.parse(text) as { message?: string; error?: string; reason?: string };
+        msg = j.message ?? j.reason ?? j.error ?? msg;
+      } catch {
+        // not JSON
+      }
+      throw new Error(`Lightspeed ${res.status}${msg ? `: ${msg}` : ""}`);
     }
-    return (await res.json()) as unknown;
+    return text ? (JSON.parse(text) as unknown) : null;
   }
   throw new Error(`Lightspeed não respondeu em ${path}.`);
 }
+
+const lskGet = (ctx: ActionCtx, path: string, query: Record<string, string> = {}) =>
+  lskCall(ctx, "GET", path, query);
 
 /** GET /lightspeed/callback (registered as the redirect URI). */
 export const callback = httpAction(async (ctx, request) => {
@@ -585,6 +614,11 @@ const saleV = v.object({
 export const saveSales = internalMutation({
   args: { locationId: v.number(), sales: v.array(saleV), cursor: v.optional(v.number()) },
   handler: async (ctx, { locationId, sales, cursor }) => {
+    const loc = await ctx.db
+      .query("lskLocations")
+      .withIndex("by_location", (q) => q.eq("locationId", locationId))
+      .unique();
+    const stock = loc?.stockFromSales && loc.company ? await stockTaker(ctx, loc.company) : null;
     for (const s of sales) {
       const row = await ctx.db
         .query("lskSales")
@@ -592,14 +626,133 @@ export const saveSales = internalMutation({
         .unique();
       if (row) {
         await ctx.db.replace(row._id, { ...s, locationId });
+        // Voided after we counted it: the stock comes back
+        if (stock && !row.cancelled && s.cancelled) {
+          await stock(s, 1);
+        }
       } else {
         await ctx.db.insert("lskSales", { ...s, locationId });
+        if (stock && !s.cancelled) {
+          await stock(s, -1);
+        }
       }
     }
     await patchLocation(ctx, locationId, {
       salesAt: Date.now(),
       ...(cursor ? { salesCursor: cursor } : {}),
     });
+  },
+});
+
+/**
+ * Stock of the independent inventory moved by a Lightspeed sale: each
+ * line's SKU is matched to the business's product with the same SKU
+ * (recipes take their ingredients), like a sale in our own POS.
+ */
+async function stockTaker(ctx: MutationCtx, company: string) {
+  const products = await inCompany(company, (key) =>
+    ctx.db
+      .query("posProducts")
+      .withIndex("by_company", (q) => q.eq("company", key))
+      .take(5000)
+  );
+  const bySku = new Map(products.filter((p) => p.sku).map((p) => [p.sku as string, p]));
+  const byCid = new Map(products.map((p) => [p.cid, p]));
+  const round4 = (n: number) => Math.round(n * 10_000) / 10_000;
+  const move = async (cid: string, qty: number, receipt: string) => {
+    const p = byCid.get(cid);
+    if (!p?.trackStock || qty === 0) {
+      return;
+    }
+    const next = round4((p.stock ?? 0) + qty);
+    byCid.set(cid, { ...p, stock: next });
+    await ctx.db.patch(p._id, { stock: next, updatedAt: Date.now() });
+    await ctx.db.insert("posStock", {
+      productCid: p.cid,
+      qty: round4(qty),
+      kind: qty < 0 ? "sale" : "adjust",
+      orderCid: `lsk:${receipt}`,
+      userName: "Lightspeed",
+      company,
+      at: Date.now(),
+    });
+  };
+  return async (sale: LskSale, sign: 1 | -1) => {
+    for (const l of sale.lines) {
+      const p = l.sku ? bySku.get(l.sku) : undefined;
+      if (!p) {
+        continue;
+      }
+      await move(p.cid, sign * l.qty, sale.receiptId);
+      for (const r of p.recipe ?? []) {
+        if (r.productId !== p.cid) {
+          await move(r.productId, sign * l.qty * r.qty, sale.receiptId);
+        }
+      }
+    }
+  };
+}
+
+export const saveCatalog = internalMutation({
+  args: {
+    locationId: v.number(),
+    items: v.array(
+      v.object({
+        itemId: v.number(),
+        name: v.string(),
+        sku: v.string(),
+        barcode: v.optional(v.string()),
+        price: v.number(),
+        cost: v.optional(v.number()),
+        active: v.boolean(),
+        groupId: v.optional(v.number()),
+        group: v.optional(v.string()),
+        itemType: v.optional(v.string()),
+      })
+    ),
+    paymentMethods: v.array(v.object({ code: v.string(), name: v.string() })),
+    accountingGroups: v.array(v.object({ id: v.number(), name: v.string() })),
+  },
+  handler: async (ctx, { locationId, items, paymentMethods, accountingGroups }) => {
+    const old = await ctx.db
+      .query("lskCatalog")
+      .withIndex("by_location", (q) => q.eq("locationId", locationId))
+      .take(5000);
+    for (const o of old) {
+      await ctx.db.delete(o._id);
+    }
+    for (const i of items.slice(0, 5000)) {
+      await ctx.db.insert("lskCatalog", { ...i, locationId });
+    }
+    await patchLocation(ctx, locationId, {
+      catalogAt: Date.now(),
+      ...(paymentMethods.length ? { paymentMethods } : {}),
+      ...(accountingGroups.length ? { accountingGroups } : {}),
+    });
+  },
+});
+
+export const webhookSecret = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const a = await authRow(ctx);
+    if (!a) {
+      throw new Error("Lightspeed não configurado.");
+    }
+    if (a.webhookSecret) {
+      return a.webhookSecret;
+    }
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    const secret = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    await ctx.db.patch(a._id, { webhookSecret: secret });
+    return secret;
+  },
+});
+
+export const webhookDone = internalMutation({
+  args: { locationId: v.number() },
+  handler: async (ctx, { locationId }) => {
+    await patchLocation(ctx, locationId, { webhookAt: Date.now() });
   },
 });
 
@@ -713,6 +866,65 @@ async function syncOne(ctx: ActionCtx, locationId: number) {
         }
       }
       await ctx.runMutation(internal.lightspeed.saveMenu, { locationId, items });
+    });
+  }
+
+  // Back-office items, payment methods and accounting groups (6-hourly)
+  if (!loc.catalogAt || Date.now() - loc.catalogAt > menuEvery) {
+    await step("itens", async () => {
+      const items: Record<string, unknown>[] = [];
+      for (let offset = 0; offset < 5000; offset += 200) {
+        const page = (await lskGet(ctx, "/items/v1/items", {
+          businessLocationId: id,
+          offset: String(offset),
+          amount: "200",
+        })) as Record<string, unknown>[] | { items?: Record<string, unknown>[] };
+        const list = Array.isArray(page) ? page : (page?.items ?? []);
+        items.push(...list);
+        if (list.length < 200) {
+          break;
+        }
+      }
+      const [methods, groups] = await Promise.all([
+        lskGet(ctx, `/f/finance/${id}/paymentMethods`).catch(() => null),
+        lskGet(ctx, `/f/finance/${id}/accountingGroups`).catch(() => null),
+      ]);
+      await ctx.runMutation(internal.lightspeed.saveCatalog, {
+        locationId,
+        items: parseCatalog(items),
+        paymentMethods: parseMethods(methods),
+        accountingGroups: parseGroups(groups),
+      });
+    });
+  }
+
+  // Order/payment confirmations come back through our webhook
+  if (!loc.webhookAt) {
+    await step("webhook", async () => {
+      const secret = await ctx.runMutation(internal.lightspeed.webhookSecret, {});
+      await lskCall(ctx, "PUT", "/o/wh/1/webhook", {}, {
+        endpointId: ENDPOINT_ID,
+        url: `${SITE()}/lightspeed/webhook?k=${secret}`,
+        provideAccount: true,
+        expandTransactions: true,
+        expandPayments: true,
+      }).catch(async (err: Error) => {
+        // Already exists: update it instead
+        if (!/409|exist/i.test(err.message)) {
+          throw err;
+        }
+        await lskCall(ctx, "POST", "/o/wh/1/webhook", {}, {
+          endpointId: ENDPOINT_ID,
+          url: `${SITE()}/lightspeed/webhook?k=${secret}`,
+          provideAccount: true,
+          expandTransactions: true,
+          expandPayments: true,
+        });
+      });
+      await lskCall(ctx, "PUT", `/o/wh/1/webhook/${ENDPOINT_ID}/business-locations/${id}`).catch(
+        () => null
+      );
+      await ctx.runMutation(internal.lightspeed.webhookDone, { locationId });
     });
   }
 

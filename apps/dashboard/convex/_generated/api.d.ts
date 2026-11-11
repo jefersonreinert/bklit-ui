@@ -28,6 +28,7 @@ import type * as jarvis from "../jarvis.js";
 import type * as journal from "../journal.js";
 import type * as lib from "../lib.js";
 import type * as lightspeed from "../lightspeed.js";
+import type * as lightspeedops from "../lightspeedops.js";
 import type * as loyalty from "../loyalty.js";
 import type * as metatrader from "../metatrader.js";
 import type * as mtproto from "../mtproto.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   journal: typeof journal;
   lib: typeof lib;
   lightspeed: typeof lightspeed;
+  lightspeedops: typeof lightspeedops;
   loyalty: typeof loyalty;
   metatrader: typeof metatrader;
   mtproto: typeof mtproto;

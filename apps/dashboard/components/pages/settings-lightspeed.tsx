@@ -124,10 +124,10 @@ function LightspeedSettings() {
           Lightspeed K-Series
         </CardTitle>
         <CardDescription>
-          Liga o app ao seu Lightspeed para usar o POS no modo “Lightspeed”, com
-          vendas, cardápio, mesas e contas abertas de lá, e para importar
-          cardápio e mesas para o sistema independente. O app só lê: nada é
-          alterado no Lightspeed.
+          Liga o app ao seu Lightspeed para controlá-lo pelo POS no modo
+          “Lightspeed”: pedidos nas mesas, fechar contas, itens, estoque pelas
+          vendas, vendas e recibos, e importar cardápio e mesas para o sistema
+          independente.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
