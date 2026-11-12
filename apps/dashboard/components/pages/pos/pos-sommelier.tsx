@@ -43,7 +43,7 @@ export function SommelierView() {
   const [greeting, setGreeting] = useState("");
   const [notes, setNotes] = useState("");
   const [voice, setVoice] = useState<"browser" | "openai">("browser");
-  const [openaiVoice, setOpenaiVoice] = useState("sage");
+  const [openaiVoice, setOpenaiVoice] = useState("marin");
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [dailyLimit, setDailyLimit] = useState("300");
   const [busy, setBusy] = useState(false);
@@ -213,7 +213,7 @@ export function SommelierView() {
             />
             <Choice
               active={voice === "openai"}
-              desc="Mais humana (gpt-4o-mini-tts). Precisa da chave OpenAI em AI Providers."
+              desc="Mais humana (OpenAI gpt-realtime-2.1-mini). Precisa da chave OpenAI em AI Providers."
               disabled={!canEdit}
               onClick={() => setVoice("openai")}
               title="Voz natural"
@@ -235,6 +235,7 @@ export function SommelierView() {
                   type="button"
                 >
                   {v}
+                  {v === "marin" || v === "cedar" ? " ★" : ""}
                 </button>
               ))}
             </div>

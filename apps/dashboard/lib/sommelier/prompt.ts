@@ -29,7 +29,10 @@ export const langOf = (code: string | undefined) =>
   SOMMELIER_LANGS.find((l) => l.code === code) ?? (SOMMELIER_LANGS[0] as SommelierLang);
 
 /** OpenAI voices offered in the settings (gpt-4o-mini-tts). */
+/** Realtime voices; marin and cedar sound the most natural. */
 export const OPENAI_VOICES = [
+  "marin",
+  "cedar",
   "sage",
   "coral",
   "ash",
@@ -39,6 +42,8 @@ export const OPENAI_VOICES = [
   "echo",
   "shimmer",
 ] as const;
+
+export const DEFAULT_VOICE = "marin";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 

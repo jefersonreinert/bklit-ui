@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { buildCatalog, mentioned, nameScore, titleCase } from "../sommelier/catalog";
 import { forSpeech, takeSentences } from "../sommelier/prompt";
 import { cleanTurns } from "../server/sommelier";
+import { AudioCollector, PCM_RATE, pcmToWav, readAloudEvents } from "../sommelier/realtime";
 
 describe("sommelier catalog", () => {
   it("matches the same wine across sources", () => {
@@ -66,5 +67,41 @@ describe("sommelier speech and turns", () => {
     ]);
     assert.deepEqual(t.map((x) => x.role), ["user", "assistant", "user"]);
     assert.equal(t[0]?.content, "a\nb");
+  });
+});
+
+describe("sommelier realtime voice", () => {
+  it("asks for one out-of-band audio response in the chosen voice", () => {
+    const [session, response] = readAloudEvents("Try the Nero d'Avola.", "marin", "English") as unknown as [
+      { session: { audio: { output: { voice: string; format: { rate: number } } } } },
+      { type: string; response: { conversation: string; input: { content: { text: string }[] }[] } },
+    ];
+    assert.equal(session.session.audio.output.voice, "marin");
+    assert.equal(session.session.audio.output.format.rate, PCM_RATE);
+    assert.equal(response.type, "response.create");
+    assert.equal(response.response.conversation, "none");
+    assert.match(response.response.input[0]?.content[0]?.text ?? "", /Nero d'Avola/);
+  });
+
+  it("collects audio deltas into a playable WAV", () => {
+    const audio = new AudioCollector();
+    const pcm = Buffer.from([1, 0, 2, 0, 3, 0]).toString("base64");
+    assert.equal(audio.push({ type: "response.created" }), "more");
+    assert.equal(audio.push({ type: "response.output_audio.delta", delta: pcm }), "more");
+    assert.equal(audio.push({ type: "response.output_audio.delta", delta: pcm }), "more");
+    assert.equal(audio.push({ type: "response.done", response: { status: "completed" } }), "done");
+    const wav = pcmToWav(audio.chunks);
+    const head = Buffer.from(wav.subarray(0, 44));
+    assert.equal(head.toString("ascii", 0, 4), "RIFF");
+    assert.equal(head.toString("ascii", 8, 12), "WAVE");
+    assert.equal(head.readUInt32LE(24), 24_000);
+    assert.equal(head.readUInt32LE(40), 12);
+    assert.equal(wav.length, 56);
+  });
+
+  it("reports failures so the old voice can take over", () => {
+    assert.ok(new AudioCollector().push({ type: "error", error: { message: "bad key" } }) instanceof Error);
+    assert.ok(new AudioCollector().push({ type: "response.done", response: { status: "completed" } }) instanceof Error);
+    assert.ok(new AudioCollector().push({ type: "response.done", response: { status: "failed" } }) instanceof Error);
   });
 });

@@ -126,7 +126,7 @@ export const settings = query({
       greeting: s?.greeting ?? "",
       notes: s?.notes ?? "",
       voice: s?.voice ?? "browser",
-      openaiVoice: s?.openaiVoice ?? "sage",
+      openaiVoice: s?.openaiVoice ?? "marin",
       model: s?.model || DEFAULT_MODEL,
       dailyLimit: s?.dailyLimit ?? 300,
       usage: {
@@ -176,7 +176,7 @@ export const save = mutation({
       greeting: input.greeting.trim().slice(0, 300),
       notes: input.notes.trim().slice(0, 3000),
       voice: input.voice,
-      openaiVoice: input.openaiVoice.trim().slice(0, 30) || "sage",
+      openaiVoice: input.openaiVoice.trim().slice(0, 30) || "marin",
       model,
       dailyLimit: Math.min(Math.max(Math.round(input.dailyLimit), 10), 5000),
       updatedAt: Date.now(),
@@ -349,6 +349,6 @@ export const speech = mutation({
       return { ok: false as const, reason: "guest" };
     }
     await ctx.db.insert("sommelierSpeech", { company: s.company, sid, ip, at: Date.now() });
-    return { ok: true as const, voice: s.openaiVoice ?? "sage" };
+    return { ok: true as const, voice: s.openaiVoice ?? "marin" };
   },
 });
