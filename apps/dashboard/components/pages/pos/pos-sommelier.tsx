@@ -42,7 +42,7 @@ export function SommelierView() {
   const [enabled, setEnabled] = useState(false);
   const [greeting, setGreeting] = useState("");
   const [notes, setNotes] = useState("");
-  const [voice, setVoice] = useState<"browser" | "openai">("browser");
+  const [voice, setVoice] = useState<"browser" | "openai" | "live">("browser");
   const [openaiVoice, setOpenaiVoice] = useState("marin");
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [dailyLimit, setDailyLimit] = useState("300");
@@ -203,7 +203,14 @@ export function SommelierView() {
           />
         </Field>
         <Field label="Voz da resposta">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Choice
+              active={voice === "live"}
+              desc="Conversa de voz em tempo real, como no ChatGPT: o cliente fala e pode interromper. GPT-Live (~US$0,05/min) + Claude para os vinhos. Precisa da chave OpenAI."
+              disabled={!canEdit}
+              onClick={() => setVoice("live")}
+              title="Conversa ao vivo"
+            />
             <Choice
               active={voice === "browser"}
               desc="Grátis. Usa a voz do celular do cliente."
@@ -220,10 +227,10 @@ export function SommelierView() {
             />
           </div>
         </Field>
-        {voice === "openai" ? (
+        {voice !== "browser" ? (
           <Field label="Timbre">
             <div className="flex flex-wrap gap-1.5">
-              {OPENAI_VOICES.map((v) => (
+              {(voice === "live" ? OPENAI_VOICES.slice(0, 2) : OPENAI_VOICES).map((v) => (
                 <button
                   className={cn(
                     "rounded-full border px-3 py-1 text-sm capitalize",
