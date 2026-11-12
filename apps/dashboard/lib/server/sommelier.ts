@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
+  DEFAULT_VOICE,
   forSpeech,
   instructions,
   langOf,
@@ -9,6 +10,7 @@ import {
   turnContext,
 } from "@/lib/sommelier/prompt";
 import { providerKey, routerClient } from "./ai/service";
+import { naturalVoice } from "./sommelier-voice";
 
 /**
  * Server side of the AI sommelier: one guest turn streamed from Claude
@@ -203,7 +205,7 @@ export async function chat(input: {
 }
 
 /**
- * A natural voice for one piece of an answer (OpenAI gpt-4o-mini-tts),
+ * A natural voice for one piece of an answer (OpenAI Realtime),
  * when the business picked it and an OpenAI key is set. null: the page
  * uses the phone's own voice.
  */
@@ -233,27 +235,6 @@ export async function speech(input: {
   }
   const voice = (OPENAI_VOICES as readonly string[]).includes(allowed.voice)
     ? allowed.voice
-    : "sage";
-  const res = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${openai.key}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini-tts",
-      voice,
-      input: text,
-      response_format: "mp3",
-      instructions: `Speak ${langOf(input.lang).name} like a warm, relaxed sommelier talking to a guest at a wine bar: natural pace, friendly, a little smile in the voice.`,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  }).catch(() => null);
-  if (!(res?.ok && res.body)) {
-    console.error("[sommelier] voice failed", res?.status);
-    return null;
-  }
-  return new Response(res.body, {
-    headers: { "content-type": "audio/mpeg", "cache-control": "no-store" },
-  });
+    : DEFAULT_VOICE;
+  return naturalVoice(openai.key, text, voice, langOf(input.lang).name);
 }
