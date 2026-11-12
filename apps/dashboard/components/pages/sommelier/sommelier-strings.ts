@@ -22,6 +22,8 @@ export interface GuestStrings {
   bottle: string;
   privacy: string;
   newChat: string;
+  connecting: string;
+  liveEnd: string;
 }
 
 const en: GuestStrings = {
@@ -52,6 +54,8 @@ const en: GuestStrings = {
   bottle: "bottle",
   privacy: "Your questions are saved anonymously to improve the service.",
   newChat: "New conversation",
+  connecting: "Connecting…",
+  liveEnd: "Tap to end the conversation",
 };
 
 const pt: GuestStrings = {
@@ -82,6 +86,8 @@ const pt: GuestStrings = {
   bottle: "garrafa",
   privacy: "Suas perguntas são guardadas de forma anônima para melhorar o serviço.",
   newChat: "Nova conversa",
+  connecting: "Conectando…",
+  liveEnd: "Toque para encerrar a conversa",
 };
 
 const it: GuestStrings = {
@@ -108,6 +114,8 @@ const it: GuestStrings = {
   glass: "calice",
   bottle: "bottiglia",
   newChat: "Nuova conversazione",
+  connecting: "Connessione…",
+  liveEnd: "Tocca per chiudere la conversazione",
 };
 
 const es: GuestStrings = {
@@ -134,6 +142,8 @@ const es: GuestStrings = {
   glass: "copa",
   bottle: "botella",
   newChat: "Nueva conversación",
+  connecting: "Conectando…",
+  liveEnd: "Toca para terminar la conversación",
 };
 
 const fr: GuestStrings = {
@@ -160,6 +170,8 @@ const fr: GuestStrings = {
   glass: "verre",
   bottle: "bouteille",
   newChat: "Nouvelle conversation",
+  connecting: "Connexion…",
+  liveEnd: "Touchez pour terminer la conversation",
 };
 
 const de: GuestStrings = {
@@ -186,6 +198,8 @@ const de: GuestStrings = {
   glass: "Glas",
   bottle: "Flasche",
   newChat: "Neues Gespräch",
+  connecting: "Verbinde…",
+  liveEnd: "Tippen, um das Gespräch zu beenden",
 };
 
 const ALL: Record<string, GuestStrings> = { en, pt, it, es, fr, de };

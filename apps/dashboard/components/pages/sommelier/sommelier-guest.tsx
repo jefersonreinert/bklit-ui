@@ -6,6 +6,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { api } from "@/convex/_generated/api";
 import { mentioned, type PublicWine } from "@/lib/sommelier/catalog";
 import { langOf, SOMMELIER_LANGS, takeSentences } from "@/lib/sommelier/prompt";
+import { addFragment, LiveCall, type LiveTurn, questionTurns } from "@/lib/sommelier/live";
 import { canListen, ListenError, listenOnce, Speaker } from "@/lib/sommelier/voice";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
@@ -100,8 +101,19 @@ export function SommelierGuest() {
   const listenCtl = useRef<AbortController | null>(null);
   const askCtl = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
+  // Live voice conversation (GPT-Live; Claude answers the wine questions)
+  const call = useRef<LiveCall | null>(null);
+  const liveTurns = useRef<LiveTurn[]>([]);
+  const lastHeard = useRef(0);
+  const quietTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [inCall, setInCall] = useState(false);
+  const [brain, setBrain] = useState("");
 
   const t = guestStrings(lang);
+  const liveMode = useMemo(
+    () => venue?.voice === "live" && LiveCall.supported(),
+    [venue]
+  );
   const micOk = useMemo(() => (typeof window === "undefined" ? true : canListen()), []);
 
   useEffect(() => {
@@ -143,8 +155,26 @@ export function SommelierGuest() {
     speaker.current = s;
     // Voices load late on some phones
     window.speechSynthesis?.getVoices();
-    return () => s.stop();
+    return () => {
+      s.stop();
+      call.current?.stop();
+    };
   }, [venue, token]);
+
+  // Hang up a live call nobody is using (it is billed per minute)
+  useEffect(() => {
+    if (!inCall) {
+      return;
+    }
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const now = Date.now();
+      if (now - lastHeard.current > 120_000 || now - started > 15 * 60_000) {
+        call.current?.stop();
+      }
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, [inCall]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -168,6 +198,7 @@ export function SommelierGuest() {
   };
 
   const stopAll = () => {
+    call.current?.stop();
     listenCtl.current?.abort();
     askCtl.current?.abort();
     speaker.current?.stop();
@@ -191,6 +222,7 @@ export function SommelierGuest() {
       }
       stopAll();
       setNotice(null);
+      setBrain("");
       const ctl = new AbortController();
       askCtl.current = ctl;
       const history = [...turnsRef.current, { role: "user" as const, content: text }];
@@ -291,7 +323,150 @@ export function SommelierGuest() {
 
   listenRef.current = listen;
 
+  /** A wine question inside a live call: Claude answers, GPT-Live says it. */
+  const answerLive = async (id: string) => {
+    const c = call.current;
+    const asked = questionTurns(liveTurns.current);
+    if (!(c && token)) {
+      return;
+    }
+    if (!asked) {
+      c.note("The guest has not asked anything yet: ask what they would like.", id);
+      return;
+    }
+    let answer = "";
+    let sent = 0;
+    try {
+      const res = await fetch(`${BASE_PATH}/api/sommelier/`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ t: token, sid: sid.current, lang: langRef.current, turns: asked }),
+      });
+      if (!(res.ok && res.body)) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        c.say(body?.error ?? guestStrings(langRef.current).error, id);
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        answer += decoder.decode(value, { stream: true });
+        // The first sentences go out early, so the voice starts sooner
+        if (!sent) {
+          const { sentences } = takeSentences(answer, 60);
+          if (sentences.length) {
+            const first = sentences.join(" ");
+            sent = answer.indexOf(first) + first.length;
+            c.say(`Sommelier notes (say this in your own words, names and prices exact): ${first}`, id);
+          }
+        }
+      }
+      const rest = answer.slice(sent).trim();
+      if (rest) {
+        c.say(sent ? rest : `Sommelier notes (say this in your own words, names and prices exact): ${rest}`, id);
+      }
+      setBrain(answer);
+    } catch {
+      c.say(guestStrings(langRef.current).error, id);
+    }
+  };
+
+  const startLive = async () => {
+    stopAll();
+    setNotice(null);
+    setPhase("thinking");
+    liveTurns.current = [];
+    updateTurns([]);
+    setBrain("");
+    const greeting = venue?.greeting || guestStrings(langRef.current).hello;
+    const speaking = () => {
+      setPhase("speaking");
+      if (quietTimer.current) {
+        clearTimeout(quietTimer.current);
+      }
+      quietTimer.current = setTimeout(() => setPhase((p) => (p === "speaking" ? "listening" : p)), 1200);
+    };
+    const c = new LiveCall({
+      onReady: () => {
+        lastHeard.current = Date.now();
+        setPhase("listening");
+        c.say(`Greet the guest now, in your own words, along the lines of: "${greeting}". Then pause and listen.`, null);
+      },
+      onUser: (delta) => {
+        lastHeard.current = Date.now();
+        liveTurns.current = addFragment(liveTurns.current, "user", delta);
+        updateTurns(liveTurns.current);
+      },
+      onAssistant: (delta) => {
+        lastHeard.current = Date.now();
+        liveTurns.current = addFragment(liveTurns.current, "assistant", delta);
+        updateTurns(liveTurns.current);
+        speaking();
+      },
+      onDelegation: (id) => {
+        answerLive(id);
+      },
+      onEnd: () => {
+        if (call.current === c) {
+          call.current = null;
+        }
+        setInCall(false);
+        setPhase("idle");
+      },
+    });
+    call.current = c;
+    setInCall(true);
+    try {
+      const ok = await c.start(async (sdp) => {
+        const res = await fetch(`${BASE_PATH}/api/sommelier/live/`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            t: token,
+            sid: sid.current,
+            lang: langRef.current,
+            greeting: greeting.slice(0, 400),
+            sdp,
+          }),
+        });
+        if (res.status !== 200) {
+          return null;
+        }
+        return ((await res.json()) as { sdp: string }).sdp;
+      });
+      if (!ok) {
+        // No live voice today: tap-and-talk instead
+        call.current = null;
+        setInCall(false);
+        setPhase("idle");
+        if (micOk) {
+          listen();
+        } else {
+          setTyping(true);
+        }
+      }
+    } catch {
+      call.current = null;
+      setInCall(false);
+      setPhase("idle");
+      setNotice(guestStrings(langRef.current).micDenied);
+      setTyping(true);
+    }
+  };
+
   const onOrb = () => {
+    if (inCall) {
+      call.current?.stop();
+      return;
+    }
+    if (liveMode) {
+      startLive();
+      return;
+    }
     unlock();
     if (!micOk) {
       setTyping(true);
@@ -349,7 +524,11 @@ export function SommelierGuest() {
   const onTap = venue.wines.filter((w) => w.onTap);
   const lastAnswer = [...turns].reverse().find((x) => x.role === "assistant");
   const label =
-    phase === "listening"
+    inCall && phase === "listening"
+      ? t.liveEnd
+      : inCall && phase === "thinking"
+        ? t.connecting
+        : phase === "listening"
       ? t.listening
       : phase === "thinking"
         ? t.thinking
@@ -407,7 +586,10 @@ export function SommelierGuest() {
               text={turn.content}
             />
             {turn.role === "assistant" && turn.content && turn === lastAnswer ? (
-              <WineCards t={t} wines={mentioned(turn.content, venue.wines).slice(0, 4)} />
+              <WineCards
+                t={t}
+                wines={mentioned(inCall || brain ? brain : turn.content, venue.wines).slice(0, 4)}
+              />
             ) : null}
           </div>
         ))}
@@ -465,7 +647,7 @@ export function SommelierGuest() {
               onClick={() => setShowList((v) => !v)}
               title={t.onTap}
             />
-            {micOk ? (
+            {micOk && !liveMode ? (
               <button
                 className={cn(
                   "text-right text-[11px]",

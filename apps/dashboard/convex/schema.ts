@@ -1870,7 +1870,7 @@ export default defineSchema({
     greeting: v.optional(v.string()),
     /** Owner's instructions for the AI ("push the Maltese wines"…). */
     notes: v.optional(v.string()),
-    voice: v.union(v.literal("browser"), v.literal("openai")),
+    voice: v.union(v.literal("browser"), v.literal("openai"), v.literal("live")),
     openaiVoice: v.optional(v.string()),
     model: v.optional(v.string()),
     /** Questions per 24 h for the whole business (cost cap). */

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { buildCatalog, mentioned, nameScore, titleCase } from "../sommelier/catalog";
 import { forSpeech, takeSentences } from "../sommelier/prompt";
 import { cleanTurns } from "../server/sommelier";
+import { addFragment, questionTurns } from "../sommelier/live";
 import { AudioCollector, PCM_RATE, pcmToWav, readAloudEvents } from "../sommelier/realtime";
 
 describe("sommelier catalog", () => {
@@ -103,5 +104,30 @@ describe("sommelier realtime voice", () => {
     assert.ok(new AudioCollector().push({ type: "error", error: { message: "bad key" } }) instanceof Error);
     assert.ok(new AudioCollector().push({ type: "response.done", response: { status: "completed" } }) instanceof Error);
     assert.ok(new AudioCollector().push({ type: "response.done", response: { status: "failed" } }) instanceof Error);
+  });
+});
+
+describe("sommelier live call", () => {
+  it("joins transcript fragments into turns", () => {
+    let turns = addFragment([], "assistant", "Hello! ");
+    turns = addFragment(turns, "assistant", "What do you like?");
+    turns = addFragment(turns, "user", " Something");
+    turns = addFragment(turns, "user", " red and light");
+    assert.deepEqual(turns, [
+      { role: "assistant", content: "Hello! What do you like?" },
+      { role: "user", content: "Something red and light" },
+    ]);
+  });
+
+  it("asks Claude what the guest said, without the voice's filler", () => {
+    const asked = questionTurns([
+      { role: "assistant", content: "Hello!" },
+      { role: "user", content: "A red,  please" },
+      { role: "assistant", content: "Let me think…" },
+    ]);
+    assert.deepEqual(asked, [{ role: "user", content: "A red, please" }]);
+    assert.equal(questionTurns([{ role: "assistant", content: "Hello!" }]), null);
+    const long = questionTurns([{ role: "user", content: "x".repeat(900) }]);
+    assert.equal(long?.[0]?.content.length, 600);
   });
 });

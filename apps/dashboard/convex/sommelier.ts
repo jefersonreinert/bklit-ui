@@ -11,7 +11,7 @@ import {
 } from "../lib/sommelier/catalog";
 import { DEFAULT_MODEL } from "../lib/sommelier/prompt";
 import type { Doc } from "./_generated/dataModel";
-import { mutation, type QueryCtx, query } from "./_generated/server";
+import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
 import { audit, canReadPos, meta, newToken, requireStaff } from "./access";
 import { requireRouter } from "./ai";
 
@@ -32,7 +32,9 @@ const SPEECH_PER_GUEST = 400;
 const SPEECH_PER_IP = 1200;
 const CELLAR_KEY = "cb:cellar:v1";
 
-const VOICES = v.union(v.literal("browser"), v.literal("openai"));
+const VOICES = v.union(v.literal("browser"), v.literal("openai"), v.literal("live"));
+const LIVE_PER_GUEST = 12;
+const LIVE_PER_IP = 40;
 
 async function settingsOf(ctx: QueryCtx, company: string) {
   return await ctx.db
@@ -350,5 +352,59 @@ export const speech = mutation({
     }
     await ctx.db.insert("sommelierSpeech", { company: s.company, sid, ip, at: Date.now() });
     return { ok: true as const, voice: s.openaiVoice ?? "marin" };
+  },
+});
+
+/**
+ * A live voice conversation (GPT-Live over WebRTC): limited per guest.
+ * Claude still answers every wine question inside it (as a normal
+ * question, through begin/finish).
+ */
+export const live = mutation({
+  args: { token: v.string(), sid: v.string(), ip: v.string() },
+  handler: async (ctx, { token, sid, ip }) => {
+    await requireRouter(ctx);
+    const s = await byToken(ctx, token);
+    if (s?.voice !== "live") {
+      return { ok: false as const, reason: "off" };
+    }
+    const used = await ctx.db
+      .query("sommelierSpeech")
+      .withIndex("by_sid", (q) => q.eq("sid", `live:${sid}`).gt("at", since()))
+      .take(LIVE_PER_GUEST);
+    const net = await ctx.db
+      .query("sommelierSpeech")
+      .withIndex("by_ip", (q) => q.eq("ip", `live:${ip}`).gt("at", since()))
+      .take(LIVE_PER_IP);
+    if (used.length >= LIVE_PER_GUEST || net.length >= LIVE_PER_IP) {
+      return { ok: false as const, reason: "guest" };
+    }
+    await ctx.db.insert("sommelierSpeech", {
+      company: s.company,
+      sid: `live:${sid}`,
+      ip: `live:${ip}`,
+      at: Date.now(),
+    });
+    return {
+      ok: true as const,
+      voice: s.openaiVoice ?? "marin",
+      name: await venueName(ctx, s.company),
+    };
+  },
+});
+
+/** Admin only (CLI): switch a venue's guest voice. */
+export const setVoice = internalMutation({
+  args: { company: v.string(), voice: VOICES },
+  handler: async (ctx, { company, voice }) => {
+    const s = await ctx.db
+      .query("sommelierSettings")
+      .withIndex("by_company", (q) => q.eq("company", company))
+      .first();
+    if (!s) {
+      return false;
+    }
+    await ctx.db.patch(s._id, { voice, updatedAt: Date.now() });
+    return true;
   },
 });
