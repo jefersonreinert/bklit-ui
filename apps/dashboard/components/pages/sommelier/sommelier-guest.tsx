@@ -27,6 +27,25 @@ type Phase = "idle" | "listening" | "thinking" | "speaking";
 interface Turn {
   role: "user" | "assistant";
   content: string;
+  /** Preview of a photo the guest sent (object URL). */
+  photo?: string;
+}
+
+/** Shrinks a camera photo to a JPEG the AI can read (≈1280 px, base64). */
+async function shrinkPhoto(file: File) {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("no canvas");
+  }
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const url = canvas.toDataURL("image/jpeg", 0.82);
+  return url.slice(url.indexOf(",") + 1);
 }
 
 const SID_KEY = "casa.sommelier.sid";
@@ -103,6 +122,7 @@ export function SommelierGuest() {
   const listenCtl = useRef<AbortController | null>(null);
   const askCtl = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
+  const camera = useRef<HTMLInputElement | null>(null);
   // Live voice conversation (GPT-Live; Claude answers the wine questions)
   const call = useRef<LiveCall | null>(null);
   const liveTurns = useRef<LiveTurn[]>([]);
@@ -217,7 +237,7 @@ export function SommelierGuest() {
   const listenRef = useRef<() => void>(() => undefined);
 
   const ask = useCallback(
-    async (question: string) => {
+    async (question: string, photo?: { data: string; url: string }) => {
       const text = question.trim().slice(0, 600);
       if (!(text && token)) {
         return;
@@ -227,7 +247,10 @@ export function SommelierGuest() {
       setBrain("");
       const ctl = new AbortController();
       askCtl.current = ctl;
-      const history = [...turnsRef.current, { role: "user" as const, content: text }];
+      const history: Turn[] = [
+        ...turnsRef.current,
+        { role: "user", content: text, photo: photo?.url },
+      ];
       updateTurns([...history, { role: "assistant", content: "" }]);
       setPhase("thinking");
       const say = (s: string) => speaker.current?.say(s);
@@ -240,7 +263,8 @@ export function SommelierGuest() {
             t: token,
             sid: sid.current,
             lang: langRef.current,
-            turns: history.slice(-12),
+            turns: history.slice(-12).map(({ role, content }) => ({ role, content })),
+            image: photo?.data,
           }),
           signal: ctl.signal,
         });
@@ -497,6 +521,19 @@ export function SommelierGuest() {
     ask(text);
   };
 
+  const onPhoto = async (file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+    unlock();
+    try {
+      const data = await shrinkPhoto(file);
+      ask(t.photoAsk, { data, url: URL.createObjectURL(file) });
+    } catch {
+      setNotice(t.photoBad);
+    }
+  };
+
   const restart = () => {
     stopAll();
     setPhase("idle");
@@ -560,6 +597,7 @@ export function SommelierGuest() {
           <div key={`${i}-${turn.role}`}>
             <Bubble
               pending={turn.role === "assistant" && !turn.content}
+              photo={turn.photo}
               role={turn.role}
               text={turn.content}
             />
@@ -602,12 +640,31 @@ export function SommelierGuest() {
         ) : null}
         <div className="flex items-center justify-between gap-2">
           <div className="flex w-24 flex-col items-start gap-2">
-            <RoundButton
-              active={typing}
-              label={<KeyboardIcon />}
-              onClick={() => setTyping((v) => !v)}
-              title={t.type}
-            />
+            <div className="flex gap-2">
+              <RoundButton
+                active={typing}
+                label={<KeyboardIcon />}
+                onClick={() => setTyping((v) => !v)}
+                title={t.type}
+              />
+              <RoundButton
+                active={false}
+                label={<CameraIcon />}
+                onClick={() => camera.current?.click()}
+                title={t.photo}
+              />
+              <input
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  onPhoto(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+                ref={camera}
+                type="file"
+              />
+            </div>
             {turns.length ? (
               <button className="text-[11px] text-muted-foreground" onClick={restart} type="button">
                 {t.newChat}
@@ -689,15 +746,25 @@ function Bubble({
   text,
   pending,
   faded,
+  photo,
 }: {
   role: Turn["role"];
   text: string;
   pending?: boolean;
   faded?: boolean;
+  photo?: string;
 }) {
   const mine = role === "user";
   return (
-    <div className={cn("mt-3 flex", mine ? "justify-end" : "justify-start")}>
+    <div className={cn("mt-3 flex flex-col", mine ? "items-end" : "items-start")}>
+      {photo ? (
+        // biome-ignore lint/performance/noImgElement: local photo preview
+        <img
+          alt=""
+          className="mb-1.5 max-h-56 max-w-[60%] rounded-2xl object-cover ring-1 ring-border"
+          src={photo}
+        />
+      ) : null}
       <div
         className={cn(
           "max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
@@ -950,6 +1017,24 @@ function GlassIcon({ className }: { className?: string }) {
       <path d="M7 2.75h10c.4 2.6.5 5.4-.6 7.6A4.9 4.9 0 0 1 12 13a4.9 4.9 0 0 1-4.4-2.65C6.5 8.15 6.6 5.35 7 2.75Z" />
       <path d="M7.2 7.25c1.6-.7 3.2-.7 4.8 0s3.2.7 4.8 0" />
       <path d="M12 13v8M8.5 21.25h7" />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-5 text-(--gold)"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.6}
+      viewBox="0 0 24 24"
+    >
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5Z" />
+      <circle cx="12" cy="12.5" r="3.5" />
     </svg>
   );
 }

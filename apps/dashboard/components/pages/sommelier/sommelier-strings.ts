@@ -25,6 +25,9 @@ export interface GuestStrings {
   connecting: string;
   liveEnd: string;
   askAnything: string;
+  photo: string;
+  photoAsk: string;
+  photoBad: string;
 }
 
 const en: GuestStrings = {
@@ -58,6 +61,9 @@ const en: GuestStrings = {
   connecting: "Connecting…",
   liveEnd: "Tap to end the conversation",
   askAnything: "Ask anything",
+  photo: "Photo of a wine",
+  photoAsk: "What wine is this? Tell me all about it.",
+  photoBad: "I couldn't open that photo. Please try again.",
 };
 
 const pt: GuestStrings = {
@@ -91,6 +97,9 @@ const pt: GuestStrings = {
   connecting: "Conectando…",
   liveEnd: "Toque para encerrar a conversa",
   askAnything: "Pergunte qualquer coisa",
+  photo: "Foto de um vinho",
+  photoAsk: "Que vinho é este? Me conte tudo sobre ele.",
+  photoBad: "Não consegui abrir essa foto. Tente de novo.",
 };
 
 const it: GuestStrings = {
@@ -120,6 +129,9 @@ const it: GuestStrings = {
   connecting: "Connessione…",
   liveEnd: "Tocca per chiudere la conversazione",
   askAnything: "Chiedimi qualsiasi cosa",
+  photo: "Foto di un vino",
+  photoAsk: "Che vino è questo? Raccontami tutto.",
+  photoBad: "Non riesco ad aprire la foto. Riprova.",
 };
 
 const es: GuestStrings = {
@@ -149,6 +161,9 @@ const es: GuestStrings = {
   connecting: "Conectando…",
   liveEnd: "Toca para terminar la conversación",
   askAnything: "Pregúntame lo que quieras",
+  photo: "Foto de un vino",
+  photoAsk: "¿Qué vino es este? Cuéntame todo sobre él.",
+  photoBad: "No pude abrir esa foto. Inténtalo de nuevo.",
 };
 
 const fr: GuestStrings = {
@@ -178,6 +193,9 @@ const fr: GuestStrings = {
   connecting: "Connexion…",
   liveEnd: "Touchez pour terminer la conversation",
   askAnything: "Demandez-moi tout",
+  photo: "Photo d'un vin",
+  photoAsk: "Quel est ce vin ? Racontez-moi tout.",
+  photoBad: "Impossible d'ouvrir cette photo. Réessayez.",
 };
 
 const de: GuestStrings = {
@@ -207,6 +225,9 @@ const de: GuestStrings = {
   connecting: "Verbinde…",
   liveEnd: "Tippen, um das Gespräch zu beenden",
   askAnything: "Frag mich alles",
+  photo: "Foto eines Weins",
+  photoAsk: "Welcher Wein ist das? Erzähl mir alles darüber.",
+  photoBad: "Das Foto ließ sich nicht öffnen. Bitte nochmal versuchen.",
 };
 
 const ALL: Record<string, GuestStrings> = { en, pt, it, es, fr, de };
