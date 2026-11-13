@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SOMMELIER_LANGS } from "@/lib/sommelier/prompt";
 import { BASE_PATH } from "@/lib/use-connectors";
@@ -28,9 +28,12 @@ export function CircleFlag({ country, size = 20 }: { country: string; size?: num
 export function LanguagePicker({
   value,
   onChange,
+  children,
 }: {
   value: string;
   onChange: (code: string) => void;
+  /** Page settings shown under the languages (theme, modes…). */
+  children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const current = SOMMELIER_LANGS.find((l) => l.code === value) ?? { code: "en", country: "gb" };
@@ -57,7 +60,7 @@ export function LanguagePicker({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-52 gap-0 bg-background p-1 [--gold:#9a6f28] dark:[--gold:#e8c48a]"
+        className="w-60 gap-0 bg-background p-1 [--gold:#9a6f28] dark:[--gold:#e8c48a]"
       >
         {SOMMELIER_LANGS.map((l) => (
           <button
@@ -90,6 +93,7 @@ export function LanguagePicker({
             ) : null}
           </button>
         ))}
+        {children ? <div className="mt-1 space-y-2 border-border border-t px-2 pt-2.5 pb-1.5">{children}</div> : null}
       </PopoverContent>
     </Popover>
   );

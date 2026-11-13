@@ -71,7 +71,7 @@ export function AskAnything({
 
   return (
     <button
-      className="mx-auto mt-4 flex w-full flex-col items-center gap-3 outline-none"
+      className="m-auto flex w-full flex-col items-center gap-3 py-4 outline-none"
       onClick={onClick}
       type="button"
     >

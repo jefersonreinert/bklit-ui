@@ -641,31 +641,46 @@ export function SommelierGuest() {
 
   return (
     <Shell>
-      <header className="flex items-center gap-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
+      <header className="flex items-center gap-2.5 px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5">
         <Logo company={venue.company} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-(--gold) uppercase tracking-[0.18em]">
-            AI Sommelier
-          </p>
-          <h1 className="truncate font-serif text-xl text-foreground">{venue.name}</h1>
+        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+          <h1 className="truncate font-serif text-lg text-foreground leading-tight">{venue.name}</h1>
+          <span className="shrink-0 text-(--gold) text-[9px] uppercase tracking-[0.18em]">AI Sommelier</span>
         </div>
         <button
           aria-label={t.onTap}
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-full border",
+            "flex size-9 shrink-0 items-center justify-center rounded-full border",
             showList ? "border-(--gold)/60 bg-(--gold)/15" : "border-border bg-card"
           )}
           onClick={() => setShowList((v) => !v)}
           title={t.onTap}
           type="button"
         >
-          <GlassIcon className="size-5 text-(--gold)" />
+          <GlassIcon className="size-[18px] text-(--gold)" />
         </button>
-        <LanguagePicker onChange={setLang} value={lang} />
+        <LanguagePicker onChange={setLang} value={lang}>
+          <ThemeToggle className="w-full justify-between [&>button]:flex-1 [&>button]:justify-center" />
+          {micOk && !liveMode ? (
+            <button
+              className={cn("block text-xs", handsFree ? "text-(--gold)" : "text-muted-foreground")}
+              onClick={() => setHandsFree(!handsFree)}
+              type="button"
+            >
+              {handsFree ? "● " : "○ "}
+              {t.handsFree}
+            </button>
+          ) : null}
+          {turns.length ? (
+            <button className="block text-muted-foreground text-xs" onClick={restart} type="button">
+              ↺ {t.newChat}
+            </button>
+          ) : null}
+          <p className="text-[10px] text-muted-foreground/70 leading-snug">{t.privacy}</p>
+        </LanguagePicker>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 pb-4">
-        <Bubble role="assistant" text={venue.greeting || t.hello} />
+      <main className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
         {turns.length === 0 && phase === "idle" && !inCall ? (
           <AskAnything hints={t.ideas} onClick={onOrb} title={t.askAnything} />
         ) : null}
@@ -738,29 +753,6 @@ export function SommelierGuest() {
             type="file"
           />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col items-start gap-1">
-            <div className="flex gap-3">
-              {turns.length ? (
-                <button className="text-[11px] text-muted-foreground" onClick={restart} type="button">
-                  {t.newChat}
-                </button>
-              ) : null}
-              {micOk && !liveMode ? (
-                <button
-                  className={cn("text-[11px]", handsFree ? "text-(--gold)" : "text-muted-foreground")}
-                  onClick={() => setHandsFree(!handsFree)}
-                  type="button"
-                >
-                  {handsFree ? "● " : "○ "}
-                  {t.handsFree}
-                </button>
-              ) : null}
-            </div>
-            <p className="text-[10px] text-muted-foreground/70 leading-tight">{t.privacy}</p>
-          </div>
-          <ThemeToggle className="shrink-0" />
-        </div>
       </footer>
 
       {showList ? (
@@ -796,17 +788,17 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Logo({ company }: { company: string }) {
   const [ok, setOk] = useState(true);
   if (!ok) {
-    return <GlassIcon className="size-10 text-(--gold)" />;
+    return <GlassIcon className="size-9 text-(--gold)" />;
   }
   return (
     // biome-ignore lint/performance/noImgElement: tiny static logo
     <img
       alt=""
-      className="size-11 rounded-full bg-[#faf7f0] object-contain p-1 ring-1 ring-border"
-      height={44}
+      className="size-9 rounded-full bg-[#faf7f0] object-contain p-0.5 ring-1 ring-border"
+      height={36}
       onError={() => setOk(false)}
       src={`${BASE_PATH}/brands/${company}.png`}
-      width={44}
+      width={36}
     />
   );
 }
