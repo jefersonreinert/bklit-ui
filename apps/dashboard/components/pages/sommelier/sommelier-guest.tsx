@@ -105,7 +105,6 @@ export function SommelierGuest() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [interim, setInterim] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
   const [handsFree, setHandsFreeState] = useState(true);
   const [showList, setShowList] = useState(false);
@@ -120,6 +119,7 @@ export function SommelierGuest() {
   const askCtl = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
   const camera = useRef<HTMLInputElement | null>(null);
+  const field = useRef<HTMLInputElement | null>(null);
   // Live voice conversation (GPT-Live; Claude answers the wine questions)
   const call = useRef<LiveCall | null>(null);
   const liveTurns = useRef<LiveTurn[]>([]);
@@ -234,7 +234,7 @@ export function SommelierGuest() {
   const listenRef = useRef<() => void>(() => undefined);
 
   const ask = useCallback(
-    async (question: string, photo?: { data: string; url: string }) => {
+    async (question: string, photo?: { data: string; url: string }, typed = false) => {
       const text = question.trim().slice(0, 600);
       if (!(text && token)) {
         return;
@@ -305,7 +305,8 @@ export function SommelierGuest() {
       }
       setPhase((p) => (p === "thinking" ? "idle" : p));
       await speaker.current?.drained();
-      if (!ctl.signal.aborted && handsFreeRef.current && micOk) {
+      // Typed questions: the guest chose not to talk (noisy bar), no mic
+      if (!(ctl.signal.aborted || typed) && handsFreeRef.current && micOk) {
         listenRef.current();
       }
     },
@@ -335,10 +336,10 @@ export function SommelierGuest() {
       const code = err instanceof ListenError ? err.code : "";
       if (code === "not-allowed" || code === "service-not-allowed") {
         setNotice(s.micDenied);
-        setTyping(true);
+        field.current?.focus();
       } else if (code === "unsupported") {
         setNotice(s.noMic);
-        setTyping(true);
+        field.current?.focus();
       }
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
@@ -511,7 +512,7 @@ export function SommelierGuest() {
         } else if (micOk) {
           listen();
         } else {
-          setTyping(true);
+          field.current?.focus();
         }
       }
     } catch {
@@ -519,7 +520,7 @@ export function SommelierGuest() {
       setInCall(false);
       setPhase("idle");
       setNotice(guestStrings(langRef.current).micDenied);
-      setTyping(true);
+      field.current?.focus();
       if (photo) {
         // No microphone: the answer still comes, read aloud
         updateTurns([]);
@@ -539,7 +540,7 @@ export function SommelierGuest() {
     }
     unlock();
     if (!micOk) {
-      setTyping(true);
+      field.current?.focus();
       setNotice(t.noMic);
       return;
     }
@@ -554,9 +555,31 @@ export function SommelierGuest() {
   const onSend = (e: FormEvent) => {
     e.preventDefault();
     unlock();
-    const text = draft;
+    const text = draft.trim().slice(0, 600);
+    if (!text) {
+      return;
+    }
     setDraft("");
-    ask(text);
+    field.current?.blur();
+    if (inCall && call.current) {
+      // Typed inside a live call: Claude answers, the voice says it
+      lastHeard.current = Date.now();
+      liveTurns.current = [...liveTurns.current, { role: "user", content: text }];
+      updateTurns(liveTurns.current);
+      setBrain("");
+      answerLive(null);
+      return;
+    }
+    ask(text, undefined, true);
+  };
+
+  /** Typing while the mic listens: stop listening (bar noise). */
+  const onFieldFocus = () => {
+    if (phase === "listening" && !inCall) {
+      listenCtl.current?.abort();
+      setInterim("");
+      setPhase("idle");
+    }
   };
 
   const onIdea = (text: string) => {
@@ -613,18 +636,7 @@ export function SommelierGuest() {
 
   const onTap = venue.wines.filter((w) => w.onTap);
   const lastAnswer = [...turns].reverse().find((x) => x.role === "assistant");
-  const label =
-    inCall && phase === "listening"
-      ? t.liveEnd
-      : inCall && phase === "thinking"
-        ? t.connecting
-        : phase === "listening"
-      ? t.listening
-      : phase === "thinking"
-        ? t.thinking
-        : phase === "speaking"
-          ? t.speaking
-          : t.tap;
+  const label = talkLabel(t, phase, inCall);
 
   return (
     <Shell>
@@ -636,6 +648,18 @@ export function SommelierGuest() {
           </p>
           <h1 className="truncate font-serif text-xl text-foreground">{venue.name}</h1>
         </div>
+        <button
+          aria-label={t.onTap}
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-full border",
+            showList ? "border-(--gold)/60 bg-(--gold)/15" : "border-border bg-card"
+          )}
+          onClick={() => setShowList((v) => !v)}
+          title={t.onTap}
+          type="button"
+        >
+          <GlassIcon className="size-5 text-(--gold)" />
+        </button>
         <LanguagePicker onChange={setLang} value={lang} />
       </header>
 
@@ -669,87 +693,71 @@ export function SommelierGuest() {
         <div ref={bottom} />
       </main>
 
-      <footer className="bg-background/80 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
-        {typing ? (
-          <form className="mb-3 flex gap-2" onSubmit={onSend}>
-            <input
-              className="h-11 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-[16px] text-foreground outline-none placeholder:text-muted-foreground focus:border-(--gold)/60"
-              enterKeyHint="send"
-              maxLength={600}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={t.type}
-              value={draft}
-            />
-            <button
-              className="h-11 rounded-full bg-(--gold) px-4 font-medium text-(--on-gold) disabled:opacity-40"
-              disabled={!draft.trim()}
-              type="submit"
-            >
-              {t.send}
-            </button>
-          </form>
-        ) : null}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex w-24 flex-col items-start gap-2">
-            <div className="flex gap-2">
-              <RoundButton
-                active={typing}
-                label={<KeyboardIcon />}
-                onClick={() => setTyping((v) => !v)}
-                title={t.type}
-              />
-              <RoundButton
-                active={false}
-                label={<CameraIcon />}
-                onClick={() => camera.current?.click()}
-                title={t.photo}
-              />
-              <input
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  onPhoto(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-                ref={camera}
-                type="file"
-              />
-            </div>
-            {turns.length ? (
-              <button className="text-[11px] text-muted-foreground" onClick={restart} type="button">
-                {t.newChat}
-              </button>
-            ) : null}
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <Orb onClick={onOrb} phase={phase} />
-            <span className="text-muted-foreground text-xs">{label}</span>
-          </div>
-          <div className="flex w-24 flex-col items-end gap-2">
-            <RoundButton
-              active={showList}
-              label={<GlassIcon className="size-5 text-(--gold)" />}
-              onClick={() => setShowList((v) => !v)}
-              title={t.onTap}
-            />
-            {micOk && !liveMode ? (
-              <button
-                className={cn(
-                  "text-right text-[11px]",
-                  handsFree ? "text-(--gold)" : "text-muted-foreground"
-                )}
-                onClick={() => setHandsFree(!handsFree)}
-                type="button"
-              >
-                {handsFree ? "● " : "○ "}
-                {t.handsFree}
-              </button>
-            ) : null}
-          </div>
+      <footer className="space-y-2.5 bg-background/80 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+        <form className="relative" onSubmit={onSend}>
+          <input
+            aria-label={t.type}
+            className="h-12 w-full rounded-full border border-border bg-card pr-14 pl-5 text-[16px] text-foreground outline-none placeholder:text-muted-foreground focus:border-(--gold)/60"
+            enterKeyHint="send"
+            maxLength={600}
+            onChange={(e) => setDraft(e.target.value)}
+            onFocus={onFieldFocus}
+            placeholder={t.type}
+            ref={field}
+            value={draft}
+          />
+          <button
+            aria-label={t.send}
+            className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full bg-(--gold) text-(--on-gold) transition-opacity disabled:opacity-30"
+            disabled={!draft.trim()}
+            type="submit"
+          >
+            <SendIcon />
+          </button>
+        </form>
+        <div className="grid grid-cols-2 gap-2.5">
+          <TalkButton label={label} onClick={onOrb} phase={phase} />
+          <button
+            className="flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 font-medium text-foreground text-sm active:scale-[0.98]"
+            onClick={() => camera.current?.click()}
+            type="button"
+          >
+            <CameraIcon />
+            <span className="truncate">{t.photoBtn}</span>
+          </button>
+          <input
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              onPhoto(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+            ref={camera}
+            type="file"
+          />
         </div>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-[10px] text-muted-foreground/70 leading-tight">{t.privacy}</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col items-start gap-1">
+            <div className="flex gap-3">
+              {turns.length ? (
+                <button className="text-[11px] text-muted-foreground" onClick={restart} type="button">
+                  {t.newChat}
+                </button>
+              ) : null}
+              {micOk && !liveMode ? (
+                <button
+                  className={cn("text-[11px]", handsFree ? "text-(--gold)" : "text-muted-foreground")}
+                  onClick={() => setHandsFree(!handsFree)}
+                  type="button"
+                >
+                  {handsFree ? "● " : "○ "}
+                  {t.handsFree}
+                </button>
+              ) : null}
+            </div>
+            <p className="text-[10px] text-muted-foreground/70 leading-tight">{t.privacy}</p>
+          </div>
           <ThemeToggle className="shrink-0" />
         </div>
       </footer>
@@ -848,49 +856,61 @@ function Dot({ delay }: { delay: string }) {
   );
 }
 
-function Orb({ phase, onClick }: { phase: Phase; onClick: () => void }) {
-  const active = phase !== "idle";
+function talkLabel(t: Strings, phase: Phase, inCall: boolean) {
+  if (inCall) {
+    return phase === "thinking" ? t.connecting : t.endCall;
+  }
+  switch (phase) {
+    case "listening":
+      return t.listening;
+    case "thinking":
+      return t.thinking;
+    case "speaking":
+      return t.speaking;
+    default:
+      return t.talk;
+  }
+}
+
+/** Talk: same size as the photo button, the text field sits above both. */
+function TalkButton({
+  phase,
+  label,
+  onClick,
+}: {
+  phase: Phase;
+  label: string;
+  onClick: () => void;
+}) {
+  const live = phase === "listening" || phase === "speaking";
   return (
     <button
-      aria-label="Microphone"
-      className="relative flex size-20 items-center justify-center rounded-full outline-none active:scale-95"
+      aria-label={label}
+      className="relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-b from-[#e6c88d] to-[#b0803f] px-3 font-medium text-[#2a1c08] text-sm shadow-[0_8px_30px_-12px_rgba(201,154,85,0.7)] active:scale-[0.98]"
       onClick={onClick}
       type="button"
     >
-      {phase === "listening" || phase === "speaking" ? (
-        <>
-          <span className="absolute inset-0 animate-ping rounded-full bg-(--gold)/25" />
-          <span className="absolute -inset-2 animate-pulse rounded-full border border-(--gold)/30" />
-        </>
-      ) : null}
-      <span
-        className={cn(
-          "relative flex size-20 items-center justify-center rounded-full shadow-[0_10px_40px_-10px_rgba(201,154,85,0.55)] transition-colors",
-          active
-            ? "bg-gradient-to-b from-[#f5e3bd] to-[#c99a55]"
-            : "bg-gradient-to-b from-[#e6c88d] to-[#b0803f]"
-        )}
-      >
-        {phase === "thinking" ? (
-          <span className="size-8 animate-spin rounded-full border-[3px] border-[#2a1c08]/30 border-t-[#2a1c08]" />
-        ) : phase === "speaking" ? (
-          <Bars />
-        ) : (
-          <MicIcon />
-        )}
-      </span>
+      {live ? <span className="absolute inset-0 animate-pulse bg-white/20" /> : null}
+      {phase === "thinking" ? (
+        <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-[#2a1c08]/30 border-t-[#2a1c08]" />
+      ) : phase === "speaking" ? (
+        <Bars />
+      ) : (
+        <MicIcon />
+      )}
+      <span className="relative truncate">{label}</span>
     </button>
   );
 }
 
 function Bars() {
   return (
-    <span className="flex h-8 items-center gap-1">
+    <span className="relative flex h-5 shrink-0 items-center gap-0.5">
       {[0, 120, 240, 360, 120].map((d, i) => (
         <span
-          className="w-1.5 animate-pulse rounded-full bg-[#2a1c08]"
+          className="w-1 animate-pulse rounded-full bg-[#2a1c08]"
           key={`${i}-${d}`}
-          style={{ height: `${[14, 26, 18, 28, 12][i]}px`, animationDelay: `${d}ms` }}
+          style={{ height: `${[8, 16, 11, 18, 7][i]}px`, animationDelay: `${d}ms` }}
         />
       ))}
     </span>
@@ -901,7 +921,7 @@ function MicIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="size-8 text-[#2a1c08]"
+      className="relative size-5 shrink-0 text-[#2a1c08]"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -911,35 +931,6 @@ function MicIcon() {
       <rect height="12" rx="3" width="6" x="9" y="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
     </svg>
-  );
-}
-
-function RoundButton({
-  label,
-  onClick,
-  active,
-  title,
-}: {
-  label: React.ReactNode;
-  onClick: () => void;
-  active: boolean;
-  title: string;
-}) {
-  return (
-    <button
-      aria-label={title}
-      className={cn(
-        "flex size-11 items-center justify-center rounded-full border text-lg",
-        active
-          ? "border-(--gold)/60 bg-(--gold)/15"
-          : "border-border bg-card"
-      )}
-      onClick={onClick}
-      title={title}
-      type="button"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -1069,6 +1060,23 @@ function GlassIcon({ className }: { className?: string }) {
   );
 }
 
+function SendIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2.2}
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
+    </svg>
+  );
+}
+
 function CameraIcon() {
   return (
     <svg
@@ -1083,23 +1091,6 @@ function CameraIcon() {
     >
       <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5Z" />
       <circle cx="12" cy="12.5" r="3.5" />
-    </svg>
-  );
-}
-
-function KeyboardIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-5 text-foreground/80"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeWidth={1.6}
-      viewBox="0 0 24 24"
-    >
-      <rect height="12" rx="2.5" width="19" x="2.5" y="6" />
-      <path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14h8" />
     </svg>
   );
 }

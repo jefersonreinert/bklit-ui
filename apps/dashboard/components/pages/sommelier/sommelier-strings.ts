@@ -28,6 +28,9 @@ export interface GuestStrings {
   photo: string;
   photoAsk: string;
   photoBad: string;
+  talk: string;
+  endCall: string;
+  photoBtn: string;
 }
 
 const en: GuestStrings = {
@@ -64,6 +67,9 @@ const en: GuestStrings = {
   photo: "Photo of a wine",
   photoAsk: "What wine is this? Tell me all about it.",
   photoBad: "I couldn't open that photo. Please try again.",
+  talk: "Talk",
+  endCall: "End call",
+  photoBtn: "Photo",
 };
 
 const pt: GuestStrings = {
@@ -100,6 +106,9 @@ const pt: GuestStrings = {
   photo: "Foto de um vinho",
   photoAsk: "Que vinho é este? Me conte tudo sobre ele.",
   photoBad: "Não consegui abrir essa foto. Tente de novo.",
+  talk: "Falar",
+  endCall: "Encerrar",
+  photoBtn: "Foto",
 };
 
 const it: GuestStrings = {
@@ -132,6 +141,9 @@ const it: GuestStrings = {
   photo: "Foto di un vino",
   photoAsk: "Che vino è questo? Raccontami tutto.",
   photoBad: "Non riesco ad aprire la foto. Riprova.",
+  talk: "Parla",
+  endCall: "Chiudi",
+  photoBtn: "Foto",
 };
 
 const es: GuestStrings = {
@@ -164,6 +176,9 @@ const es: GuestStrings = {
   photo: "Foto de un vino",
   photoAsk: "¿Qué vino es este? Cuéntame todo sobre él.",
   photoBad: "No pude abrir esa foto. Inténtalo de nuevo.",
+  talk: "Hablar",
+  endCall: "Terminar",
+  photoBtn: "Foto",
 };
 
 const fr: GuestStrings = {
@@ -196,6 +211,9 @@ const fr: GuestStrings = {
   photo: "Photo d'un vin",
   photoAsk: "Quel est ce vin ? Racontez-moi tout.",
   photoBad: "Impossible d'ouvrir cette photo. Réessayez.",
+  talk: "Parler",
+  endCall: "Raccrocher",
+  photoBtn: "Photo",
 };
 
 const de: GuestStrings = {
@@ -228,6 +246,9 @@ const de: GuestStrings = {
   photo: "Foto eines Weins",
   photoAsk: "Welcher Wein ist das? Erzähl mir alles darüber.",
   photoBad: "Das Foto ließ sich nicht öffnen. Bitte nochmal versuchen.",
+  talk: "Sprechen",
+  endCall: "Beenden",
+  photoBtn: "Foto",
 };
 
 const ALL: Record<string, GuestStrings> = { en, pt, it, es, fr, de };
