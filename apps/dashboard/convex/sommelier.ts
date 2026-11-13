@@ -283,7 +283,6 @@ export const begin = mutation({
       return { ok: false as const, reason: limit };
     }
     const { wines, food } = await catalogOf(ctx, s.company);
-    const currency = "€";
     const id = await ctx.db.insert("sommelierChats", {
       company: s.company,
       sid,
@@ -298,7 +297,7 @@ export const begin = mutation({
       venue: await venueName(ctx, s.company),
       notes: s.notes ?? "",
       model: s.model || DEFAULT_MODEL,
-      catalog: catalogText(wines, food, currency),
+      catalog: catalogText(wines, food),
     };
   },
 });
