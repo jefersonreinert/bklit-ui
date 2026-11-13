@@ -61,6 +61,7 @@ export class LiveCall {
   private readonly audio: HTMLAudioElement;
   private ended = false;
   private seq = 0;
+  private micOn = false;
 
   constructor(private readonly on: LiveEvents) {
     this.audio = new Audio();
@@ -104,6 +105,8 @@ export class LiveCall {
       throw err;
     }
     for (const track of this.mic.getAudioTracks()) {
+      // Push-to-talk: the mic is muted until the guest holds the button
+      track.enabled = this.micOn;
       peer.addTrack(track, this.mic);
     }
     const channel = peer.createDataChannel("oai-events");
@@ -127,6 +130,14 @@ export class LiveCall {
   /** Something GPT-Live should say aloud (in its own words). */
   say(content: string, delegationId: string | null) {
     this.send({ type: "session.commentary.append", delegation_id: delegationId, content });
+  }
+
+  /** Push-to-talk: the guest is holding the button (or let go). */
+  setMic(on: boolean) {
+    this.micOn = on;
+    for (const track of this.mic?.getAudioTracks() ?? []) {
+      track.enabled = on;
+    }
   }
 
   /** Context it may use, without speaking it now. */

@@ -59,7 +59,9 @@ export class ListenError extends Error {
 export function listenOnce(
   lang: string,
   onInterim: (text: string) => void,
-  signal: AbortSignal
+  signal: AbortSignal,
+  /** Push-to-talk: keep listening through pauses until `signal` aborts. */
+  hold = false
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const Ctor = recognitionCtor();
@@ -69,7 +71,7 @@ export function listenOnce(
     }
     const rec = new Ctor();
     rec.lang = lang;
-    rec.continuous = false;
+    rec.continuous = hold;
     rec.interimResults = true;
     let final = "";
     let interim = "";

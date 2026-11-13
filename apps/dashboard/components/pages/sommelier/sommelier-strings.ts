@@ -29,6 +29,7 @@ export interface GuestStrings {
   photoAsk: string;
   photoBad: string;
   talk: string;
+  release: string;
   endCall: string;
   photoBtn: string;
 }
@@ -67,7 +68,8 @@ const en: GuestStrings = {
   photo: "Photo of a wine",
   photoAsk: "What wine is this? Tell me all about it.",
   photoBad: "I couldn't open that photo. Please try again.",
-  talk: "Talk",
+  talk: "Hold to talk",
+  release: "Release to send",
   endCall: "End call",
   photoBtn: "Photo",
 };
@@ -106,7 +108,8 @@ const pt: GuestStrings = {
   photo: "Foto de um vinho",
   photoAsk: "Que vinho é este? Me conte tudo sobre ele.",
   photoBad: "Não consegui abrir essa foto. Tente de novo.",
-  talk: "Falar",
+  talk: "Segure para falar",
+  release: "Solte para enviar",
   endCall: "Encerrar",
   photoBtn: "Foto",
 };
@@ -141,7 +144,8 @@ const it: GuestStrings = {
   photo: "Foto di un vino",
   photoAsk: "Che vino è questo? Raccontami tutto.",
   photoBad: "Non riesco ad aprire la foto. Riprova.",
-  talk: "Parla",
+  talk: "Tieni premuto per parlare",
+  release: "Rilascia per inviare",
   endCall: "Chiudi",
   photoBtn: "Foto",
 };
@@ -176,7 +180,8 @@ const es: GuestStrings = {
   photo: "Foto de un vino",
   photoAsk: "¿Qué vino es este? Cuéntame todo sobre él.",
   photoBad: "No pude abrir esa foto. Inténtalo de nuevo.",
-  talk: "Hablar",
+  talk: "Mantén para hablar",
+  release: "Suelta para enviar",
   endCall: "Terminar",
   photoBtn: "Foto",
 };
@@ -211,7 +216,8 @@ const fr: GuestStrings = {
   photo: "Photo d'un vin",
   photoAsk: "Quel est ce vin ? Racontez-moi tout.",
   photoBad: "Impossible d'ouvrir cette photo. Réessayez.",
-  talk: "Parler",
+  talk: "Maintenez pour parler",
+  release: "Relâchez pour envoyer",
   endCall: "Raccrocher",
   photoBtn: "Photo",
 };
@@ -246,7 +252,8 @@ const de: GuestStrings = {
   photo: "Foto eines Weins",
   photoAsk: "Welcher Wein ist das? Erzähl mir alles darüber.",
   photoBad: "Das Foto ließ sich nicht öffnen. Bitte nochmal versuchen.",
-  talk: "Sprechen",
+  talk: "Halten zum Sprechen",
+  release: "Loslassen zum Senden",
   endCall: "Beenden",
   photoBtn: "Foto",
 };
