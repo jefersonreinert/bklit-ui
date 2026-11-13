@@ -405,15 +405,11 @@ const COLOR_NAME: Record<WineColor, string> = {
   "": "",
 };
 
-const price = (n: number, currency: string) =>
-  `${currency}${n.toFixed(2)}`;
-
-/** One line per wine: compact, but with everything the sommelier needs. */
-export function catalogText(
-  wines: SommelierWine[],
-  food: FoodItem[],
-  currency = "€"
-) {
+/**
+ * One line per wine: compact, but with everything the sommelier needs.
+ * No prices: the owner prefers guests not to hear them from the AI.
+ */
+export function catalogText(wines: SommelierWine[], food: FoodItem[]) {
   const lines = wines.map((w) => {
     const parts = [
       w.name,
@@ -425,14 +421,12 @@ export function catalogText(
       w.vintage && `vintage ${w.vintage}`,
       w.abv ? `${w.abv}% abv` : "",
       w.pours.length
-        ? `${w.onTap ? "ON TAP now" : "by the glass"}: ${w.pours
-            .map((p) => `${p.ml} ml ${price(p.price, currency)}`)
-            .join(", ")}`
+        ? `${w.onTap ? "ON TAP now" : "by the glass"}: ${w.pours.map((p) => `${p.ml} ml`).join(", ")}`
         : w.onTap
           ? "ON TAP now"
           : "",
-      w.bottle ? `bottle at the table ${price(w.bottle, currency)}` : "",
-      w.takeaway ? `bottle to take away ${price(w.takeaway, currency)}` : "",
+      w.bottle ? "bottle at the table" : "",
+      w.takeaway ? "bottle to take away" : "",
       w.notes && `house tasting notes: ${w.notes}`,
       w.story && `story: ${w.story}`,
       w.pairing.length ? `house pairings: ${w.pairing.join("; ")}` : "",
@@ -441,7 +435,7 @@ export function catalogText(
   });
   const dishes = food.map(
     (f) =>
-      `- ${f.name} (${f.category}) ${price(f.price, currency)}${f.description ? `: ${f.description}` : ""}`
+      `- ${f.name} (${f.category})${f.description ? `: ${f.description}` : ""}`
   );
   return [
     `WINE LIST (${wines.length} wines; ${wines.filter((w) => w.onTap).length} on tap now):`,
@@ -452,21 +446,15 @@ export function catalogText(
   ].join("\n");
 }
 
-/** Shown to guests next to the conversation (no costs, no stock). */
+/** Shown to guests next to the conversation (no prices, costs or stock). */
 export type PublicWine = Pick<
   SommelierWine,
-  | "id"
-  | "name"
-  | "producer"
-  | "color"
-  | "grape"
-  | "country"
-  | "region"
-  | "onTap"
-  | "pours"
-  | "bottle"
-  | "image"
->;
+  "id" | "name" | "producer" | "color" | "grape" | "country" | "region" | "onTap" | "image"
+> & {
+  /** Pour sizes on the dispenser (ml). */
+  sizes: number[];
+  bottle: boolean;
+};
 
 export const publicWine = (w: SommelierWine): PublicWine => ({
   id: w.id,
@@ -477,8 +465,8 @@ export const publicWine = (w: SommelierWine): PublicWine => ({
   country: w.country,
   region: w.region,
   onTap: w.onTap,
-  pours: w.pours,
-  bottle: w.bottle,
+  sizes: w.pours.map((p) => p.ml),
+  bottle: !!w.bottle,
   image: w.image,
 });
 

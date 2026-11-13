@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildCatalog, mentioned, nameScore, titleCase } from "../sommelier/catalog";
+import { buildCatalog, catalogText, mentioned, nameScore, publicWine, titleCase } from "../sommelier/catalog";
 import { forSpeech, takeSentences } from "../sommelier/prompt";
 import { cleanTurns, withPhoto } from "../server/sommelier";
 import { addFragment, questionTurns } from "../sommelier/live";
@@ -41,6 +41,14 @@ describe("sommelier catalog", () => {
     assert.equal(w.bottle, 41);
     assert.equal(w.notes, "Citrus and sea breeze.");
     assert.deepEqual(w.pairing, ["Oysters"]);
+    // Guests never see or hear prices
+    const text = catalogText(wines, [{ name: "Cheese board", category: "Food", price: 14, description: "" }]);
+    assert.doesNotMatch(text, /€|\b41\b|1\.50|\b14\b/);
+    assert.match(text, /ON TAP now: 25 ml, 125 ml/);
+    const pub = publicWine(w);
+    assert.deepEqual(pub.sizes, [25, 125]);
+    assert.equal(pub.bottle, true);
+    assert.ok(!JSON.stringify(pub).includes("price"));
   });
 
   it("finds the wines an answer talks about", () => {

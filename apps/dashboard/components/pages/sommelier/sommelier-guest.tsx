@@ -97,9 +97,6 @@ const SWATCH: Record<string, string> = {
   "": "#9a8f86",
 };
 
-const money = (n: number) =>
-  `€${n.toLocaleString("en-GB", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
-
 export function SommelierGuest() {
   const [token, setToken] = useState<string | null>(null);
   const [venue, setVenue] = useState<Venue | null | undefined>(undefined);
@@ -393,13 +390,13 @@ export function SommelierGuest() {
           if (sentences.length) {
             const first = sentences.join(" ");
             sent = answer.indexOf(first) + first.length;
-            c.say(`Sommelier notes (say this briefly, add nothing, names and prices exact): ${first}`, id);
+            c.say(`Sommelier notes (say this briefly, add nothing, wine names exact): ${first}`, id);
           }
         }
       }
       const rest = answer.slice(sent).trim();
       if (rest) {
-        c.say(sent ? rest : `Sommelier notes (say this briefly, add nothing, names and prices exact): ${rest}`, id);
+        c.say(sent ? rest : `Sommelier notes (say this briefly, add nothing, wine names exact): ${rest}`, id);
       }
       setBrain(answer);
     } catch {
@@ -948,12 +945,9 @@ function RoundButton({
 
 type Strings = ReturnType<typeof guestStrings>;
 
-function priceLine(w: PublicWine, t: Strings) {
-  const glass = w.pours.find((p) => p.ml >= 100) ?? w.pours.at(-1);
-  return [
-    glass ? `${glass.ml} ml ${money(glass.price)}` : "",
-    w.bottle ? `${t.bottle} ${money(w.bottle)}` : "",
-  ]
+/** How the wine is served (sizes, bottle), never the price. */
+function serveLine(w: PublicWine, t: Strings) {
+  return [w.sizes.length ? `${w.sizes.join(" · ")} ml` : "", w.bottle ? t.bottle : ""]
     .filter(Boolean)
     .join(" · ");
 }
@@ -983,17 +977,17 @@ function WineCards({ wines, t }: { wines: PublicWine[]; t: Strings }) {
           </div>
           {w.onTap ? (
             <div className="mt-2 flex flex-wrap gap-1">
-              {w.pours.map((p) => (
+              {w.sizes.map((ml) => (
                 <span
                   className="rounded-full bg-(--gold)/15 px-2 py-0.5 text-(--gold) text-[11px]"
-                  key={p.ml}
+                  key={ml}
                 >
-                  {p.ml} ml · {money(p.price)}
+                  {ml} ml
                 </span>
               ))}
             </div>
           ) : (
-            <p className="mt-2 text-muted-foreground text-xs">{priceLine(w, t)}</p>
+            <p className="mt-2 text-muted-foreground text-xs">{serveLine(w, t)}</p>
           )}
         </div>
       ))}
@@ -1042,7 +1036,7 @@ function WineList({
                 <span className="block truncate text-muted-foreground text-xs">
                   {[w.grape, w.country].filter(Boolean).join(" · ")}
                 </span>
-                <span className="block text-(--gold) text-xs">{priceLine(w, t)}</span>
+                <span className="block text-(--gold) text-xs">{serveLine(w, t)}</span>
               </span>
               <span className="shrink-0 rounded-full bg-(--gold) px-3 py-1 font-medium text-(--on-gold) text-xs">
                 {t.ask}
