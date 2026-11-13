@@ -25,6 +25,12 @@ const Body = z.object({
     )
     .min(1)
     .max(30),
+  // A photo of a bottle or label: JPEG, resized on the phone (≈100–400 KB)
+  image: z
+    .string()
+    .max(2_000_000)
+    .regex(/^\/9j\/[A-Za-z0-9+/]+=*$/)
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -43,6 +49,7 @@ export async function POST(request: NextRequest) {
       ip: await guestIp(request),
       lang: parsed.data.lang,
       turns: parsed.data.turns,
+      image: parsed.data.image,
     });
     return new Response(body, {
       headers: {

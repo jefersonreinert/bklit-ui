@@ -69,6 +69,10 @@ Boundaries:
 ${houseNotes.trim() ? `\nNotes from the owner (follow them):\n${houseNotes.trim()}\n` : ""}`;
 }
 
+/** Added to the guest's words when they send a photo (bottle, label, menu). */
+export const PHOTO_TASK = `[The guest just took this photo at the bar, most likely of a wine bottle, a label or a dispenser.]
+Read the label and work out the wine: producer, name, grape, region and vintage when you can see them. Then check the WINE LIST: if it is one of our wines, say so and call it by its exact list name, tell them whether it is on tap now and the price of a glass or a taster, then tell them about it in a warm, spoken way (style, what they will taste and smell, how to enjoy it, one food pairing from our menu). If it is not on our list, say what it is when you can read it and suggest the closest wine we pour. If the photo is not a wine or you can't read it, say so kindly and ask for a closer photo of the front label. Never guess a wine you can't read.`;
+
 export function turnContext(langName: string, now: Date, timeZone = "Europe/Malta") {
   const time = now.toLocaleString("en-GB", {
     timeZone,

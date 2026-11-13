@@ -7,6 +7,7 @@ import {
   instructions,
   langOf,
   OPENAI_VOICES,
+  PHOTO_TASK,
   turnContext,
 } from "@/lib/sommelier/prompt";
 import { providerKey, routerClient } from "./ai/service";
@@ -65,6 +66,24 @@ export function cleanTurns(turns: Turn[], max = 12): Turn[] {
   return out;
 }
 
+/** The last guest turn as photo + words (older turns stay text). */
+export function withPhoto(turns: Turn[], image: string): Anthropic.Beta.BetaMessageParam[] {
+  return turns.map((t, i) =>
+    i === turns.length - 1
+      ? {
+          role: t.role,
+          content: [
+            {
+              type: "image" as const,
+              source: { type: "base64" as const, media_type: "image/jpeg" as const, data: image },
+            },
+            { type: "text" as const, text: `${PHOTO_TASK}\n\nGuest: ${t.content}` },
+          ],
+        }
+      : t
+  );
+}
+
 const SORRY =
   "Sorry, I lost my train of thought for a moment. Could you ask me again?";
 
@@ -79,6 +98,8 @@ export async function chat(input: {
   ip: string;
   lang: string;
   turns: Turn[];
+  /** A JPEG photo (base64) sent with the last question. */
+  image?: string;
 }): Promise<ReadableStream<Uint8Array>> {
   const turns = cleanTurns(input.turns);
   const question = turns.at(-1);
@@ -99,7 +120,7 @@ export async function chat(input: {
     sid: input.sid,
     ip: input.ip,
     lang: lang.code,
-    question: question.content,
+    question: input.image ? `[photo] ${question.content}` : question.content,
   });
   if (!started.ok) {
     throw new SommelierError(
@@ -160,7 +181,7 @@ export async function chat(input: {
               },
               { type: "text", text: turnContext(lang.name, new Date()) },
             ],
-            messages: turns,
+            messages: input.image ? withPhoto(turns, input.image) : turns,
           },
           { signal: AbortSignal.timeout(TIMEOUT_MS) }
         );

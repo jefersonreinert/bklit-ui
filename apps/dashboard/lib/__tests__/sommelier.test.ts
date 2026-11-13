@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildCatalog, mentioned, nameScore, titleCase } from "../sommelier/catalog";
 import { forSpeech, takeSentences } from "../sommelier/prompt";
-import { cleanTurns } from "../server/sommelier";
+import { cleanTurns, withPhoto } from "../server/sommelier";
 import { addFragment, questionTurns } from "../sommelier/live";
 import { AudioCollector, PCM_RATE, pcmToWav, readAloudEvents } from "../sommelier/realtime";
 
@@ -129,5 +129,24 @@ describe("sommelier live call", () => {
     assert.equal(questionTurns([{ role: "assistant", content: "Hello!" }]), null);
     const long = questionTurns([{ role: "user", content: "x".repeat(900) }]);
     assert.equal(long?.[0]?.content.length, 600);
+  });
+});
+
+describe("sommelier photo", () => {
+  it("puts the photo on the last guest turn only", () => {
+    const out = withPhoto(
+      [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+        { role: "user", content: "What wine is this?" },
+      ],
+      "/9j/abc"
+    );
+    assert.equal(out[0]?.content, "hi");
+    const last = out[2]?.content;
+    assert.ok(Array.isArray(last));
+    assert.equal(last[0]?.type, "image");
+    assert.equal(last[1]?.type, "text");
+    assert.match(last[1]?.type === "text" ? last[1].text : "", /What wine is this\?$/);
   });
 });
