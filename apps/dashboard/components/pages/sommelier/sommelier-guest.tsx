@@ -393,13 +393,13 @@ export function SommelierGuest() {
           if (sentences.length) {
             const first = sentences.join(" ");
             sent = answer.indexOf(first) + first.length;
-            c.say(`Sommelier notes (say this in your own words, names and prices exact): ${first}`, id);
+            c.say(`Sommelier notes (say this briefly, add nothing, names and prices exact): ${first}`, id);
           }
         }
       }
       const rest = answer.slice(sent).trim();
       if (rest) {
-        c.say(sent ? rest : `Sommelier notes (say this in your own words, names and prices exact): ${rest}`, id);
+        c.say(sent ? rest : `Sommelier notes (say this briefly, add nothing, names and prices exact): ${rest}`, id);
       }
       setBrain(answer);
     } catch {
@@ -427,7 +427,7 @@ export function SommelierGuest() {
     }
     setBrain("");
     c.say(
-      "The guest just sent you a photo of a wine. In one short sentence, say you are taking a look at the label. Then wait for the sommelier notes about it.",
+      "The guest just sent you a photo of a wine. In a few words, say you are looking at the label. Then wait for the sommelier notes about it.",
       null
     );
     answerLive(null, photo.data);
