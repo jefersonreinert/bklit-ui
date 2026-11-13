@@ -75,7 +75,7 @@ export function AskAnything({
       onClick={onClick}
       type="button"
     >
-      <StippleArt className="h-64 w-64" />
+      <StippleArt className="h-72 w-72" />
       <span className="font-mono text-(--gold) text-lg uppercase tracking-[0.3em]">
         <span className="sr-only">{title}</span>
         <span aria-hidden="true">{heading}</span>
