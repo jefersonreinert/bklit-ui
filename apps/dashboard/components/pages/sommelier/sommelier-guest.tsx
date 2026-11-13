@@ -11,6 +11,8 @@ import { canListen, ListenError, listenOnce, Speaker } from "@/lib/sommelier/voi
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+import { AskAnything } from "./ask-anything";
+import { LanguagePicker } from "./language-picker";
 import { guestStrings } from "./sommelier-strings";
 
 /**
@@ -546,37 +548,13 @@ export function SommelierGuest() {
           </p>
           <h1 className="truncate font-serif text-xl text-foreground">{venue.name}</h1>
         </div>
-        <label className="relative">
-          <span className="sr-only">Language</span>
-          <select
-            className="h-9 appearance-none rounded-full border border-border bg-card pr-3 pl-3 text-sm text-foreground outline-none"
-            onChange={(e) => setLang(e.target.value)}
-            value={lang}
-          >
-            {SOMMELIER_LANGS.map((l) => (
-              <option className="text-black" key={l.code} value={l.code}>
-                {l.flag} {l.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <LanguagePicker onChange={setLang} value={lang} />
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 pb-4">
         <Bubble role="assistant" text={venue.greeting || t.hello} />
-        {turns.length === 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {t.ideas.map((idea) => (
-              <button
-                className="rounded-full border border-(--gold)/40 bg-(--gold)/10 px-3 py-1.5 text-left text-(--gold) text-sm active:scale-95"
-                key={idea}
-                onClick={() => onIdea(idea)}
-                type="button"
-              >
-                {idea}
-              </button>
-            ))}
-          </div>
+        {turns.length === 0 && phase === "idle" && !inCall ? (
+          <AskAnything hints={t.ideas} onClick={onOrb} title={t.askAnything} />
         ) : null}
         {turns.map((turn, i) => (
           <div key={`${i}-${turn.role}`}>
@@ -602,7 +580,7 @@ export function SommelierGuest() {
         <div ref={bottom} />
       </main>
 
-      <footer className="border-border border-t bg-background/80 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+      <footer className="bg-background/80 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
         {typing ? (
           <form className="mb-3 flex gap-2" onSubmit={onSend}>
             <input
