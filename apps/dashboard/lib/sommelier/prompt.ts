@@ -10,19 +10,21 @@ export interface SommelierLang {
   speech: string;
   label: string;
   flag: string;
+  /** circle-flags file in /flags */
+  country: string;
   /** In the language itself, for the AI. */
   name: string;
 }
 
 export const SOMMELIER_LANGS: SommelierLang[] = [
-  { code: "en", speech: "en-GB", label: "English", flag: "🇬🇧", name: "English" },
-  { code: "pt", speech: "pt-BR", label: "Português", flag: "🇧🇷", name: "Portuguese (Brazilian)" },
-  { code: "it", speech: "it-IT", label: "Italiano", flag: "🇮🇹", name: "Italian" },
-  { code: "es", speech: "es-ES", label: "Español", flag: "🇪🇸", name: "Spanish" },
-  { code: "fr", speech: "fr-FR", label: "Français", flag: "🇫🇷", name: "French" },
-  { code: "de", speech: "de-DE", label: "Deutsch", flag: "🇩🇪", name: "German" },
-  { code: "nl", speech: "nl-NL", label: "Nederlands", flag: "🇳🇱", name: "Dutch" },
-  { code: "pl", speech: "pl-PL", label: "Polski", flag: "🇵🇱", name: "Polish" },
+  { code: "en", country: "gb", speech: "en-GB", label: "English", flag: "🇬🇧", name: "English" },
+  { code: "pt", country: "br", speech: "pt-BR", label: "Português", flag: "🇧🇷", name: "Portuguese (Brazilian)" },
+  { code: "it", country: "it", speech: "it-IT", label: "Italiano", flag: "🇮🇹", name: "Italian" },
+  { code: "es", country: "es", speech: "es-ES", label: "Español", flag: "🇪🇸", name: "Spanish" },
+  { code: "fr", country: "fr", speech: "fr-FR", label: "Français", flag: "🇫🇷", name: "French" },
+  { code: "de", country: "de", speech: "de-DE", label: "Deutsch", flag: "🇩🇪", name: "German" },
+  { code: "nl", country: "nl", speech: "nl-NL", label: "Nederlands", flag: "🇳🇱", name: "Dutch" },
+  { code: "pl", country: "pl", speech: "pl-PL", label: "Polski", flag: "🇵🇱", name: "Polish" },
 ];
 
 export const langOf = (code: string | undefined) =>

@@ -24,6 +24,7 @@ export interface GuestStrings {
   newChat: string;
   connecting: string;
   liveEnd: string;
+  askAnything: string;
 }
 
 const en: GuestStrings = {
@@ -56,6 +57,7 @@ const en: GuestStrings = {
   newChat: "New conversation",
   connecting: "Connecting…",
   liveEnd: "Tap to end the conversation",
+  askAnything: "Ask anything",
 };
 
 const pt: GuestStrings = {
@@ -88,6 +90,7 @@ const pt: GuestStrings = {
   newChat: "Nova conversa",
   connecting: "Conectando…",
   liveEnd: "Toque para encerrar a conversa",
+  askAnything: "Pergunte qualquer coisa",
 };
 
 const it: GuestStrings = {
@@ -116,6 +119,7 @@ const it: GuestStrings = {
   newChat: "Nuova conversazione",
   connecting: "Connessione…",
   liveEnd: "Tocca per chiudere la conversazione",
+  askAnything: "Chiedimi qualsiasi cosa",
 };
 
 const es: GuestStrings = {
@@ -144,6 +148,7 @@ const es: GuestStrings = {
   newChat: "Nueva conversación",
   connecting: "Conectando…",
   liveEnd: "Toca para terminar la conversación",
+  askAnything: "Pregúntame lo que quieras",
 };
 
 const fr: GuestStrings = {
@@ -172,6 +177,7 @@ const fr: GuestStrings = {
   newChat: "Nouvelle conversation",
   connecting: "Connexion…",
   liveEnd: "Touchez pour terminer la conversation",
+  askAnything: "Demandez-moi tout",
 };
 
 const de: GuestStrings = {
@@ -200,6 +206,7 @@ const de: GuestStrings = {
   newChat: "Neues Gespräch",
   connecting: "Verbinde…",
   liveEnd: "Tippen, um das Gespräch zu beenden",
+  askAnything: "Frag mich alles",
 };
 
 const ALL: Record<string, GuestStrings> = { en, pt, it, es, fr, de };
