@@ -350,7 +350,7 @@ export function SommelierGuest() {
   listenRef.current = listen;
 
   /** A wine question inside a live call: Claude answers, GPT-Live says it. */
-  const answerLive = async (id: string) => {
+  const answerLive = async (id: string | null, image?: string) => {
     const c = call.current;
     const asked = questionTurns(liveTurns.current);
     if (!(c && token)) {
@@ -366,7 +366,13 @@ export function SommelierGuest() {
       const res = await fetch(`${BASE_PATH}/api/sommelier/`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ t: token, sid: sid.current, lang: langRef.current, turns: asked }),
+        body: JSON.stringify({
+          t: token,
+          sid: sid.current,
+          lang: langRef.current,
+          turns: asked,
+          image,
+        }),
       });
       if (!(res.ok && res.body)) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -401,13 +407,42 @@ export function SommelierGuest() {
     }
   };
 
-  const startLive = async () => {
+  /** A photo inside a live call: the voice says it is looking, Claude reads it. */
+  const showPhoto = (photo: { data: string; url: string }) => {
+    liveTurns.current = [
+      ...liveTurns.current,
+      { role: "user", content: guestStrings(langRef.current).photoAsk, photo: photo.url },
+    ];
+    updateTurns(liveTurns.current);
+  };
+
+  const photoLive = (photo: { data: string; url: string }, shown = false) => {
+    const c = call.current;
+    if (!c) {
+      return;
+    }
+    lastHeard.current = Date.now();
+    if (!shown) {
+      showPhoto(photo);
+    }
+    setBrain("");
+    c.say(
+      "The guest just sent you a photo of a wine. In one short sentence, say you are taking a look at the label. Then wait for the sommelier notes about it.",
+      null
+    );
+    answerLive(null, photo.data);
+  };
+
+  const startLive = async (photo?: { data: string; url: string }) => {
     stopAll();
     setNotice(null);
     setPhase("thinking");
     liveTurns.current = [];
     updateTurns([]);
     setBrain("");
+    if (photo) {
+      showPhoto(photo);
+    }
     const greeting = venue?.greeting || guestStrings(langRef.current).hello;
     const speaking = () => {
       setPhase("speaking");
@@ -420,7 +455,11 @@ export function SommelierGuest() {
       onReady: () => {
         lastHeard.current = Date.now();
         setPhase("listening");
-        c.say(`Greet the guest now, in your own words, along the lines of: "${greeting}". Then pause and listen.`, null);
+        if (photo) {
+          photoLive(photo, true);
+        } else {
+          c.say(`Greet the guest now, in your own words, along the lines of: "${greeting}". Then pause and listen.`, null);
+        }
       },
       onUser: (delta) => {
         lastHeard.current = Date.now();
@@ -469,7 +508,10 @@ export function SommelierGuest() {
         call.current = null;
         setInCall(false);
         setPhase("idle");
-        if (micOk) {
+        if (photo) {
+          updateTurns([]);
+          ask(guestStrings(langRef.current).photoAsk, photo);
+        } else if (micOk) {
           listen();
         } else {
           setTyping(true);
@@ -481,6 +523,11 @@ export function SommelierGuest() {
       setPhase("idle");
       setNotice(guestStrings(langRef.current).micDenied);
       setTyping(true);
+      if (photo) {
+        // No microphone: the answer still comes, read aloud
+        updateTurns([]);
+        ask(guestStrings(langRef.current).photoAsk, photo);
+      }
     }
   };
 
@@ -527,8 +574,15 @@ export function SommelierGuest() {
     }
     unlock();
     try {
-      const data = await shrinkPhoto(file);
-      ask(t.photoAsk, { data, url: URL.createObjectURL(file) });
+      const photo = { data: await shrinkPhoto(file), url: URL.createObjectURL(file) };
+      // Live voice venues: the answer comes as a spoken conversation
+      if (inCall && call.current) {
+        photoLive(photo);
+      } else if (liveMode) {
+        startLive(photo);
+      } else {
+        ask(t.photoAsk, photo);
+      }
     } catch {
       setNotice(t.photoBad);
     }

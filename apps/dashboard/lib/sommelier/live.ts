@@ -8,13 +8,15 @@
 export interface LiveTurn {
   role: "user" | "assistant";
   content: string;
+  /** Preview of a photo the guest sent (object URL). */
+  photo?: string;
 }
 
 /** Joins transcript fragments into alternating turns. */
 export function addFragment(turns: LiveTurn[], role: LiveTurn["role"], delta: string) {
   const last = turns.at(-1);
   if (last?.role === role) {
-    return [...turns.slice(0, -1), { role, content: last.content + delta }];
+    return [...turns.slice(0, -1), { ...last, content: last.content + delta }];
   }
   return [...turns, { role, content: delta.trimStart() }];
 }
