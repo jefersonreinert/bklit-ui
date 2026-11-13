@@ -51,7 +51,6 @@ async function shrinkPhoto(file: File) {
 
 const SID_KEY = "casa.sommelier.sid";
 const LANG_KEY = "casa.sommelier.lang";
-const FREE_KEY = "casa.sommelier.handsfree";
 
 function stored(key: string) {
   try {
@@ -107,12 +106,12 @@ export function SommelierGuest() {
   const [interim, setInterim] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [handsFree, setHandsFreeState] = useState(true);
+  const [holding, setHoldingState] = useState(false);
   const [showList, setShowList] = useState(false);
 
   const sid = useRef("");
   const langRef = useRef("en");
-  const handsFreeRef = useRef(true);
+  const holdingRef = useRef(false);
   const turnsRef = useRef<Turn[]>([]);
   const speaker = useRef<Speaker | null>(null);
   const unlocked = useRef(false);
@@ -141,9 +140,6 @@ export function SommelierGuest() {
     const l = firstLang();
     langRef.current = l;
     setLangState(l);
-    const free = stored(FREE_KEY) !== "0";
-    handsFreeRef.current = free;
-    setHandsFreeState(free);
     const tok = new URLSearchParams(window.location.search).get("t");
     setToken(tok);
     const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -206,10 +202,9 @@ export function SommelierGuest() {
     store(LANG_KEY, code);
   };
 
-  const setHandsFree = (on: boolean) => {
-    handsFreeRef.current = on;
-    setHandsFreeState(on);
-    store(FREE_KEY, on ? "1" : "0");
+  const setHolding = (on: boolean) => {
+    holdingRef.current = on;
+    setHoldingState(on);
   };
 
   const updateTurns = (next: Turn[]) => {
@@ -231,11 +226,9 @@ export function SommelierGuest() {
     }
   };
 
-  // listen() and ask() call each other (conversation mode)
-  const listenRef = useRef<() => void>(() => undefined);
 
   const ask = useCallback(
-    async (question: string, photo?: { data: string; url: string }, typed = false) => {
+    async (question: string, photo?: { data: string; url: string }) => {
       const text = question.trim().slice(0, 600);
       if (!(text && token)) {
         return;
@@ -305,11 +298,7 @@ export function SommelierGuest() {
         return;
       }
       setPhase((p) => (p === "thinking" ? "idle" : p));
-      await speaker.current?.drained();
-      // Typed questions: the guest chose not to talk (noisy bar), no mic
-      if (!(ctl.signal.aborted || typed) && handsFreeRef.current && micOk) {
-        listenRef.current();
-      }
+      // Push-to-talk only: the mic never opens by itself (noisy bar)
     },
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
     [token, micOk]
@@ -323,7 +312,7 @@ export function SommelierGuest() {
     setPhase("listening");
     setInterim("");
     try {
-      const text = await listenOnce(langOf(langRef.current).speech, setInterim, ctl.signal);
+      const text = await listenOnce(langOf(langRef.current).speech, setInterim, ctl.signal, true);
       setInterim("");
       if (text) {
         ask(text);
@@ -346,7 +335,6 @@ export function SommelierGuest() {
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
   }, [ask]);
 
-  listenRef.current = listen;
 
   /** A wine question inside a live call: Claude answers, GPT-Live says it. */
   const answerLive = async (id: string | null, image?: string) => {
@@ -454,6 +442,8 @@ export function SommelierGuest() {
       onReady: () => {
         lastHeard.current = Date.now();
         setPhase("listening");
+        // Still holding since the tap that started the call
+        c.setMic(holdingRef.current);
         if (photo) {
           photoLive(photo, true);
         } else {
@@ -530,28 +520,45 @@ export function SommelierGuest() {
     }
   };
 
-  const onOrb = () => {
-    if (inCall) {
-      call.current?.stop();
-      return;
-    }
-    if (liveMode) {
-      startLive();
-      return;
-    }
+  /**
+   * Push-to-talk: the mic only hears the guest while they hold the
+   * button, so the talk around them in the bar is not picked up.
+   */
+  const onPressStart = () => {
     unlock();
+    setHolding(true);
+    if (liveMode) {
+      if (inCall && call.current) {
+        call.current.setMic(true);
+        setPhase("listening");
+      } else if (!inCall) {
+        startLive();
+      }
+      return;
+    }
     if (!micOk) {
       field.current?.focus();
       setNotice(t.noMic);
       return;
     }
-    if (phase === "listening") {
-      // Done talking: what was heard so far is sent
-      listenCtl.current?.abort();
-      return;
-    }
     listen();
   };
+
+  const onPressEnd = () => {
+    if (!holdingRef.current) {
+      return;
+    }
+    setHolding(false);
+    if (liveMode) {
+      call.current?.setMic(false);
+      setPhase((p) => (p === "listening" ? "idle" : p));
+      return;
+    }
+    // Let go: what was heard is sent
+    listenCtl.current?.abort();
+  };
+
+  const endCall = () => call.current?.stop();
 
   const onSend = (e: FormEvent) => {
     e.preventDefault();
@@ -571,7 +578,7 @@ export function SommelierGuest() {
       answerLive(null);
       return;
     }
-    ask(text, undefined, true);
+    ask(text);
   };
 
   /** Typing while the mic listens: stop listening (bar noise). */
@@ -637,7 +644,7 @@ export function SommelierGuest() {
 
   const onTap = venue.wines.filter((w) => w.onTap);
   const lastAnswer = [...turns].reverse().find((x) => x.role === "assistant");
-  const label = talkLabel(t, phase, inCall);
+  const label = holding ? t.release : talkLabel(t, phase, inCall);
 
   return (
     <Shell>
@@ -661,16 +668,6 @@ export function SommelierGuest() {
         </button>
         <LanguagePicker onChange={setLang} value={lang}>
           <ThemeToggle className="w-full justify-between [&>button]:flex-1 [&>button]:justify-center" />
-          {micOk && !liveMode ? (
-            <button
-              className={cn("block text-xs", handsFree ? "text-(--gold)" : "text-muted-foreground")}
-              onClick={() => setHandsFree(!handsFree)}
-              type="button"
-            >
-              {handsFree ? "● " : "○ "}
-              {t.handsFree}
-            </button>
-          ) : null}
           {turns.length ? (
             <button className="block text-muted-foreground text-xs" onClick={restart} type="button">
               ↺ {t.newChat}
@@ -682,7 +679,7 @@ export function SommelierGuest() {
 
       <main className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
         {turns.length === 0 && phase === "idle" && !inCall ? (
-          <AskAnything hints={t.ideas} onClick={onOrb} title={t.askAnything} />
+          <AskAnything hints={t.ideas} onClick={() => field.current?.focus()} title={t.askAnything} />
         ) : null}
         {turns.map((turn, i) => (
           <div key={`${i}-${turn.role}`}>
@@ -731,15 +728,36 @@ export function SommelierGuest() {
             <SendIcon />
           </button>
         </form>
-        <div className="grid grid-cols-2 gap-2.5">
-          <TalkButton label={label} onClick={onOrb} phase={phase} />
+        <div className="flex gap-2.5">
+          {inCall ? (
+            <button
+              aria-label={t.endCall}
+              className="flex size-12 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground/80"
+              onClick={endCall}
+              title={t.endCall}
+              type="button"
+            >
+              ✕
+            </button>
+          ) : null}
+          <TalkButton
+            holding={holding}
+            label={label}
+            onEnd={onPressEnd}
+            onStart={onPressStart}
+            phase={phase}
+          />
           <button
-            className="flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 font-medium text-foreground text-sm active:scale-[0.98]"
+            aria-label={t.photo}
+            className={cn(
+              "flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-card font-medium text-foreground text-sm active:scale-[0.98]",
+              inCall ? "w-12 shrink-0" : "min-w-0 flex-1 px-3"
+            )}
             onClick={() => camera.current?.click()}
             type="button"
           >
             <CameraIcon />
-            <span className="truncate">{t.photoBtn}</span>
+            {inCall ? null : <span className="truncate">{t.photoBtn}</span>}
           </button>
           <input
             accept="image/*"
@@ -860,12 +878,12 @@ function Dot({ delay }: { delay: string }) {
 }
 
 function talkLabel(t: Strings, phase: Phase, inCall: boolean) {
-  if (inCall) {
-    return phase === "thinking" ? t.connecting : t.endCall;
+  if (inCall && phase === "thinking") {
+    return t.connecting;
   }
   switch (phase) {
     case "listening":
-      return t.listening;
+      return inCall ? t.talk : t.listening;
     case "thinking":
       return t.thinking;
     case "speaking":
@@ -876,21 +894,48 @@ function talkLabel(t: Strings, phase: Phase, inCall: boolean) {
 }
 
 /** Talk: same size as the photo button, the text field sits above both. */
+/** Hold to talk, let go to send (pointer and keyboard). */
 function TalkButton({
   phase,
   label,
-  onClick,
+  holding,
+  onStart,
+  onEnd,
 }: {
   phase: Phase;
   label: string;
-  onClick: () => void;
+  holding: boolean;
+  onStart: () => void;
+  onEnd: () => void;
 }) {
-  const live = phase === "listening" || phase === "speaking";
+  const live = holding || phase === "speaking";
   return (
     <button
       aria-label={label}
-      className="relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-b from-[#e6c88d] to-[#b0803f] px-3 font-medium text-[#2a1c08] text-sm shadow-[0_8px_30px_-12px_rgba(201,154,85,0.7)] active:scale-[0.98]"
-      onClick={onClick}
+      aria-pressed={holding}
+      className={cn(
+        "relative flex h-12 min-w-0 flex-1 touch-none select-none items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-b from-[#e6c88d] to-[#b0803f] px-3 font-medium text-[#2a1c08] text-sm shadow-[0_8px_30px_-12px_rgba(201,154,85,0.7)] transition-transform [-webkit-touch-callout:none]",
+        holding && "scale-[1.04] ring-4 ring-(--gold)/30"
+      )}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => {
+        if ((e.key === " " || e.key === "Enter") && !e.repeat) {
+          e.preventDefault();
+          onStart();
+        }
+      }}
+      onKeyUp={(e) => {
+        if (e.key === " " || e.key === "Enter") {
+          onEnd();
+        }
+      }}
+      onPointerCancel={onEnd}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        onStart();
+      }}
+      onPointerUp={onEnd}
       type="button"
     >
       {live ? <span className="absolute inset-0 animate-pulse bg-white/20" /> : null}
