@@ -780,12 +780,13 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="relative isolate flex h-dvh flex-col overflow-hidden bg-background bg-[radial-gradient(120%_60%_at_50%_0%,rgba(217,176,108,0.16),transparent_65%)] text-foreground [--gold:#9a6f28] [--on-gold:#ffffff] dark:[--gold:#e8c48a] dark:[--on-gold:#2a1c08]">
       <StippleArt
         className="pointer-events-none absolute top-[12%] -right-[30%] -z-10 h-[78vh] w-[78vh] max-w-none"
-        dots={16000}
-        grain={1.3}
+        dots={20_000}
+        fps={30}
+        grain={1.2}
         hold={6}
         morph={3}
-        opacity={0.14}
-        start={3}
+        opacity={0.13}
+        start={2}
       />
       {children}
     </div>
