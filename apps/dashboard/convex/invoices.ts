@@ -76,6 +76,8 @@ export const uploadUrl = mutation({
 /** What /api/inv/read returns (lib/invoices/types ExtractedInvoice). */
 const extracted = v.object({
   supplier: v.object({ name: v.string(), taxId: v.string(), address: v.string() }),
+  // The AI also returns these; kept optional so its full answer is accepted
+  buyer: v.optional(v.object({ name: v.string(), taxId: v.string(), address: v.string() })),
   number: v.string(),
   date: v.string(),
   dueDate: v.string(),
@@ -95,6 +97,8 @@ const extracted = v.object({
       unitPrice: v.union(v.number(), v.null()),
       vatRate: v.union(v.number(), v.null()),
       lineTotal: v.union(v.number(), v.null()),
+      category: v.optional(v.string()),
+      genericName: v.optional(v.string()),
     })
   ),
 });

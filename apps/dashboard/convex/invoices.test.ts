@@ -148,6 +148,18 @@ describe("supplier invoices", () => {
     expect((await balance(t, token, aperol))?.qty).toBe(1000);
   });
 
+  it("accepts the AI's whole answer (buyer, category, generic name)", async () => {
+    const { t, token, aperol } = await setup();
+    const full = { ...line({ description: "Aperol Aperitivo 1L", quantity: 2, unitPrice: 12 }), category: "spirits", genericName: "aperitif" };
+    const data = {
+      ...invoice("F-77", [full]),
+      buyer: { name: "Vinomad Ltd", taxId: "MT999", address: "Valletta" },
+    };
+    const id = await t.mutation(api.invoices.create, { session: token, company: "a", files: [], data });
+    const d = await t.query(api.invoices.detail, { session: token, id });
+    expect(d?.invoice.lines[0]?.itemId).toBe(aperol);
+  });
+
   it("finds the supplier again by VAT number", async () => {
     const { t, token } = await setup();
     const a = await t.mutation(api.invoices.create, { session: token, company: "a", files: [], data: invoice("1", []) });
