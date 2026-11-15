@@ -2201,6 +2201,53 @@ export default defineSchema({
   })
     .index("by_company", ["company", "date"])
     .index("by_supplier_number", ["supplierId", "number"]),
+  /**
+   * Technical sheets of a group: a menu item (one portion) or a prep
+   * (syrup, sauce, batch) used inside other recipes. Lines are stock
+   * items or preps, in the ingredient's base unit, with a loss %.
+   */
+  invRecipes: defineTable({
+    group: v.string(),
+    name: v.string(),
+    kind: v.union(v.literal("menu"), v.literal("prep")),
+    category: v.string(),
+    /** What one batch gives (base unit); a menu item = 1 portion. */
+    yieldQty: v.number(),
+    yieldUnit: invUnit,
+    lines: v.array(
+      v.object({
+        itemId: v.optional(v.id("invItems")),
+        prepId: v.optional(v.id("invRecipes")),
+        qty: v.number(),
+        waste: v.number(),
+      })
+    ),
+    /** Target gross margin 0–1 (on the price without VAT). */
+    targetGp: v.optional(v.number()),
+    method: v.optional(v.string()),
+    glass: v.optional(v.string()),
+    garnish: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_group", ["group", "name"]),
+
+  /**
+   * A menu recipe in one bar: the POS product it is sold as (its price
+   * and, later, its sales) or a price typed by hand.
+   */
+  invRecipePrices: defineTable({
+    company: v.string(),
+    recipeId: v.id("invRecipes"),
+    productId: v.optional(v.string()),
+    /** Menu price with VAT, when no product is linked. */
+    price: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_recipe", ["recipeId", "company"])
+    .index("by_company", ["company"])
+    .index("by_product", ["company", "productId"]),
 });
+
 
 
