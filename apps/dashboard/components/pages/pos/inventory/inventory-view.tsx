@@ -10,6 +10,7 @@ import { ItemsSection } from "./items";
 import { MovesSection } from "./moves";
 import { PurchasingSection } from "./purchasing";
 import { RecipesSection } from "./recipes";
+import { RolloutSection } from "./rollout";
 import { SalesSection, VarianceSection } from "./sales";
 import { SetupSection } from "./setup";
 import { CARD, useOverview } from "./shared";
@@ -20,9 +21,10 @@ import { CARD, useOverview } from "./shared";
  * bar sells with this app's POS or with Lightspeed.
  */
 
-type Section = "items" | "count" | "invoices" | "recipes" | "sales" | "variance" | "purchasing" | "moves" | "setup";
+type Section = "rollout" | "items" | "count" | "invoices" | "recipes" | "sales" | "variance" | "purchasing" | "moves" | "setup";
 
 const SECTIONS: { id: Section; label: string }[] = [
+  { id: "rollout", label: "Implantação" },
   { id: "items", label: "Itens" },
   { id: "count", label: "Contagem" },
   { id: "invoices", label: "Invoices" },
@@ -65,6 +67,7 @@ export function InventoryView() {
         <p className={cn(CARD, "text-sm")}>Sem acesso ao estoque deste bar.</p>
       ) : (
         <>
+          {section === "rollout" ? <RolloutSection /> : null}
           {section === "items" ? <ItemsSection data={data} /> : null}
           {section === "count" ? <CountSection data={data} /> : null}
           {section === "invoices" ? <InvoicesSection data={data} /> : null}
