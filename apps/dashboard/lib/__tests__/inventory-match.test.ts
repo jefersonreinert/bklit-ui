@@ -25,6 +25,8 @@ describe("invoice matching", () => {
   it("scores names without sizes and packaging", () => {
     assert.ok(nameScore("TANQUERAY LONDON DRY GIN 70CL", "Gin Tanqueray London Dry 70cl") > 0.85);
     assert.ok(nameScore("Gordons Gin 6x70cl", "Gin Tanqueray 70cl") < 0.6);
+    // A case size glued together ("6X70CL") is size, not a name word
+    assert.equal(nameScore("TANQUERAY GIN 6X70CL", "Gin Tanqueray 70cl"), 1);
     assert.equal(nameScore("70cl", "Gin"), 0);
     const hit = bestByName("Aperol 1L", [
       { id: "a", name: "Campari 1L" },
