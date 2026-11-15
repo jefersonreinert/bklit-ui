@@ -25,6 +25,7 @@ import type * as i18n from "../i18n.js";
 import type * as ict from "../ict.js";
 import type * as inv from "../inv.js";
 import type * as inventory from "../inventory.js";
+import type * as invoices from "../invoices.js";
 import type * as jarvis from "../jarvis.js";
 import type * as journal from "../journal.js";
 import type * as lib from "../lib.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   ict: typeof ict;
   inv: typeof inv;
   inventory: typeof inventory;
+  invoices: typeof invoices;
   jarvis: typeof jarvis;
   journal: typeof journal;
   lib: typeof lib;

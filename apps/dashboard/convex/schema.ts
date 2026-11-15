@@ -346,6 +346,36 @@ export const invMoveKind = v.union(
   v.literal("adjust")
 );
 
+/** One line of a supplier invoice, as reviewed. */
+export const invInvoiceLine = v.object({
+  id: v.string(),
+  description: v.string(),
+  code: v.string(),
+  ean: v.string(),
+  quantity: v.number(),
+  unit: v.string(),
+  packSize: v.union(v.number(), v.null()),
+  packUnit: v.string(),
+  unitPrice: v.union(v.number(), v.null()),
+  vatRate: v.union(v.number(), v.null()),
+  /** Net cost of the line, without VAT. */
+  net: v.number(),
+  itemId: v.union(v.id("invItems"), v.null()),
+  /** Base units (ml, g, un) in one invoiced unit; 0 = still unknown. */
+  perUnit: v.number(),
+  match: v.union(
+    v.literal("ean"),
+    v.literal("code"),
+    v.literal("alias"),
+    v.literal("similar"),
+    v.literal("manual"),
+    v.literal("none")
+  ),
+  score: v.number(),
+  /** Not stock (delivery fee, deposit, service): ignored on approval. */
+  skip: v.boolean(),
+});
+
 export default defineSchema({
   notes: defineTable({
     clientId: v.string(),
@@ -2108,5 +2138,69 @@ export default defineSchema({
   })
     .index("by_count", ["countId"])
     .index("by_count_item", ["countId", "itemId", "areaId"]),
+  /** Suppliers of a group of bars (found by VAT number or name). */
+  invSuppliers: defineTable({
+    group: v.string(),
+    name: v.string(),
+    /** Normalized name, for matching invoices. */
+    key: v.string(),
+    taxId: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["group", "key"])
+    .index("by_tax", ["group", "taxId"]),
+
+  /**
+   * What the app learned from approved invoices: this supplier's code or
+   * description is this stock item, and one invoiced unit holds `perUnit`
+   * base units. Next invoices link by themselves.
+   */
+  invSupplierItems: defineTable({
+    supplierId: v.id("invSuppliers"),
+    code: v.optional(v.string()),
+    alias: v.string(),
+    itemId: v.id("invItems"),
+    perUnit: v.number(),
+    /** Last cost per base unit, to flag price rises. */
+    lastCost: v.number(),
+    lastAt: v.number(),
+  })
+    .index("by_code", ["supplierId", "code"])
+    .index("by_alias", ["supplierId", "alias"]),
+
+  /** Supplier invoices (and credit notes): read by AI, reviewed, approved. */
+  invInvoices: defineTable({
+    company: v.string(),
+    supplierId: v.id("invSuppliers"),
+    supplierName: v.string(),
+    number: v.string(),
+    date: v.string(),
+    dueDate: v.optional(v.string()),
+    currency: v.string(),
+    subtotal: v.number(),
+    vat: v.number(),
+    total: v.number(),
+    /** A credit note takes stock out (returns) and value back. */
+    credit: v.boolean(),
+    status: v.union(v.literal("review"), v.literal("approved"), v.literal("void")),
+    files: v.array(
+      v.object({ id: v.id("_storage"), name: v.string(), type: v.string() })
+    ),
+    lines: v.array(invInvoiceLine),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    approvedAt: v.optional(v.number()),
+    approvedBy: v.optional(v.string()),
+    voidedAt: v.optional(v.number()),
+    voidedBy: v.optional(v.string()),
+    paidAt: v.optional(v.number()),
+  })
+    .index("by_company", ["company", "date"])
+    .index("by_supplier_number", ["supplierId", "number"]),
 });
+
 
