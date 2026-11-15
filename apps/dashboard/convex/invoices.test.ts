@@ -180,6 +180,8 @@ describe("supplier invoices", () => {
     expect(ctx.duplicates.map((x) => x.number)).toEqual(["F-1"]);
     expect(ctx.past[0]?.lines[0]).toMatchObject({ itemId: aperol, perUnit: 1000, costPerBase: 0.012 });
     expect(ctx.items.find((i) => i.id === aperol)?.costPerBase).toBe(0.012);
+    // No menu in bar "a" in this test: an empty list, not an error
+    expect(ctx.menu).toEqual([]);
     await t.mutation(api.invoices.saveReview, {
       session: token,
       id: second,

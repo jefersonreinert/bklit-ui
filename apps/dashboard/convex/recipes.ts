@@ -373,3 +373,70 @@ function categoryOf(category: string, wine: boolean) {
   }
   return "other";
 }
+
+/**
+ * "Selling this product takes `qty` of this item": adds the ingredient to
+ * the product's sheet in this bar, or creates the sheet (linked to the
+ * product) when it has none. Used by the invoice agent's suggestions
+ * (Small Still Water = 1 bottle of 275 ml; Single Espresso = 7 g coffee).
+ */
+export const addUse = mutation({
+  args: {
+    session: v.optional(v.string()),
+    company: v.string(),
+    productId: v.string(),
+    itemId: v.id("invItems"),
+    qty: v.number(),
+  },
+  handler: async (ctx, { session, company, productId, itemId, qty }) => {
+    const user = await requireStaff(ctx, session, EDIT, company);
+    const group = await groupKey(ctx, company);
+    const item = await ctx.db.get(itemId);
+    if (item?.group !== group) {
+      throw new ConvexError("Item não encontrado.");
+    }
+    if (!(qty > 0)) {
+      throw new ConvexError("Quantidade inválida.");
+    }
+    const product = await ctx.db
+      .query("posProducts")
+      .withIndex("by_cid", (q) => q.eq("cid", productId))
+      .unique();
+    if (!product || (product.company ?? "main") !== company) {
+      throw new ConvexError("Produto não encontrado neste bar.");
+    }
+    const link = await ctx.db
+      .query("invRecipePrices")
+      .withIndex("by_product", (q) => q.eq("company", company).eq("productId", productId))
+      .first();
+    const recipe = link ? await ctx.db.get(link.recipeId) : null;
+    const now = Date.now();
+    const amount = Math.round(qty * 1000) / 1000;
+    if (recipe) {
+      if (recipe.lines.some((l) => l.itemId === itemId)) {
+        return recipe._id;
+      }
+      await ctx.db.patch(recipe._id, {
+        lines: [...recipe.lines, { itemId, qty: amount, waste: 0 }],
+        updatedAt: now,
+      });
+      await audit(ctx, user, "Ingrediente na ficha", `${recipe.name}: ${item.name} ${amount}`, company);
+      return recipe._id;
+    }
+    const id = await ctx.db.insert("invRecipes", {
+      group,
+      name: clean(product.name),
+      kind: "menu",
+      category: categoryOf(product.category, Boolean(product.wine)),
+      yieldQty: 1,
+      yieldUnit: "un",
+      lines: [{ itemId, qty: amount, waste: 0 }],
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("invRecipePrices", { company, recipeId: id, productId, updatedAt: now });
+    await audit(ctx, user, "Ficha criada", `${product.name}: ${item.name} ${amount}`, company);
+    return id;
+  },
+});

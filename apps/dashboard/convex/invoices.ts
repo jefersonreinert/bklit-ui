@@ -753,7 +753,43 @@ export const agentContext = query({
           expectedPackCost: l.packCost || null,
         })),
       }));
+    // The bar's menu (Lightspeed or this app's POS), with what each product
+    // already takes from stock, so the agent can say which products use
+    // a new item ("Small Still Water" = 1 bottle of 275 ml water)
+    const [products, links, recipes] = await Promise.all([
+      ctx.db
+        .query("posProducts")
+        .withIndex("by_company", (q) => q.eq("company", inv.company))
+        .take(1500),
+      ctx.db
+        .query("invRecipePrices")
+        .withIndex("by_company", (q) => q.eq("company", inv.company))
+        .take(2000),
+      ctx.db
+        .query("invRecipes")
+        .withIndex("by_group", (q) => q.eq("group", group))
+        .take(2000),
+    ]);
+    const recipeOf = new Map(links.filter((l) => l.productId).map((l) => [l.productId as string, l.recipeId as string]));
+    const recipeById = new Map(recipes.map((r) => [r._id as string, r]));
+    const menu = products
+      .filter((p) => p.available)
+      .map((p) => {
+        const r = recipeById.get(recipeOf.get(p.cid) ?? "");
+        return {
+          productId: p.cid,
+          name: p.name,
+          department: [p.category, p.subcategory].filter(Boolean).join(" › "),
+          price: p.price,
+          uses: r
+            ? r.lines
+                .filter((l) => l.itemId)
+                .map((l) => ({ item: name.get(l.itemId as string) ?? "", qty: l.qty }))
+            : [],
+        };
+      });
     return {
+      menu,
       openOrders: orders,
       invoice: {
         id: inv._id,
