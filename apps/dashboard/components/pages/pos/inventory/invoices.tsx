@@ -344,6 +344,7 @@ function InvoiceDetail({
             )}
           </div>
         ) : null}
+        {review || inv.review ? <AgentPanel d={d} editable={review} /> : null}
         <Header d={d} editable={review} />
         <div className="space-y-2">
           <p className="font-medium text-sm">Linhas ({inv.lines.length})</p>
@@ -664,5 +665,114 @@ function ItemPicker({
         </p>
       </div>
     </FullPage>
+  );
+}
+
+type Finding = NonNullable<Detail["invoice"]["review"]>["findings"][number];
+
+const LEVEL: Record<Finding["level"], { label: string; tone: string }> = {
+  error: { label: "Erro", tone: "border-destructive/40 bg-destructive/5 text-destructive" },
+  warn: { label: "Atenção", tone: "border-amber-400/50 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" },
+  info: { label: "Info", tone: "border-border bg-muted/40 text-foreground" },
+};
+
+/**
+ * The invoice agent: Claude reads the original next to the catalog and
+ * this supplier's history, links the lines, fixes the header and lists
+ * what a manager must look at. It never approves.
+ */
+function AgentPanel({ d, editable }: { d: Detail; editable: boolean }) {
+  const company = useCompany();
+  const inv = d.invoice;
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const res = await fetch(`${BASE_PATH}/api/inv/agent`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-pos-session": getSession() ?? "" },
+        body: JSON.stringify({ id: inv._id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "O agente falhou.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "O agente falhou.");
+    } finally {
+      setRunning(false);
+    }
+  };
+  const createItem = async (f: Finding) => {
+    if (!(f.newItem && f.lineId)) {
+      return;
+    }
+    const itemId = await sendPos(api.inv.saveItem, {
+      company,
+      name: f.newItem.name,
+      category: f.newItem.category,
+      unit: f.newItem.unit,
+      size: f.newItem.size,
+      container: f.newItem.container,
+      barcodes: [],
+    });
+    if (itemId) {
+      await sendPos(api.invoices.updateLine, { id: inv._id, lineId: f.lineId, itemId, skip: false });
+    }
+  };
+  const lineName = (id?: string) => inv.lines.find((l) => l.id === id)?.description;
+  const order: Finding["level"][] = ["error", "warn", "info"];
+  const findings = [...(inv.review?.findings ?? [])].sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+
+  return (
+    <div className={cn(CARD, "space-y-3")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-medium">Agente de invoices</p>
+          <p className="text-muted-foreground text-sm">
+            Confere o original com o catálogo e o histórico do fornecedor, liga as linhas, acerta o
+            cabeçalho e aponta duplicados, contas, IVA e preços. Você continua aprovando.
+          </p>
+        </div>
+        {editable ? (
+          <Button disabled={running} onClick={run}>
+            {running ? "Conferindo…" : inv.review ? "Conferir de novo" : "Conferir com o agente"}
+          </Button>
+        ) : null}
+      </div>
+      {running ? (
+        <p className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Spinner /> O agente está lendo o invoice e conferindo linha por linha. Pode levar 1 a 2 minutos.
+        </p>
+      ) : null}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {inv.review && !running ? (
+        <>
+          <p className="whitespace-pre-wrap text-sm">{inv.review.summary}</p>
+          {findings.length ? (
+            <ul className="space-y-2">
+              {findings.map((f, i) => (
+                <li className={cn("rounded-xl border px-3 py-2 text-sm", LEVEL[f.level].tone)} key={`${i}-${f.text.slice(0, 20)}`}>
+                  <span className="font-medium">{LEVEL[f.level].label}</span>
+                  {f.lineId ? <span className="opacity-80"> · {lineName(f.lineId)}</span> : null}
+                  <span className="block">{f.text}</span>
+                  {f.newItem && f.lineId && editable ? (
+                    <Button className="mt-2" onClick={() => createItem(f)} size="sm" variant="outline">
+                      Criar “{f.newItem.name}” ({num(f.newItem.size)} {f.newItem.unit}) e ligar
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="text-muted-foreground text-xs">
+            Conferido em {new Date(inv.review.at).toLocaleString()} por {inv.review.by}
+            {inv.review.inputTokens ? ` · ${num((inv.review.inputTokens + (inv.review.outputTokens ?? 0)) / 1000, 0)} mil tokens` : ""}
+          </p>
+        </>
+      ) : null}
+    </div>
   );
 }

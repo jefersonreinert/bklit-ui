@@ -160,6 +160,40 @@ describe("supplier invoices", () => {
     expect(d?.invoice.lines[0]?.itemId).toBe(aperol);
   });
 
+  it("gives the agent the history, possible duplicates and catalog, and keeps its review", async () => {
+    const { t, token, aperol } = await setup();
+    const first = await t.mutation(api.invoices.create, {
+      session: token,
+      company: "a",
+      files: [],
+      data: invoice("F-1", [line({ description: "Aperol Aperitivo 1L", quantity: 6, unitPrice: 12 })], 84.96),
+    });
+    await t.mutation(api.invoices.approve, { session: token, id: first });
+    // Same total, two days later, another number: maybe the same invoice
+    const second = await t.mutation(api.invoices.create, {
+      session: token,
+      company: "a",
+      files: [],
+      data: { ...invoice("F-2", [line({ description: "Aperol Aperitivo 1L", quantity: 6, unitPrice: 12 })], 84.96), date: "2026-11-12" },
+    });
+    const ctx = await t.query(api.invoices.agentContext, { session: token, id: second });
+    expect(ctx.duplicates.map((x) => x.number)).toEqual(["F-1"]);
+    expect(ctx.past[0]?.lines[0]).toMatchObject({ itemId: aperol, perUnit: 1000, costPerBase: 0.012 });
+    expect(ctx.items.find((i) => i.id === aperol)?.costPerBase).toBe(0.012);
+    await t.mutation(api.invoices.saveReview, {
+      session: token,
+      id: second,
+      review: {
+        at: 1,
+        by: "",
+        summary: "Possível duplicado do F-1.",
+        findings: [{ level: "error", text: "Mesmo total e fornecedor do F-1, dois dias antes." }],
+      },
+    });
+    const d = await t.query(api.invoices.detail, { session: token, id: second });
+    expect([d?.invoice.review?.by, d?.invoice.review?.findings.length]).toEqual(["Admin", 1]);
+  });
+
   it("finds the supplier again by VAT number", async () => {
     const { t, token } = await setup();
     const a = await t.mutation(api.invoices.create, { session: token, company: "a", files: [], data: invoice("1", []) });
