@@ -12,9 +12,9 @@ import {
   ActivityControl,
   ItemsControl,
   LastOp,
-  StockControl,
   TablesControl,
 } from "./pos-lightspeed-control";
+import { InventoryView } from "./inventory/inventory-view";
 
 /**
  * POS "Lightspeed" mode: the same app driving the business's Lightspeed
@@ -161,7 +161,7 @@ export function LightspeedApp() {
       {tab === "today" ? <Sales /> : null}
       {tab === "receipts" ? <Receipts /> : null}
       {tab === "items" ? <ItemsControl /> : null}
-      {tab === "stock" ? <StockControl onImport={() => setTab("import")} /> : null}
+      {tab === "stock" ? <InventoryView /> : null}
       {tab === "activity" ? <ActivityControl /> : null}
       {tab === "import" ? <Import /> : null}
     </div>

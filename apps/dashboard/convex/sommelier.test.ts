@@ -127,7 +127,9 @@ describe("AI sommelier", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.catalog).toContain("Colle Vecchio");
-    expect(r.catalog).toContain("ON TAP now: 25 ml €1.40");
+    expect(r.catalog).toContain("ON TAP now: 25 ml");
+    // Guests never hear prices: the AI does not get them
+    expect(r.catalog).not.toContain("€");
     expect(r.catalog).toContain("Charcuterie board");
     expect(r.catalog).not.toContain("Hidden Wine");
     expect(r.notes).toBe("Push Maltese wines");

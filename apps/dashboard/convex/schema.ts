@@ -333,6 +333,19 @@ const posPayment = v.object({
   at: v.number(),
 });
 
+export const invUnit = v.union(v.literal("ml"), v.literal("g"), v.literal("un"));
+
+export const invMoveKind = v.union(
+  v.literal("opening"),
+  v.literal("purchase"),
+  v.literal("sale"),
+  v.literal("waste"),
+  v.literal("transfer_in"),
+  v.literal("transfer_out"),
+  v.literal("count"),
+  v.literal("adjust")
+);
+
 export default defineSchema({
   notes: defineTable({
     clientId: v.string(),
@@ -1966,4 +1979,134 @@ export default defineSchema({
   })
     .index("by_key", ["company", "key"])
     .index("by_company_at", ["company", "at"]),
+  /* ------------------------------- inventory ------------------------------ */
+  // Stock control of a group of businesses (the bars of one owner): one
+  // catalog of stock items for the group, a balance per business, and a
+  // ledger of movements that is the only source of truth (the balance is
+  // always the sum of the ledger). Quantities are in the item's base unit
+  // (ml, g or un); costs are per base unit.
+
+  /** Businesses that share one stock catalog (and may transfer stock). */
+  invGroups: defineTable({
+    key: v.string(),
+    name: v.string(),
+    companies: v.array(v.string()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /** What is bought and counted (a bottle of gin), not what is sold. */
+  invItems: defineTable({
+    group: v.string(),
+    name: v.string(),
+    category: v.string(),
+    unit: invUnit,
+    /** Content of one container in the base unit (700 for a 70 cl bottle). */
+    size: v.number(),
+    /** Name of one container ("garrafa", "lata", "pacote"). */
+    container: v.string(),
+    barcodes: v.array(v.string()),
+    /** Bottle profile for weighing: grams empty and full (with the cap). */
+    emptyG: v.optional(v.number()),
+    fullG: v.optional(v.number()),
+    abv: v.optional(v.number()),
+    sku: v.optional(v.string()),
+    note: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_group", ["group", "name"]),
+
+  /** Barcode → item, unique inside a group. */
+  invBarcodes: defineTable({
+    group: v.string(),
+    code: v.string(),
+    itemId: v.id("invItems"),
+  })
+    .index("by_code", ["group", "code"])
+    .index("by_item", ["itemId"]),
+
+  /** Balance of an item in one business: a cache of the ledger. */
+  invStock: defineTable({
+    company: v.string(),
+    itemId: v.id("invItems"),
+    qty: v.number(),
+    /** Weighted average cost per base unit. */
+    avgCost: v.number(),
+    /** Minimum and par (ideal) level, in base units. */
+    min: v.optional(v.number()),
+    par: v.optional(v.number()),
+    lastCountAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_company", ["company"])
+    .index("by_item", ["itemId", "company"]),
+
+  /** Storage areas of a business (back bar, cellar, cold room…). */
+  invAreas: defineTable({
+    company: v.string(),
+    name: v.string(),
+    sort: v.number(),
+    /** Items in shelf order, so a count follows the shelves. */
+    items: v.array(v.id("invItems")),
+    active: v.boolean(),
+  }).index("by_company", ["company", "sort"]),
+
+  /** The ledger: every change of stock, never edited or deleted. */
+  invMoves: defineTable({
+    company: v.string(),
+    itemId: v.id("invItems"),
+    kind: invMoveKind,
+    /** Signed quantity in the base unit (+ in, − out). */
+    qty: v.number(),
+    /** Cost per base unit used for this movement. */
+    unitCost: v.number(),
+    /** Balance after this movement. */
+    after: v.number(),
+    /** Unique key of the source (count line, invoice line, sale) so the
+     * same source never moves stock twice. */
+    ref: v.optional(v.string()),
+    note: v.optional(v.string()),
+    userName: v.string(),
+    at: v.number(),
+  })
+    .index("by_company_at", ["company", "at"])
+    .index("by_item", ["itemId", "company", "at"])
+    .index("by_ref", ["ref"]),
+
+  /** Stock takes, per business (optionally some areas). */
+  invCounts: defineTable({
+    company: v.string(),
+    number: v.number(),
+    name: v.string(),
+    status: v.union(v.literal("open"), v.literal("closed")),
+    startedAt: v.number(),
+    startedBy: v.string(),
+    closedAt: v.optional(v.number()),
+    closedBy: v.optional(v.string()),
+    /** Totals when closed: value counted and value of the difference. */
+    value: v.optional(v.number()),
+    diffValue: v.optional(v.number()),
+  }).index("by_company", ["company", "startedAt"]),
+
+  /** One counted item in one area of a count (saved as it is typed). */
+  invCountLines: defineTable({
+    countId: v.id("invCounts"),
+    itemId: v.id("invItems"),
+    areaId: v.optional(v.id("invAreas")),
+    /** Full, closed containers. */
+    full: v.number(),
+    /** Weights (g) of the open bottles. */
+    weights: v.array(v.number()),
+    /** Loose quantity in the base unit (g of cheese, ml measured). */
+    loose: v.number(),
+    /** Total in the base unit, computed when saved. */
+    qty: v.number(),
+    /** The total used an estimated density (no full weight yet). */
+    estimated: v.boolean(),
+    userName: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_count", ["countId"])
+    .index("by_count_item", ["countId", "itemId", "areaId"]),
 });
+

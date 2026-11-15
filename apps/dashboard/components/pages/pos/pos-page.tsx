@@ -35,7 +35,7 @@ import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
 import { ReportsView } from "./pos-reports";
 import { SettingsView } from "./pos-settings";
-import { StockView } from "./pos-stock";
+import { InventoryView } from "./inventory/inventory-view";
 import { TablesView } from "./pos-tables";
 import { TeamView } from "./pos-team";
 import { VouchersView } from "./pos-vouchers";
@@ -395,7 +395,7 @@ function PosApp() {
           {tab === "sommelier" ? <SommelierView /> : null}
           {tab === "team" ? <TeamView /> : null}
           {tab === "products" ? <ProductsView /> : null}
-          {tab === "stock" ? <StockView /> : null}
+          {tab === "stock" ? <InventoryView /> : null}
           {tab === "customers" ? <CustomersView /> : null}
           {tab === "reports" ? <ReportsView /> : null}
           {tab === "vouchers" ? <VouchersView /> : null}
