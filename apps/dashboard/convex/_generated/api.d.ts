@@ -42,6 +42,7 @@ import type * as pos from "../pos.js";
 import type * as posapi from "../posapi.js";
 import type * as recipes from "../recipes.js";
 import type * as reservations from "../reservations.js";
+import type * as sales from "../sales.js";
 import type * as sommelier from "../sommelier.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   posapi: typeof posapi;
   recipes: typeof recipes;
   reservations: typeof reservations;
+  sales: typeof sales;
   sommelier: typeof sommelier;
   staff: typeof staff;
   stores: typeof stores;

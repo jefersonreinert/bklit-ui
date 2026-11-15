@@ -22,4 +22,10 @@ crons.interval("ohlc compact", { minutes: 10 }, internal.ohlc.compact, {});
  */
 crons.interval("lightspeed sync", { minutes: 10 }, internal.lightspeed.syncAll, {});
 
+/**
+ * Stock (convex/sales.ts): new sales of the POS, Lightspeed and the wine
+ * dispensers become stock usage through the technical sheets.
+ */
+crons.interval("stock from sales", { minutes: 5 }, internal.sales.runAll, {});
+
 export default crons;
