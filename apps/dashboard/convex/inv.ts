@@ -291,7 +291,7 @@ export const saveGroup = mutation({
   },
 });
 
-async function setBarcodes(
+export async function setBarcodes(
   ctx: MutationCtx,
   group: string,
   itemId: Id<"invItems">,
