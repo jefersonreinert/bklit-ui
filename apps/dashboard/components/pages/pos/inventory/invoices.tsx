@@ -344,7 +344,7 @@ function InvoiceDetail({
             )}
           </div>
         ) : null}
-        {review || inv.review ? <AgentPanel d={d} editable={review} /> : null}
+        {review || inv.review ? <AgentPanel d={d} data={data} editable={review} /> : null}
         <Header d={d} editable={review} />
         <div className="space-y-2">
           <p className="font-medium text-sm">Linhas ({inv.lines.length})</p>
@@ -681,7 +681,7 @@ const LEVEL: Record<Finding["level"], { label: string; tone: string }> = {
  * this supplier's history, links the lines, fixes the header and lists
  * what a manager must look at. It never approves.
  */
-function AgentPanel({ d, editable }: { d: Detail; editable: boolean }) {
+function AgentPanel({ d, data, editable }: { d: Detail; data: InvOverview; editable: boolean }) {
   const company = useCompany();
   const inv = d.invoice;
   const [running, setRunning] = useState(false);
@@ -705,23 +705,36 @@ function AgentPanel({ d, editable }: { d: Detail; editable: boolean }) {
       setRunning(false);
     }
   };
-  const createItem = async (f: Finding) => {
-    if (!(f.newItem && f.lineId)) {
-      return;
+  const [applied, setApplied] = useState<Set<number>>(new Set());
+  /** New item (if any) → linked to its line → sheets of the products that use it. */
+  const apply = async (f: Finding, index: number) => {
+    const line = inv.lines.find((l) => l.id === f.lineId);
+    let itemId = line?.itemId ?? null;
+    if (f.newItem && f.lineId) {
+      const created = await sendPos(api.inv.saveItem, {
+        company,
+        name: f.newItem.name,
+        category: f.newItem.category,
+        unit: f.newItem.unit,
+        size: f.newItem.size,
+        container: f.newItem.container,
+        barcodes: [],
+      });
+      if (!created) {
+        return;
+      }
+      itemId = created;
+      await sendPos(api.invoices.updateLine, { id: inv._id, lineId: f.lineId, itemId: created, skip: false });
     }
-    const itemId = await sendPos(api.inv.saveItem, {
-      company,
-      name: f.newItem.name,
-      category: f.newItem.category,
-      unit: f.newItem.unit,
-      size: f.newItem.size,
-      container: f.newItem.container,
-      barcodes: [],
-    });
     if (itemId) {
-      await sendPos(api.invoices.updateLine, { id: inv._id, lineId: f.lineId, itemId, skip: false });
+      for (const u of f.uses ?? []) {
+        await sendPos(api.recipes.addUse, { company, productId: u.productId, itemId, qty: u.qty });
+      }
     }
+    setApplied((s) => new Set(s).add(index));
   };
+  const unitOf = (f: Finding) =>
+    f.newItem?.unit ?? data.items.find((i) => i._id === inv.lines.find((l) => l.id === f.lineId)?.itemId)?.unit ?? "";
   const lineName = (id?: string) => inv.lines.find((l) => l.id === id)?.description;
   const order: Finding["level"][] = ["error", "warn", "info"];
   const findings = [...(inv.review?.findings ?? [])].sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
@@ -758,9 +771,18 @@ function AgentPanel({ d, editable }: { d: Detail; editable: boolean }) {
                   <span className="font-medium">{LEVEL[f.level].label}</span>
                   {f.lineId ? <span className="opacity-80"> · {lineName(f.lineId)}</span> : null}
                   <span className="block">{f.text}</span>
-                  {f.newItem && f.lineId && editable ? (
-                    <Button className="mt-2" onClick={() => createItem(f)} size="sm" variant="outline">
-                      Criar “{f.newItem.name}” ({num(f.newItem.size)} {f.newItem.unit}) e ligar
+                  {f.uses?.length ? (
+                    <span className="mt-1 block text-xs opacity-90">
+                      Fichas: {f.uses.map((u) => `${u.product} = ${num(u.qty)} ${unitOf(f)}`).join(" · ")}
+                    </span>
+                  ) : null}
+                  {editable && f.lineId && (f.newItem || f.uses?.length) ? (
+                    <Button className="mt-2" disabled={applied.has(i)} onClick={() => apply(f, i)} size="sm" variant="outline">
+                      {applied.has(i)
+                        ? "Feito"
+                        : f.newItem
+                          ? `Criar “${f.newItem.name}”${f.uses?.length ? `, ligar e criar ${f.uses.length} ficha(s)` : " e ligar"}`
+                          : `Criar ${f.uses?.length} ficha(s)`}
                     </Button>
                   ) : null}
                 </li>

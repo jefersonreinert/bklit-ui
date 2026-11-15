@@ -28,6 +28,9 @@ describe("invoice matching", () => {
     // A case size glued together ("6X70CL") is size, not a name word
     assert.equal(nameScore("TANQUERAY GIN 6X70CL", "Gin Tanqueray 70cl"), 1);
     assert.equal(nameScore("70cl", "Gin"), 0);
+    // An abbreviated brand is not another product that starts the same way
+    assert.ok(nameScore("MARG. STILL 275ML X 24 BCRS", "Margarita") < 0.5);
+    assert.ok(nameScore("Albarinos Rias Baixas", "Albarino Rias Baixas") > 0.9);
     const hit = bestByName("Aperol 1L", [
       { id: "a", name: "Campari 1L" },
       { id: "b", name: "Aperol Aperitivo 1L" },

@@ -58,6 +58,16 @@ function words(s: string) {
     .filter((w) => w.length > 1 && !NOISE.has(w) && !SIZE_TOKEN.test(w));
 }
 
+/**
+ * Two words of the same family ("albarino" / "albarinos", "limoncello" /
+ * "limoncell"): one starts the other and covers most of it. A short
+ * abbreviation ("marg" for a brand) does not make "margarita".
+ */
+function sameStem(a: string, b: string) {
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return short.length >= 5 && long.startsWith(short) && short.length / long.length >= 0.75;
+}
+
 /** 0–1: how alike two product names are (shared words, Dice score). */
 export function nameScore(a: string, b: string) {
   const wa = new Set(words(a));
@@ -67,7 +77,7 @@ export function nameScore(a: string, b: string) {
   }
   let shared = 0;
   for (const w of wa) {
-    if (wb.has(w) || [...wb].some((x) => x.length > 3 && w.length > 3 && (x.startsWith(w) || w.startsWith(x)))) {
+    if (wb.has(w) || [...wb].some((x) => sameStem(w, x))) {
       shared++;
     }
   }

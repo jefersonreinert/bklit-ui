@@ -386,6 +386,10 @@ export const invInvoiceReview = v.object({
       level: v.union(v.literal("info"), v.literal("warn"), v.literal("error")),
       lineId: v.optional(v.string()),
       text: v.string(),
+      /** Menu products that use this line's item, and how much per sale. */
+      uses: v.optional(
+        v.array(v.object({ productId: v.string(), product: v.string(), qty: v.number() }))
+      ),
       /** A stock item the agent suggests creating for a line. */
       newItem: v.optional(
         v.object({

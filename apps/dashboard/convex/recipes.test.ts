@@ -146,4 +146,16 @@ describe("technical sheets", () => {
     });
     expect((await find(t, token, "bar", "Negroni"))?.price).toBe(12.5);
   });
+
+  it("adds what a product takes from stock: creates its sheet, then adds ingredients once", async () => {
+    const { t, token, gin, campari } = await setup();
+    const first = await t.mutation(api.recipes.addUse, { session: token, company: "bar", productId: "negroni", itemId: gin, qty: 30 });
+    const again = await t.mutation(api.recipes.addUse, { session: token, company: "bar", productId: "negroni", itemId: campari, qty: 30 });
+    await t.mutation(api.recipes.addUse, { session: token, company: "bar", productId: "negroni", itemId: gin, qty: 99 });
+    expect(again).toBe(first);
+    const r = await find(t, token, "bar", "Negroni");
+    expect([r?.productId, r?.lines.map((l) => [l.itemId, l.qty])]).toEqual(["negroni", [[gin, 30], [campari, 30]]]);
+    expect(r?.cost).toBe(1.95);
+  });
 });
+
