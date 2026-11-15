@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Icon } from "@/lib/icons";
+import type { ExtractedInvoice } from "@/lib/invoices/types";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { getSession, sendPos, useCompany, usePosQuery } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,38 @@ async function prepare(file: File): Promise<{ data: string; mimeType: string }> 
   return { data: url.slice(url.indexOf(",") + 1), mimeType: "image/jpeg" };
 }
 
+/** Only the fields the server takes, whatever else the AI returned. */
+function toInvoiceArgs(d: ExtractedInvoice) {
+  const party = (p: ExtractedInvoice["supplier"] | undefined) => ({
+    name: p?.name ?? "",
+    taxId: p?.taxId ?? "",
+    address: p?.address ?? "",
+  });
+  const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? n : null);
+  return {
+    supplier: party(d.supplier),
+    number: d.number ?? "",
+    date: d.date ?? "",
+    dueDate: d.dueDate ?? "",
+    currency: d.currency ?? "",
+    subtotal: num(d.subtotal),
+    vatTotal: num(d.vatTotal),
+    total: num(d.total),
+    lines: (d.lines ?? []).map((l) => ({
+      description: l.description ?? "",
+      code: l.code ?? "",
+      ean: l.ean ?? "",
+      quantity: num(l.quantity),
+      unit: l.unit ?? "",
+      packSize: num(l.packSize),
+      packUnit: l.packUnit ?? "",
+      unitPrice: num(l.unitPrice),
+      vatRate: num(l.vatRate),
+      lineTotal: num(l.lineTotal),
+    })),
+  };
+}
+
 export function InvoicesSection({ data }: { data: InvOverview }) {
   const company = useCompany();
   const fmt = useMoney();
@@ -106,7 +139,7 @@ export function InvoicesSection({ data }: { data: InvOverview }) {
         stored.push({ id: storageId, name: f.name.slice(0, 80), type: f.type });
       }
       setStep("Ligando as linhas aos itens…");
-      const id = await sendPos(api.invoices.create, { company, data: body, files: stored });
+      const id = await sendPos(api.invoices.create, { company, data: toInvoiceArgs(body), files: stored });
       if (id) {
         setOpen(id);
         setFilter("review");
