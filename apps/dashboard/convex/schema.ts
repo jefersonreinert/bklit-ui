@@ -2247,7 +2247,42 @@ export default defineSchema({
     .index("by_recipe", ["recipeId", "company"])
     .index("by_company", ["company"])
     .index("by_product", ["company", "productId"]),
+  /**
+   * What a sold thing takes from stock when the POS product link is not
+   * enough: a Lightspeed SKU or a CSV name → a recipe, or a dispenser
+   * wine (Wine Monitor SKU) → a stock item in ml.
+   */
+  invSaleLinks: defineTable({
+    company: v.string(),
+    source: v.union(v.literal("pos"), v.literal("ls"), v.literal("wm"), v.literal("csv")),
+    key: v.string(),
+    name: v.string(),
+    recipeId: v.optional(v.id("invRecipes")),
+    itemId: v.optional(v.id("invItems")),
+    updatedAt: v.number(),
+  }).index("by_key", ["company", "source", "key"]),
+
+  /** Up to when each sales source of a business was turned into usage. */
+  invSalesCursors: defineTable({
+    company: v.string(),
+    source: v.string(),
+    at: v.number(),
+    runAt: v.number(),
+  }).index("by_key", ["company", "source"]),
+
+  /** Sales imported from a file (Lightspeed export, spreadsheet). */
+  invSalesImports: defineTable({
+    company: v.string(),
+    date: v.string(),
+    fileName: v.string(),
+    lines: v.array(
+      v.object({ sku: v.string(), name: v.string(), qty: v.number(), posted: v.boolean() })
+    ),
+    createdAt: v.number(),
+    createdBy: v.string(),
+  }).index("by_company", ["company", "createdAt"]),
 });
+
 
 
 

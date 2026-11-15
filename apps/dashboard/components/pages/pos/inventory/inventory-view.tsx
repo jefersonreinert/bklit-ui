@@ -9,6 +9,7 @@ import { InvoicesSection } from "./invoices";
 import { ItemsSection } from "./items";
 import { MovesSection } from "./moves";
 import { RecipesSection } from "./recipes";
+import { SalesSection, VarianceSection } from "./sales";
 import { SetupSection } from "./setup";
 import { CARD, useOverview } from "./shared";
 
@@ -18,13 +19,15 @@ import { CARD, useOverview } from "./shared";
  * bar sells with this app's POS or with Lightspeed.
  */
 
-type Section = "items" | "count" | "invoices" | "recipes" | "moves" | "setup";
+type Section = "items" | "count" | "invoices" | "recipes" | "sales" | "variance" | "moves" | "setup";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "items", label: "Itens" },
   { id: "count", label: "Contagem" },
   { id: "invoices", label: "Invoices" },
   { id: "recipes", label: "Fichas" },
+  { id: "sales", label: "Vendas" },
+  { id: "variance", label: "Variância" },
   { id: "moves", label: "Movimentos" },
   { id: "setup", label: "Ajustes" },
 ];
@@ -64,6 +67,8 @@ export function InventoryView() {
           {section === "count" ? <CountSection data={data} /> : null}
           {section === "invoices" ? <InvoicesSection data={data} /> : null}
           {section === "recipes" ? <RecipesSection data={data} /> : null}
+          {section === "sales" ? <SalesSection data={data} /> : null}
+          {section === "variance" ? <VarianceSection /> : null}
           {section === "moves" ? <MovesSection data={data} /> : null}
           {section === "setup" ? <SetupSection data={data} /> : null}
         </>
