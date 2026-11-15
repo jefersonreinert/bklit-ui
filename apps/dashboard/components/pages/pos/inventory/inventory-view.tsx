@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useCompany } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import { CountSection } from "./count";
+import { InvoicesSection } from "./invoices";
 import { ItemsSection } from "./items";
 import { MovesSection } from "./moves";
 import { SetupSection } from "./setup";
@@ -16,11 +17,12 @@ import { CARD, useOverview } from "./shared";
  * bar sells with this app's POS or with Lightspeed.
  */
 
-type Section = "items" | "count" | "moves" | "setup";
+type Section = "items" | "count" | "invoices" | "moves" | "setup";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "items", label: "Itens" },
   { id: "count", label: "Contagem" },
+  { id: "invoices", label: "Invoices" },
   { id: "moves", label: "Movimentos" },
   { id: "setup", label: "Ajustes" },
 ];
@@ -58,6 +60,7 @@ export function InventoryView() {
         <>
           {section === "items" ? <ItemsSection data={data} /> : null}
           {section === "count" ? <CountSection data={data} /> : null}
+          {section === "invoices" ? <InvoicesSection data={data} /> : null}
           {section === "moves" ? <MovesSection data={data} /> : null}
           {section === "setup" ? <SetupSection data={data} /> : null}
         </>

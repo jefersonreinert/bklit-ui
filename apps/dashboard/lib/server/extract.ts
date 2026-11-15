@@ -4,6 +4,7 @@ import { DESIGN_FONTS } from "@/lib/menu-canvas/fonts";
 import { MENU_ICONS } from "@/lib/menu-canvas/model";
 import type { AiEdit, ExtractedDesign } from "@/lib/menu-canvas/types";
 import type { ExtractedMenu } from "@/lib/menu-studio/types";
+import { providerKey } from "./ai/service";
 import { groqKey } from "./groq-chat";
 import { GroqError, groqJson } from "./groq-json";
 
@@ -196,7 +197,9 @@ async function askClaude<T>(
   prompt: string,
   schema: Schema
 ): Promise<T> {
-  const client = new Anthropic();
+  // The key saved in Settings → AI Providers, else the server's own
+  const saved = await providerKey("anthropic").catch(() => null);
+  const client = new Anthropic(saved ? { apiKey: saved.key } : undefined);
   const content = contentFor(files);
   content.push({ type: "text", text: prompt });
   const stream = client.messages.stream({
