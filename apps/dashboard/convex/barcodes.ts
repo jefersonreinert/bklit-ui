@@ -1,8 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { validGtin, normalizeGtin } from "../lib/inventory/gtin";
-import { AUTO_SCORE, bestByName, nameScore } from "../lib/inventory/match";
+import { AUTO_SCORE, bestByName, nameScore, wmKey } from "../lib/inventory/match";
 import type { Doc, Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
+import { internalMutation, type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { audit, requireStaff } from "./access";
 import { groupOf, setBarcodes } from "./inv";
 
@@ -34,7 +34,12 @@ async function wines(ctx: QueryCtx, company: string) {
     .withIndex("by_company", (q) => q.eq("company", company))
     .first();
   const list = (Array.isArray(state?.wines) ? state.wines : []) as WmWine[];
-  return list.filter((w) => w?.sku && w.name);
+  // "sku" below is the wine's unique key (SKU + name): the portal reuses SKUs
+  const seen = new Set<string>();
+  return list
+    .filter((w) => w?.sku && w.name)
+    .map((w) => ({ ...w, wmSku: w.sku, sku: wmKey(w.sku, w.name) }))
+    .filter((w) => !seen.has(w.sku) && Boolean(seen.add(w.sku)));
 }
 
 async function wineItems(ctx: QueryCtx, company: string) {
@@ -84,6 +89,7 @@ export const context = query({
             .slice(0, 5);
       rows.push({
         sku: w.sku,
+        wmSku: w.wmSku,
         wine: w.name,
         producer: w.producer ?? "",
         grape: w.title2 || w.description || "",
@@ -110,63 +116,84 @@ export const context = query({
   },
 });
 
+const findV = v.object({
+  sku: v.string(),
+  gtin: v.optional(v.string()),
+  itemId: v.optional(v.id("invItems")),
+  source: v.optional(v.string()),
+  note: v.optional(v.string()),
+  confidence: v.number(),
+});
+
+type FindIn = {
+  sku: string;
+  gtin?: string;
+  itemId?: Id<"invItems">;
+  source?: string;
+  note?: string;
+  confidence: number;
+};
+
+/** Saves finds for review; codes with a wrong check digit are dropped. */
+async function saveFindsFor(ctx: MutationCtx, company: string, finds: FindIn[]) {
+  const { items } = await wineItems(ctx, company);
+  const inGroup = new Set(items.map((i) => i._id as string));
+  const known = new Map((await wines(ctx, company)).map((w) => [w.sku, w.name]));
+  let saved = 0;
+  for (const f of finds.slice(0, 200)) {
+    const wine = known.get(f.sku);
+    if (!wine) {
+      continue;
+    }
+    const code = f.gtin ? normalizeGtin(f.gtin) : "";
+    const ok = code && validGtin(code);
+    const row = await ctx.db
+      .query("invBarcodeFinds")
+      .withIndex("by_sku", (q) => q.eq("company", company).eq("sku", f.sku))
+      .first();
+    if (row?.status === "accepted") {
+      continue;
+    }
+    const doc = {
+      company,
+      sku: f.sku,
+      wine,
+      gtin: ok ? code : undefined,
+      itemId: f.itemId && inGroup.has(f.itemId) ? f.itemId : undefined,
+      source: clean(f.source, 300) || undefined,
+      note:
+        clean(code && !ok ? `Código ${code} com dígito verificador errado, descartado. ${f.note ?? ""}` : f.note, 300) ||
+        undefined,
+      confidence: Math.min(1, Math.max(0, f.confidence)),
+      status: ok ? ("found" as const) : ("notfound" as const),
+      at: Date.now(),
+    };
+    if (row) {
+      await ctx.db.replace(row._id, doc);
+    } else {
+      await ctx.db.insert("invBarcodeFinds", doc);
+    }
+    saved++;
+  }
+  return saved;
+}
+
 /** What the finder agent found (codes with a wrong check digit are dropped). */
 export const saveFinds = mutation({
-  args: {
-    session: v.optional(v.string()),
-    company: v.string(),
-    finds: v.array(
-      v.object({
-        sku: v.string(),
-        gtin: v.optional(v.string()),
-        itemId: v.optional(v.id("invItems")),
-        source: v.optional(v.string()),
-        note: v.optional(v.string()),
-        confidence: v.number(),
-      })
-    ),
-  },
+  args: { session: v.optional(v.string()), company: v.string(), finds: v.array(findV) },
   handler: async (ctx, { session, company, finds }) => {
     await requireStaff(ctx, session, ["stock", "products"], company);
-    const { items } = await wineItems(ctx, company);
-    const inGroup = new Set(items.map((i) => i._id as string));
-    const known = new Map((await wines(ctx, company)).map((w) => [w.sku, w.name]));
-    let saved = 0;
-    for (const f of finds.slice(0, 50)) {
-      const wine = known.get(f.sku);
-      if (!wine) {
-        continue;
-      }
-      const code = f.gtin ? normalizeGtin(f.gtin) : "";
-      const ok = code && validGtin(code);
-      const row = await ctx.db
-        .query("invBarcodeFinds")
-        .withIndex("by_sku", (q) => q.eq("company", company).eq("sku", f.sku))
-        .first();
-      if (row?.status === "accepted") {
-        continue;
-      }
-      const doc = {
-        company,
-        sku: f.sku,
-        wine,
-        gtin: ok ? code : undefined,
-        itemId: f.itemId && inGroup.has(f.itemId) ? f.itemId : undefined,
-        source: clean(f.source, 300) || undefined,
-        note: clean(code && !ok ? `Código ${code} com dígito verificador errado, descartado. ${f.note ?? ""}` : f.note, 300) || undefined,
-        confidence: Math.min(1, Math.max(0, f.confidence)),
-        status: ok ? ("found" as const) : ("notfound" as const),
-        at: Date.now(),
-      };
-      if (row) {
-        await ctx.db.replace(row._id, doc);
-      } else {
-        await ctx.db.insert("invBarcodeFinds", doc);
-      }
-      saved++;
-    }
-    return saved;
+    return await saveFindsFor(ctx, company, finds);
   },
+});
+
+/**
+ * The same from a lookup done outside the app (by the operator with
+ * the deploy key): the finds wait for a person to accept them.
+ */
+export const importFinds = internalMutation({
+  args: { company: v.string(), finds: v.array(findV) },
+  handler: async (ctx, { company, finds }) => await saveFindsFor(ctx, company, finds),
 });
 
 /**

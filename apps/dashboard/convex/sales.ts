@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import type { CostRecipe } from "../lib/inventory/costing";
-import { normalizeName } from "../lib/inventory/match";
+import { normalizeName, wmKey } from "../lib/inventory/match";
 import { expandRecipe } from "../lib/inventory/usage";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -297,7 +297,7 @@ async function runWineMonitor(ctx: MutationCtx, m: Mapper, company: string) {
     .withIndex("by_company_at", (q) => q.eq("company", company).gt("at", cursor))
     .take(BATCH);
   for (const p of [...recent, ...fresh]) {
-    const t = m.resolve("wm", { sku: p.sku || normalizeName(p.wine) });
+    const t = m.resolve("wm", { sku: wmKey(p.sku, p.wine) });
     if (t && p.ml > 0) {
       await consume(ctx, m, company, `sale:wm:${p._id}`, t, p.ml, p.at);
     }
@@ -407,7 +407,7 @@ export const status = query({
       .withIndex("by_company_at", (q) => q.eq("company", company).gt("at", from))
       .take(6000);
     for (const p of pours) {
-      const key = p.sku || normalizeName(p.wine);
+      const key = wmKey(p.sku, p.wine);
       if (!m.resolve("wm", { sku: key })) {
         miss("wm", key, p.wine, p.ml);
       }

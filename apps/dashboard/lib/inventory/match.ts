@@ -210,3 +210,10 @@ export function lineNet(line: {
   }
   return 0;
 }
+
+/**
+ * A dispenser wine's identity. The Wine Monitor SKU alone is not unique
+ * (the portal reuses numbers across wines), so the name goes with it.
+ */
+export const wmKey = (sku: string | undefined, wine: string) =>
+  `${(sku ?? "").trim()}:${normalizeName(wine)}`;
