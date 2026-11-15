@@ -376,6 +376,32 @@ export const invInvoiceLine = v.object({
   skip: v.boolean(),
 });
 
+/** What the invoice agent found (lib/server/invoice-agent.ts). */
+export const invInvoiceReview = v.object({
+  at: v.number(),
+  by: v.string(),
+  summary: v.string(),
+  findings: v.array(
+    v.object({
+      level: v.union(v.literal("info"), v.literal("warn"), v.literal("error")),
+      lineId: v.optional(v.string()),
+      text: v.string(),
+      /** A stock item the agent suggests creating for a line. */
+      newItem: v.optional(
+        v.object({
+          name: v.string(),
+          category: v.string(),
+          unit: v.union(v.literal("ml"), v.literal("g"), v.literal("un")),
+          size: v.number(),
+          container: v.string(),
+        })
+      ),
+    })
+  ),
+  inputTokens: v.optional(v.number()),
+  outputTokens: v.optional(v.number()),
+});
+
 export default defineSchema({
   notes: defineTable({
     clientId: v.string(),
@@ -2198,6 +2224,8 @@ export default defineSchema({
     voidedAt: v.optional(v.number()),
     voidedBy: v.optional(v.string()),
     paidAt: v.optional(v.number()),
+    /** The invoice agent's check: summary and findings for the reviewer. */
+    review: v.optional(invInvoiceReview),
   })
     .index("by_company", ["company", "date"])
     .index("by_supplier_number", ["supplierId", "number"]),

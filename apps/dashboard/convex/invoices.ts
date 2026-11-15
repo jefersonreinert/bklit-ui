@@ -14,6 +14,7 @@ import {
   query,
 } from "./_generated/server";
 import { audit, requireStaff } from "./access";
+import { invInvoiceReview } from "./schema";
 import { groupOf, post } from "./inv";
 
 /**
@@ -654,5 +655,114 @@ export const setPaid = mutation({
     const inv = await invoiceFor(ctx, id);
     await requireStaff(ctx, session, "stock", inv.company);
     await ctx.db.patch(id, { paidAt: paid ? Date.now() : undefined });
+  },
+});
+
+/* ------------------------------ the agent -------------------------------- */
+
+/**
+ * Everything the invoice agent needs in one read: the invoice, the bar's
+ * stock catalog with costs, this supplier's last approved invoices (what
+ * each line was linked to, the conversion and the cost per base unit),
+ * and other invoices that could be the same one.
+ */
+export const agentContext = query({
+  args: { session: v.optional(v.string()), id: v.id("invInvoices") },
+  handler: async (ctx, { session, id }) => {
+    const inv = await invoiceFor(ctx, id);
+    await requireStaff(ctx, session, "stock", inv.company);
+    const group = await groupKey(ctx, inv.company);
+    const [items, stock, history] = await Promise.all([
+      groupItems(ctx, group),
+      ctx.db
+        .query("invStock")
+        .withIndex("by_company", (q) => q.eq("company", inv.company))
+        .take(2000),
+      ctx.db
+        .query("invInvoices")
+        .withIndex("by_supplier_number", (q) => q.eq("supplierId", inv.supplierId))
+        .take(200),
+    ]);
+    const cost = new Map(stock.map((s) => [s.itemId as string, s.avgCost]));
+    const name = new Map(items.map((i) => [i._id as string, i.name]));
+    const others = history.filter((h) => h._id !== id && h.status !== "void");
+    const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+    const duplicates = others
+      .filter(
+        (h) =>
+          (inv.number && h.number === inv.number) ||
+          (Math.abs(h.total - inv.total) < 0.01 && Math.abs(day(h.date) - day(inv.date)) <= 10)
+      )
+      .map((h) => ({ id: h._id, number: h.number, date: h.date, total: h.total, status: h.status }));
+    const past = others
+      .filter((h) => h.status === "approved")
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 8)
+      .map((h) => ({
+        number: h.number,
+        date: h.date,
+        total: h.total,
+        lines: h.lines
+          .filter((l) => !l.skip && l.itemId)
+          .map((l) => {
+            const qty = l.quantity * l.perUnit;
+            return {
+              description: l.description,
+              code: l.code,
+              item: name.get(l.itemId as string) ?? "",
+              itemId: l.itemId,
+              unit: l.unit,
+              perUnit: l.perUnit,
+              costPerBase: qty > 0 ? Math.round((Math.abs(l.net) / qty) * 1e6) / 1e6 : null,
+            };
+          }),
+      }));
+    return {
+      invoice: {
+        id: inv._id,
+        supplier: inv.supplierName,
+        number: inv.number,
+        date: inv.date,
+        dueDate: inv.dueDate ?? "",
+        currency: inv.currency,
+        subtotal: inv.subtotal,
+        vat: inv.vat,
+        total: inv.total,
+        credit: inv.credit,
+        status: inv.status,
+        lines: inv.lines,
+      },
+      files: await Promise.all(inv.files.map(async (f) => ({ type: f.type, url: await ctx.storage.getUrl(f.id) }))),
+      items: items.map((i) => ({
+        id: i._id,
+        name: i.name,
+        category: i.category,
+        unit: i.unit,
+        size: i.size,
+        container: i.container,
+        barcodes: i.barcodes,
+        costPerBase: cost.get(i._id) ?? 0,
+      })),
+      past,
+      duplicates,
+    };
+  },
+});
+
+/** Saves the agent's conclusion on the invoice (shown to the reviewer). */
+export const saveReview = mutation({
+  args: { session: v.optional(v.string()), id: v.id("invInvoices"), review: invInvoiceReview },
+  handler: async (ctx, { session, id, review }) => {
+    const inv = await invoiceFor(ctx, id);
+    const user = await requireStaff(ctx, session, "stock", inv.company);
+    await ctx.db.patch(id, {
+      review: {
+        ...review,
+        by: user.name,
+        summary: review.summary.slice(0, 2000),
+        findings: review.findings.slice(0, 60).map((f) => ({ ...f, text: f.text.slice(0, 500) })),
+      },
+    });
+    await audit(ctx, user, "Invoice conferido pelo agente", `${inv.supplierName} ${inv.number}`, inv.company);
   },
 });
