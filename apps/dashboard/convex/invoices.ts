@@ -548,6 +548,18 @@ export const approve = mutation({
       await learn(ctx, inv.supplierId, l, unitCost, now);
     }
     await ctx.db.patch(id, { status: "approved", approvedAt: now, approvedBy: user.name });
+    // The supplier's open order in this bar is now received (by this invoice)
+    const open = (
+      await ctx.db
+        .query("invOrders")
+        .withIndex("by_supplier", (q) => q.eq("supplierId", inv.supplierId).eq("status", "sent"))
+        .take(20)
+    )
+      .filter((o) => o.company === inv.company)
+      .sort((a, b) => (b.sentAt ?? 0) - (a.sentAt ?? 0))[0];
+    if (open && !inv.credit) {
+      await ctx.db.patch(open._id, { status: "received", receivedAt: now, invoiceId: id });
+    }
     await audit(ctx, user, "Invoice aprovado", `${inv.supplierName} ${inv.number}: ${posted} linhas`, inv.company);
     return posted;
   },
@@ -717,7 +729,32 @@ export const agentContext = query({
             };
           }),
       }));
+    const orders = (
+      await Promise.all(
+        (["sent", "draft"] as const).map((status) =>
+          ctx.db
+            .query("invOrders")
+            .withIndex("by_supplier", (q) => q.eq("supplierId", inv.supplierId).eq("status", status))
+            .take(10)
+        )
+      )
+    )
+      .flat()
+      .filter((o) => o.company === inv.company)
+      .map((o) => ({
+        number: o.number,
+        status: o.status,
+        sentAt: o.sentAt ? new Date(o.sentAt).toISOString().slice(0, 10) : null,
+        lines: o.lines.map((l) => ({
+          itemId: l.itemId,
+          item: name.get(l.itemId as string) ?? "",
+          packs: l.packs,
+          perUnit: l.perUnit,
+          expectedPackCost: l.packCost || null,
+        })),
+      }));
     return {
+      openOrders: orders,
       invoice: {
         id: inv._id,
         supplier: inv.supplierName,

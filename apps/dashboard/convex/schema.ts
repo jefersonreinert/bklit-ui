@@ -2173,6 +2173,10 @@ export default defineSchema({
     taxId: v.optional(v.string()),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
+    /** Days an order must last: delivery cycle + lead time (default 7). */
+    coverDays: v.optional(v.number()),
+    /** Contact person / order notes ("order before 14:00"). */
+    note: v.optional(v.string()),
     active: v.boolean(),
     createdAt: v.number(),
   })
@@ -2195,7 +2199,8 @@ export default defineSchema({
     lastAt: v.number(),
   })
     .index("by_code", ["supplierId", "code"])
-    .index("by_alias", ["supplierId", "alias"]),
+    .index("by_alias", ["supplierId", "alias"])
+    .index("by_item", ["itemId", "lastAt"]),
 
   /** Supplier invoices (and credit notes): read by AI, reviewed, approved. */
   invInvoices: defineTable({
@@ -2309,7 +2314,51 @@ export default defineSchema({
     createdAt: v.number(),
     createdBy: v.string(),
   }).index("by_company", ["company", "createdAt"]),
+  /** Stock used per item and day (sales + waste), kept by the ledger. */
+  invUsageDaily: defineTable({
+    company: v.string(),
+    itemId: v.id("invItems"),
+    day: v.string(),
+    qty: v.number(),
+  })
+    .index("by_item_day", ["company", "itemId", "day"])
+    .index("by_company_day", ["company", "day"]),
+
+  /** Purchase orders to suppliers: draft → sent → received (or cancelled). */
+  invOrders: defineTable({
+    company: v.string(),
+    number: v.number(),
+    supplierId: v.id("invSuppliers"),
+    supplierName: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sent"),
+      v.literal("received"),
+      v.literal("cancelled")
+    ),
+    lines: v.array(
+      v.object({
+        itemId: v.id("invItems"),
+        /** Packs ordered (cases, bottles, kg). */
+        packs: v.number(),
+        /** Base units in one pack. */
+        perUnit: v.number(),
+        /** Expected cost of one pack, without VAT (0 = unknown). */
+        packCost: v.number(),
+      })
+    ),
+    note: v.optional(v.string()),
+    deliveryDate: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    sentAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+    invoiceId: v.optional(v.id("invInvoices")),
+  })
+    .index("by_company", ["company", "createdAt"])
+    .index("by_supplier", ["supplierId", "status"]),
 });
+
 
 
 

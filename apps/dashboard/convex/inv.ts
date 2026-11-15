@@ -4,6 +4,7 @@ import {
   type BottleProfile,
   countedQty,
 } from "../lib/inventory/units";
+import { dayKey } from "../lib/inventory/reorder";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   type MutationCtx,
@@ -125,6 +126,19 @@ export async function post(
       avgCost,
       updatedAt: at,
     });
+  }
+  // Daily usage for reorder suggestions (a sale given back lowers it)
+  if (m.kind === "sale" || m.kind === "waste") {
+    const day = dayKey(at);
+    const used = await ctx.db
+      .query("invUsageDaily")
+      .withIndex("by_item_day", (q) => q.eq("company", m.company).eq("itemId", m.itemId).eq("day", day))
+      .unique();
+    if (used) {
+      await ctx.db.patch(used._id, { qty: r3(used.qty - qty) });
+    } else {
+      await ctx.db.insert("invUsageDaily", { company: m.company, itemId: m.itemId, day, qty: -qty });
+    }
   }
   return await ctx.db.insert("invMoves", {
     company: m.company,

@@ -50,7 +50,7 @@ const NOISE = new Set([
   "do",
   "and",
 ]);
-const SIZE_TOKEN = /^\d+([.,]\d+)?(cl|ml|l|lt|kg|g|gr|x)?$/;
+const SIZE_TOKEN = /^(\d+x)?\d+([.,]\d+)?(cl|ml|l|lt|kg|g|gr|x)?$/;
 
 function words(s: string) {
   return normalizeName(s)
