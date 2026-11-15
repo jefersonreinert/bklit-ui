@@ -35,6 +35,8 @@ async function setup() {
       wines: [
         { sku: "48", name: "DI MAJO NORANTE GRECO", producer: "FARSNS", title2: "GRECO", origin: "ITALY", volumeMl: 750 },
         { sku: "95", name: "MAS AMIEL", producer: "XYZ", title2: "GRENACHE", origin: "FRANCE", volumeMl: 500 },
+        // The portal reuses SKUs across different wines
+        { sku: "48", name: "CARUSU ROSSO", title2: "NERELLO MASCALESE", volumeMl: 750 },
       ],
     });
   });
@@ -46,8 +48,9 @@ describe("dispenser wine barcodes", () => {
     const { t, token, greco } = await setup();
     const rows = await t.query(api.barcodes.context, { session: token, company: "vino" });
     expect(rows.map((r) => [r.sku, r.itemId, r.linked])).toEqual([
-      ["48", greco, false],
-      ["95", null, false],
+      ["48:carusu rosso", null, false],
+      ["48:di majo norante greco", greco, false],
+      ["95:mas amiel", null, false],
     ]);
   });
 
@@ -57,12 +60,13 @@ describe("dispenser wine barcodes", () => {
       session: token,
       company: "vino",
       finds: [
-        { sku: "48", gtin: "4006381333932", confidence: 0.9 },
-        { sku: "95", gtin: "3281540031113", source: "https://example.test", confidence: 0.7 },
+        { sku: "48:di majo norante greco", gtin: "4006381333932", confidence: 0.9 },
+        { sku: "95:mas amiel", gtin: "3281540031113", source: "https://example.test", confidence: 0.7 },
       ],
     });
     const rows = await t.query(api.barcodes.context, { session: token, company: "vino" });
     expect(rows.map((r) => [r.find?.status, r.find?.gtin])).toEqual([
+      [undefined, undefined],
       ["notfound", null],
       ["found", "3281540031113"],
     ]);
@@ -70,8 +74,8 @@ describe("dispenser wine barcodes", () => {
 
   it("accepting puts the code on the item, creates it when missing, and links the dispenser", async () => {
     const { t, token, greco } = await setup();
-    await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48", gtin: "4006381333931" });
-    const newItem = await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "95", gtin: "3281540031113" });
+    await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48:di majo norante greco", gtin: "4006381333931" });
+    const newItem = await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "95:mas amiel", gtin: "3281540031113" });
     const o = await t.query(api.inv.overview, { session: token, company: "vino" });
     expect(o.items.find((i) => i._id === greco)?.barcodes).toEqual(["4006381333931"]);
     expect(o.items.find((i) => i._id === newItem)).toMatchObject({ name: "MAS AMIEL", size: 500, unit: "ml", barcodes: ["3281540031113"] });
@@ -79,14 +83,14 @@ describe("dispenser wine barcodes", () => {
     // The pours of both wines now take stock from these items
     const links = await t.run(async (ctx) => ctx.db.query("invSaleLinks").collect());
     expect(links.map((l) => [l.source, l.key, l.itemId])).toEqual([
-      ["wm", "48", greco],
-      ["wm", "95", newItem],
+      ["wm", "48:di majo norante greco", greco],
+      ["wm", "95:mas amiel", newItem],
     ]);
     // A wrong code is refused; a scanned one is taken as read
     await expect(
-      t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48", gtin: "123" })
+      t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48:di majo norante greco", gtin: "123" })
     ).rejects.toThrow(/inválido/);
-    await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48", gtin: "INT-0048", scanned: true });
+    await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "48:di majo norante greco", gtin: "INT-0048", scanned: true });
     const after = await t.query(api.inv.overview, { session: token, company: "vino" });
     expect(after.items.find((i) => i._id === greco)?.barcodes).toEqual(["4006381333931", "INT-0048"]);
   });
@@ -104,13 +108,13 @@ describe("dispenser wine barcodes", () => {
       barcodes: [],
     });
     const rows = await t.query(api.barcodes.context, { session: token, company: "vino" });
-    expect(rows.find((r) => r.sku === "95")?.candidates.map((c) => c.id)).toContain(bin);
+    expect(rows.find((r) => r.sku === "95:mas amiel")?.candidates.map((c) => c.id)).toContain(bin);
     await t.mutation(api.barcodes.saveFinds, {
       session: token,
       company: "vino",
-      finds: [{ sku: "95", gtin: "3281540031113", itemId: bin, confidence: 0.92 }],
+      finds: [{ sku: "95:mas amiel", gtin: "3281540031113", itemId: bin, confidence: 0.92 }],
     });
-    const item = await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "95", gtin: "3281540031113" });
+    const item = await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "95:mas amiel", gtin: "3281540031113" });
     expect(item).toBe(bin);
   });
 });

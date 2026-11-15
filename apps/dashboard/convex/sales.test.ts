@@ -184,7 +184,7 @@ describe("sales → stock", () => {
       session: token,
       company: "bar",
       source: "wm",
-      key: "51",
+      key: "51:marsovin 1919 white",
       name: "MARSOVIN 1919 WHITE",
       itemId: wine,
     });
