@@ -2361,7 +2361,29 @@ export default defineSchema({
   })
     .index("by_company", ["company", "createdAt"])
     .index("by_supplier", ["supplierId", "status"]),
+  /** Barcodes found for the dispenser wines (by the finder agent or a scan). */
+  invBarcodeFinds: defineTable({
+    company: v.string(),
+    /** Wine Monitor SKU of the wine. */
+    sku: v.string(),
+    wine: v.string(),
+    gtin: v.optional(v.string()),
+    /** The catalog item the finder says is this same wine. */
+    itemId: v.optional(v.id("invItems")),
+    source: v.optional(v.string()),
+    note: v.optional(v.string()),
+    /** 0–1: how sure the finder is that the code is this exact wine. */
+    confidence: v.number(),
+    status: v.union(
+      v.literal("found"),
+      v.literal("notfound"),
+      v.literal("accepted"),
+      v.literal("rejected")
+    ),
+    at: v.number(),
+  }).index("by_sku", ["company", "sku"]),
 });
+
 
 
 

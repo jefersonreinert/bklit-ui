@@ -16,6 +16,7 @@ import { sendPos, useCompany, usePos } from "@/lib/pos/store";
 import { onScan } from "@/lib/scan/hub";
 import { cn } from "@/lib/utils";
 import { BarcodeScanner } from "../scan/barcode-scanner";
+import { WineBarcodes } from "./wine-barcodes";
 import {
   CARD,
   Field,
@@ -44,6 +45,7 @@ export function ItemsSection({ data }: { data: InvOverview }) {
   const [newCode, setNewCode] = useState("");
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [barcodes, setBarcodes] = useState(false);
 
   const openCode = useCallback(
     (code: string) => {
@@ -140,6 +142,9 @@ export function ItemsSection({ data }: { data: InvOverview }) {
         <Button onClick={() => setImporting(true)} variant="outline">
           Importar do POS
         </Button>
+        <Button onClick={() => setBarcodes(true)} variant="outline">
+          Códigos das máquinas
+        </Button>
       </div>
 
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
@@ -219,6 +224,7 @@ export function ItemsSection({ data }: { data: InvOverview }) {
       {importing ? (
         <ImportFromPos data={data} onClose={() => setImporting(false)} />
       ) : null}
+      {barcodes ? <WineBarcodes onClose={() => setBarcodes(false)} /> : null}
     </div>
   );
 }

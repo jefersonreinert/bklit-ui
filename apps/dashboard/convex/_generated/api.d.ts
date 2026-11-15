@@ -10,6 +10,7 @@
 
 import type * as access from "../access.js";
 import type * as ai from "../ai.js";
+import type * as barcodes from "../barcodes.js";
 import type * as categories from "../categories.js";
 import type * as contracts from "../contracts.js";
 import type * as crons from "../crons.js";
@@ -63,6 +64,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   ai: typeof ai;
+  barcodes: typeof barcodes;
   categories: typeof categories;
   contracts: typeof contracts;
   crons: typeof crons;
