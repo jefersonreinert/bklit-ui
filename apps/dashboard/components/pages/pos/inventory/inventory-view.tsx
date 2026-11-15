@@ -8,6 +8,7 @@ import { CountSection } from "./count";
 import { InvoicesSection } from "./invoices";
 import { ItemsSection } from "./items";
 import { MovesSection } from "./moves";
+import { RecipesSection } from "./recipes";
 import { SetupSection } from "./setup";
 import { CARD, useOverview } from "./shared";
 
@@ -17,12 +18,13 @@ import { CARD, useOverview } from "./shared";
  * bar sells with this app's POS or with Lightspeed.
  */
 
-type Section = "items" | "count" | "invoices" | "moves" | "setup";
+type Section = "items" | "count" | "invoices" | "recipes" | "moves" | "setup";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "items", label: "Itens" },
   { id: "count", label: "Contagem" },
   { id: "invoices", label: "Invoices" },
+  { id: "recipes", label: "Fichas" },
   { id: "moves", label: "Movimentos" },
   { id: "setup", label: "Ajustes" },
 ];
@@ -61,6 +63,7 @@ export function InventoryView() {
           {section === "items" ? <ItemsSection data={data} /> : null}
           {section === "count" ? <CountSection data={data} /> : null}
           {section === "invoices" ? <InvoicesSection data={data} /> : null}
+          {section === "recipes" ? <RecipesSection data={data} /> : null}
           {section === "moves" ? <MovesSection data={data} /> : null}
           {section === "setup" ? <SetupSection data={data} /> : null}
         </>
