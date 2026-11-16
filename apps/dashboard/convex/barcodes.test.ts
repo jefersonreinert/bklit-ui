@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -116,5 +116,31 @@ describe("dispenser wine barcodes", () => {
     });
     const item = await t.mutation(api.barcodes.accept, { session: token, company: "vino", sku: "95:mas amiel", gtin: "3281540031113" });
     expect(item).toBe(bin);
+  });
+
+  it("links dispenser wines to items by name, creating the missing ones with their code", async () => {
+    const { t, token, greco } = await setup();
+    const res = await t.mutation(internal.barcodes.linkWines, {
+      company: "vino",
+      rows: [
+        { sku: "48:di majo norante greco", item: "Di Majo Norante Greco" },
+        { sku: "95:mas amiel", item: "Mas Amiel", gtin: "9311789000732" },
+        { sku: "48:carusu rosso", item: "Carusu Rosso", gtin: "9311789000732" },
+        { sku: "1:nope", item: "Nope" },
+      ],
+    });
+    expect(res).toMatchObject({ linked: 3, created: 2, codes: 1, missing: ["1:nope"] });
+    expect(res.skipped).toEqual(["Carusu Rosso: 9311789000732"]);
+    const rows = await t.query(api.barcodes.context, { session: token, company: "vino" });
+    expect(rows.every((r) => r.linked)).toBe(true);
+    expect(rows.find((r) => r.sku === "48:di majo norante greco")?.itemId).toBe(greco);
+    const amiel = rows.find((r) => r.sku === "95:mas amiel");
+    expect(amiel?.barcodes).toEqual(["9311789000732"]);
+    // Running it again changes nothing
+    const again = await t.mutation(internal.barcodes.linkWines, {
+      company: "vino",
+      rows: [{ sku: "95:mas amiel", item: "Mas Amiel", gtin: "9311789000732" }],
+    });
+    expect(again).toMatchObject({ linked: 1, created: 0, codes: 0 });
   });
 });
