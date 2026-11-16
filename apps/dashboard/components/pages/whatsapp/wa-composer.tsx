@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { CameraSheet, useDictation } from "@/components/pages/ai/attachments";
+import { WaChecklist } from "./wa-checklist";
 import { Icon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +79,7 @@ export function WaComposer({
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const dictation = useDictation((t) =>
     setText((d) => (d.trim() ? `${d.trimEnd()} ${t}` : t))
@@ -162,6 +164,14 @@ export function WaComposer({
           >
             <Icon className="size-5" name="IconCamera1" />
           </button>
+          <button
+            aria-label="Enviar um checklist"
+            className={cn(ROUND, SOFT)}
+            onClick={() => setChecklistOpen(true)}
+            type="button"
+          >
+            <Icon className="size-5" name="IconChecklist" />
+          </button>
           <div className="ml-auto flex items-center gap-1.5">
             <button
               aria-label={
@@ -194,6 +204,9 @@ export function WaComposer({
           </div>
         </div>
       </form>
+      {checklistOpen ? (
+        <WaChecklist onClose={() => setChecklistOpen(false)} onSend={(t) => onSend(t, null)} />
+      ) : null}
       {cameraOpen ? (
         <CameraSheet
           onCapture={async (a) => {
