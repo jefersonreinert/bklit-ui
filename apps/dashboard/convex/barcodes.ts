@@ -310,3 +310,85 @@ export const reject = mutation({
     }
   },
 });
+
+/**
+ * Admin import (run from the CLI): each dispenser wine gets its stock
+ * item — the catalog item with that name, else a new bottle — plus its
+ * code when given, and the dispenser link, so its pours take stock.
+ * A code already on another item is skipped and reported, never moved.
+ */
+export const linkWines = internalMutation({
+  args: {
+    company: v.string(),
+    rows: v.array(
+      v.object({ sku: v.string(), item: v.string(), gtin: v.optional(v.string()) })
+    ),
+  },
+  handler: async (ctx, { company, rows }) => {
+    const known = new Map((await wines(ctx, company)).map((w) => [w.sku, w]));
+    const { group } = await wineItems(ctx, company);
+    const out = { linked: 0, created: 0, codes: 0, missing: [] as string[], skipped: [] as string[] };
+    for (const r of rows.slice(0, 300)) {
+      const w = known.get(r.sku);
+      const name = clean(r.item, 120);
+      if (!(w && name)) {
+        out.missing.push(r.sku);
+        continue;
+      }
+      let item = await ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", group).eq("name", name))
+        .first();
+      if (!item) {
+        const now = Date.now();
+        const id = await ctx.db.insert("invItems", {
+          group,
+          name,
+          category: "wine",
+          unit: "ml",
+          size: w.volumeMl && w.volumeMl > 0 ? w.volumeMl : 750,
+          container: "garrafa",
+          barcodes: [],
+          note: [w.title2 || w.description, w.origin, w.vintage].filter(Boolean).join(" · ") || undefined,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+        item = (await ctx.db.get(id)) as Doc<"invItems">;
+        out.created++;
+      } else if (!item.active) {
+        await ctx.db.patch(item._id, { active: true, updatedAt: Date.now() });
+      }
+      const code = r.gtin ? normalizeGtin(r.gtin) : "";
+      if (code && validGtin(code) && !item.barcodes.includes(code)) {
+        const taken = await ctx.db
+          .query("invBarcodes")
+          .withIndex("by_code", (q) => q.eq("group", group).eq("code", code))
+          .first();
+        if (taken && taken.itemId !== item._id) {
+          out.skipped.push(`${name}: ${code}`);
+        } else {
+          const codes = await setBarcodes(ctx, group, item._id, [...item.barcodes, code]);
+          await ctx.db.patch(item._id, { barcodes: codes, updatedAt: Date.now() });
+          out.codes++;
+        }
+      }
+      const link = await linkOf(ctx, company, r.sku);
+      if (!link) {
+        await ctx.db.insert("invSaleLinks", {
+          company,
+          source: "wm",
+          key: r.sku,
+          name: w.name,
+          itemId: item._id,
+          updatedAt: Date.now(),
+        });
+      } else if (link.itemId !== item._id) {
+        await ctx.db.patch(link._id, { itemId: item._id, recipeId: undefined, updatedAt: Date.now() });
+      }
+      out.linked++;
+    }
+    await audit(ctx, null, "Vinhos das máquinas no estoque", `${out.linked} ligados, ${out.created} itens novos`, company);
+    return out;
+  },
+});
