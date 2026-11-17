@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
@@ -222,5 +222,28 @@ describe("inventory ledger", () => {
     await gin(t, token);
     await expect(t.query(api.inv.overview, { session: waiter, company: "a" })).rejects.toThrow();
     await expect(t.mutation(api.inv.startCount, { session: waiter, company: "a" })).rejects.toThrow();
+  });
+
+  it("admin import creates items and fixes the unit only while an item has no movement", async () => {
+    const { t, token } = await setup();
+    const loose = await gin(t, token, { name: "Jameson", unit: "un", size: 1, container: "un", barcodes: [] });
+    const moved = await gin(t, token, { name: "Bombay", unit: "un", size: 1, container: "un", barcodes: [] });
+    await t.mutation(api.inv.addMove, { session: token, company: "a", itemId: moved, kind: "opening", qty: 2 });
+    const bottle = { category: "spirits", unit: "ml" as const, size: 700, container: "garrafa" };
+    const res = await t.mutation(internal.inv.upsertItems, {
+      company: "a",
+      items: [
+        { name: "Jameson", ...bottle },
+        { name: "Bombay", ...bottle },
+        { name: "Monin Vanilla", ...bottle, category: "mixer" },
+      ],
+    });
+    expect(res).toEqual({ created: 1, updated: 1, same: 0, locked: ["Bombay"] });
+    const o = await t.query(api.inv.overview, { session: token, company: "a" });
+    const by = (id: string) => o.items.find((i) => i._id === id);
+    expect(by(loose)).toMatchObject({ unit: "ml", size: 700, container: "garrafa" });
+    expect(by(moved)).toMatchObject({ unit: "un", size: 1, container: "garrafa" });
+    const again = await t.mutation(internal.inv.upsertItems, { company: "a", items: [{ name: "Monin Vanilla", ...bottle, category: "mixer" }] });
+    expect(again).toMatchObject({ created: 0, same: 1 });
   });
 });

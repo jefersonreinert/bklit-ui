@@ -7,6 +7,7 @@ import {
 import { dayKey } from "../lib/inventory/reorder";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  internalMutation,
   type MutationCtx,
   mutation,
   type QueryCtx,
@@ -900,3 +901,65 @@ export const deleteCount = mutation({
   },
 });
 
+
+/**
+ * Admin import (run from the CLI): creates the bar's stock items by name,
+ * or fixes an existing one's unit, size, container and category — only
+ * while it has no movement, so a balance is never reinterpreted.
+ */
+export const upsertItems = internalMutation({
+  args: {
+    company: v.string(),
+    items: v.array(
+      v.object({
+        name: v.string(),
+        category: v.string(),
+        unit: invUnit,
+        size: v.number(),
+        container: v.string(),
+        note: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, { company, items }) => {
+    const group = await groupKey(ctx, company);
+    const out = { created: 0, updated: 0, same: 0, locked: [] as string[] };
+    for (const a of items.slice(0, 500)) {
+      const name = clean(a.name);
+      const size = a.unit === "un" ? Math.max(1, Math.round(a.size)) : r3(a.size);
+      if (!(name && size > 0)) {
+        continue;
+      }
+      const fields = { category: clean(a.category, 40) || "other", unit: a.unit, size, container: clean(a.container, 40) || "un" };
+      const cur = await ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", group).eq("name", name))
+        .first();
+      const now = Date.now();
+      if (!cur) {
+        await ctx.db.insert("invItems", { group, name, ...fields, barcodes: [], note: a.note, active: true, createdAt: now, updatedAt: now });
+        out.created++;
+        continue;
+      }
+      const same =
+        cur.active && cur.category === fields.category && cur.unit === fields.unit && cur.size === fields.size && cur.container === fields.container;
+      if (same) {
+        out.same++;
+        continue;
+      }
+      const moved = await ctx.db
+        .query("invMoves")
+        .withIndex("by_item", (q) => q.eq("itemId", cur._id))
+        .first();
+      if (moved && (cur.unit !== fields.unit || cur.size !== fields.size)) {
+        out.locked.push(name);
+        await ctx.db.patch(cur._id, { category: fields.category, container: fields.container, active: true, updatedAt: now });
+        continue;
+      }
+      await ctx.db.patch(cur._id, { ...fields, active: true, updatedAt: now });
+      out.updated++;
+    }
+    await audit(ctx, null, "Itens do bar importados", `${out.created} novos, ${out.updated} corrigidos`, company);
+    return out;
+  },
+});
