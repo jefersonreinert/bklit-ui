@@ -963,3 +963,47 @@ export const upsertItems = internalMutation({
     return out;
   },
 });
+
+/**
+ * Admin (CLI): adds a code to the bar's stock item with that name. A code
+ * already on another item is reported and left where it is.
+ */
+export const addBarcodes = internalMutation({
+  args: {
+    company: v.string(),
+    rows: v.array(v.object({ name: v.string(), code: v.string() })),
+  },
+  handler: async (ctx, { company, rows }) => {
+    const group = await groupKey(ctx, company);
+    const out = { added: 0, had: 0, noItem: [] as string[], taken: [] as string[] };
+    for (const r of rows.slice(0, 500)) {
+      const name = clean(r.name);
+      const code = r.code.trim().slice(0, 40);
+      const item = await ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", group).eq("name", name))
+        .first();
+      if (!(item && code)) {
+        out.noItem.push(name);
+        continue;
+      }
+      if (item.barcodes.includes(code)) {
+        out.had++;
+        continue;
+      }
+      const other = await ctx.db
+        .query("invBarcodes")
+        .withIndex("by_code", (q) => q.eq("group", group).eq("code", code))
+        .first();
+      if (other && other.itemId !== item._id) {
+        out.taken.push(`${name}: ${code}`);
+        continue;
+      }
+      const codes = await setBarcodes(ctx, group, item._id, [...item.barcodes, code]);
+      await ctx.db.patch(item._id, { barcodes: codes, updatedAt: Date.now() });
+      out.added++;
+    }
+    await audit(ctx, null, "Códigos copiados para o estoque", `${out.added} códigos`, company);
+    return out;
+  },
+});

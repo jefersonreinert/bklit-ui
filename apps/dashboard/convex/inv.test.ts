@@ -246,4 +246,21 @@ describe("inventory ledger", () => {
     const again = await t.mutation(internal.inv.upsertItems, { company: "a", items: [{ name: "Monin Vanilla", ...bottle, category: "mixer" }] });
     expect(again).toMatchObject({ created: 0, same: 1 });
   });
+
+  it("admin adds codes to items by name and never moves a code from another item", async () => {
+    const { t, token } = await setup();
+    const a = await gin(t, token, { name: "Jameson", barcodes: [] });
+    await gin(t, token, { name: "Bombay", barcodes: ["111"] });
+    const res = await t.mutation(internal.inv.addBarcodes, {
+      company: "a",
+      rows: [
+        { name: "Jameson", code: "5011007003005" },
+        { name: "Jameson", code: "111" },
+        { name: "Nope", code: "222" },
+      ],
+    });
+    expect(res).toEqual({ added: 1, had: 0, noItem: ["Nope"], taken: ["Jameson: 111"] });
+    const o = await t.query(api.inv.overview, { session: token, company: "a" });
+    expect(o.items.find((i) => i._id === a)?.barcodes).toEqual(["5011007003005"]);
+  });
 });
