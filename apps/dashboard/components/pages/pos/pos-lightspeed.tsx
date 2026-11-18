@@ -14,7 +14,7 @@ import {
   LastOp,
   TablesControl,
 } from "./pos-lightspeed-control";
-import { InventoryView } from "./inventory/inventory-view";
+import { ManageView } from "./manage/manage-view";
 
 /**
  * POS "Lightspeed" mode: the same app driving the business's Lightspeed
@@ -113,7 +113,7 @@ const TABS: { id: Tab; label: string; icon: Parameters<typeof Icon>[0]["name"] }
   { id: "today", label: "Vendas", icon: "IconChart1" },
   { id: "receipts", label: "Recibos", icon: "IconReceiptBill" },
   { id: "items", label: "Itens", icon: "IconTag" },
-  { id: "stock", label: "Estoque", icon: "IconArchive" },
+  { id: "stock", label: "Gestão", icon: "IconArchive" },
   { id: "activity", label: "Atividade", icon: "IconListBullets" },
   { id: "import", label: "Importar", icon: "IconArrowInbox" },
 ];
@@ -161,7 +161,7 @@ export function LightspeedApp() {
       {tab === "today" ? <Sales /> : null}
       {tab === "receipts" ? <Receipts /> : null}
       {tab === "items" ? <ItemsControl /> : null}
-      {tab === "stock" ? <InventoryView /> : null}
+      {tab === "stock" ? <ManageView products={false} /> : null}
       {tab === "activity" ? <ActivityControl /> : null}
       {tab === "import" ? <Import /> : null}
     </div>

@@ -1087,3 +1087,70 @@ export const syncCodes = internalMutation({
     return { products: products.length, items: items.length };
   },
 });
+
+/* -------------------------------- pending -------------------------------- */
+
+const BOTTLES = new Set(["spirits", "liqueur", "wine", "sparkling", "beer", "soft", "mixer"]);
+const LIST = 40;
+
+/**
+ * What still needs someone in this bar, for the Gestão panel: products on
+ * sale for nothing or without a price, cocktails with no technical sheet,
+ * bottles without a barcode, stock under its minimum and invoices waiting.
+ */
+export const pending = query({
+  args: { session: v.optional(v.string()), company: v.string() },
+  handler: async (ctx, { session, company }) => {
+    await requireStaff(ctx, session, READ, company);
+    const key = await groupKey(ctx, company);
+    const [products, items, stock, prices, invoices] = await Promise.all([
+      ctx.db
+        .query("posProducts")
+        .withIndex("by_company", (q) => q.eq("company", company))
+        .take(3000),
+      ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", key))
+        .take(MAX_ITEMS),
+      ctx.db
+        .query("invStock")
+        .withIndex("by_company", (q) => q.eq("company", company))
+        .take(MAX_ITEMS),
+      ctx.db
+        .query("invRecipePrices")
+        .withIndex("by_company", (q) => q.eq("company", company))
+        .take(3000),
+      ctx.db
+        .query("invInvoices")
+        .withIndex("by_company", (q) => q.eq("company", company))
+        .order("desc")
+        .take(200),
+    ]);
+    const product = (p: Doc<"posProducts">) => ({ id: p.cid, name: p.name, category: p.category });
+    const linked = new Set(prices.map((r) => r.productId).filter(Boolean));
+    const byItem = new Map(stock.map((s) => [s.itemId as string, s]));
+    const active = items.filter((i) => i.active);
+    const free = products.filter((p) => p.available && !(p.price > 0));
+    const noPrice = products.filter((p) => !p.available && !(p.price > 0));
+    const noSheet = products.filter((p) => /cocktail/i.test(p.category) && !linked.has(p.cid));
+    const noCode = active.filter((i) => BOTTLES.has(i.category) && !i.barcodes.length);
+    const low = active
+      .map((i) => ({ i, s: byItem.get(i._id) }))
+      .filter(({ s }) => s?.min !== undefined && s.qty < s.min)
+      .map(({ i, s }) => ({ id: i._id, name: i.name, qty: s?.qty ?? 0, min: s?.min ?? 0, unit: i.unit, size: i.size, container: i.container }));
+    const review = invoices.filter((x) => x.status === "review");
+    const neverCounted = active.filter((i) => byItem.get(i._id)?.lastCountAt === undefined).length;
+    return {
+      free: { count: free.length, list: free.slice(0, LIST).map(product) },
+      noPrice: { count: noPrice.length, list: noPrice.slice(0, LIST).map(product) },
+      noSheet: { count: noSheet.length, list: noSheet.slice(0, LIST).map(product) },
+      noCode: { count: noCode.length, list: noCode.slice(0, LIST).map((i) => ({ id: i._id, name: i.name, category: i.category })) },
+      low: { count: low.length, list: low.slice(0, LIST) },
+      invoices: {
+        count: review.length,
+        list: review.slice(0, LIST).map((x) => ({ id: x._id, supplier: x.supplierName, number: x.number, total: x.total, date: x.date })),
+      },
+      totals: { products: products.length, items: active.length, sheets: linked.size, neverCounted },
+    };
+  },
+});

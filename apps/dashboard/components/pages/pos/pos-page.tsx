@@ -31,11 +31,10 @@ import {
   usePosMode,
 } from "./pos-lightspeed";
 import { OrdersView } from "./pos-orders";
-import { ProductsView } from "./pos-products";
 import { RegisterView } from "./pos-register";
 import { ReportsView } from "./pos-reports";
 import { SettingsView } from "./pos-settings";
-import { InventoryView } from "./inventory/inventory-view";
+import { ManageView } from "./manage/manage-view";
 import { TablesView } from "./pos-tables";
 import { TeamView } from "./pos-team";
 import { VouchersView } from "./pos-vouchers";
@@ -51,8 +50,7 @@ export type PosTab =
   | "winemonitor"
   | "sommelier"
   | "team"
-  | "products"
-  | "stock"
+  | "manage"
   | "customers"
   | "reports"
   | "vouchers"
@@ -97,16 +95,10 @@ const TABS: { id: PosTab; label: string; icon: IconName; perm: PosPerm[] }[] = [
     perm: ["orders", "team"],
   },
   {
-    id: "products",
-    label: "Produtos",
-    icon: "IconTag",
-    perm: ["products", "stock"],
-  },
-  {
-    id: "stock",
-    label: "Estoque",
+    id: "manage",
+    label: "Gestão",
     icon: "IconArchive",
-    perm: ["stock"],
+    perm: ["products", "stock"],
   },
   {
     id: "customers",
@@ -394,8 +386,7 @@ function PosApp() {
           {tab === "winemonitor" ? <WineMonitorView /> : null}
           {tab === "sommelier" ? <SommelierView /> : null}
           {tab === "team" ? <TeamView /> : null}
-          {tab === "products" ? <ProductsView /> : null}
-          {tab === "stock" ? <InventoryView /> : null}
+          {tab === "manage" ? <ManageView /> : null}
           {tab === "customers" ? <CustomersView /> : null}
           {tab === "reports" ? <ReportsView /> : null}
           {tab === "vouchers" ? <VouchersView /> : null}
