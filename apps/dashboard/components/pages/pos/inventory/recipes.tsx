@@ -17,7 +17,7 @@ import {
   recipeCost,
   suggestedPrice,
 } from "@/lib/inventory/costing";
-import type { InvUnit } from "@/lib/inventory/units";
+import { INV_CATEGORIES, type InvUnit, invCategoryLabel } from "@/lib/inventory/units";
 import { sendPos, useCompany, usePos, usePosQuery } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
 import {
@@ -519,6 +519,24 @@ function RecipeEditor({
   );
 }
 
+/** Lowercase without accents, so "limao" finds "PT: limão". */
+const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/** Base unit and pack a new ingredient of this category usually comes in. */
+const NEW_DEFAULTS: Record<string, { unit: InvUnit; size: number; container: string }> = {
+  spirits: { unit: "ml", size: 700, container: "garrafa" },
+  liqueur: { unit: "ml", size: 700, container: "garrafa" },
+  wine: { unit: "ml", size: 750, container: "garrafa" },
+  sparkling: { unit: "ml", size: 750, container: "garrafa" },
+  beer: { unit: "ml", size: 330, container: "garrafa" },
+  soft: { unit: "ml", size: 200, container: "garrafa" },
+  mixer: { unit: "ml", size: 700, container: "garrafa" },
+  produce: { unit: "g", size: 1000, container: "kg" },
+  meat: { unit: "g", size: 1000, container: "kg" },
+  dairy: { unit: "g", size: 1000, container: "kg" },
+  dry: { unit: "g", size: 1000, container: "pacote" },
+};
+
 function IngredientPicker({
   data,
   preps,
@@ -530,17 +548,48 @@ function IngredientPicker({
   onPick: (p: { itemId?: Id<"invItems">; prepId?: Id<"invRecipes"> }) => void;
   onClose: () => void;
 }) {
+  const company = useCompany();
   const [q, setQ] = useState("");
+  const [cat, setCat] = useState<string>("all");
+  const [creating, setCreating] = useState(false);
   const s = q.trim().toLowerCase();
-  const items = data.items
-    .filter((i) => i.active && (!s || i.name.toLowerCase().includes(s)))
+  const active = data.items.filter((i) => i.active);
+  const cats = INV_CATEGORIES.filter((c) => active.some((i) => i.category === c.value));
+  const items = active
+    .filter((i) => (cat === "all" || i.category === cat) && (!s || fold(`${i.name} ${i.note ?? ""}`).includes(fold(s))))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 50);
-  const ps = preps.filter((p) => !s || p.name.toLowerCase().includes(s)).slice(0, 20);
+    .slice(0, s ? 80 : 300);
+  const ps =
+    cat === "all" || cat === "prep" ? preps.filter((p) => !s || p.name.toLowerCase().includes(s)).slice(0, 30) : [];
+  const exact = active.some((i) => i.name.toLowerCase() === s) || preps.some((p) => p.name.toLowerCase() === s);
   return (
     <FullPage onClose={onClose} open title="Adicionar ingrediente">
       <div className="mx-auto max-w-xl space-y-2 p-4">
-        <Input autoFocus onChange={(e) => setQ(e.target.value)} placeholder="Buscar item ou preparo…" value={q} />
+        <Input autoFocus onChange={(e) => setQ(e.target.value)} placeholder="Buscar: limão, manjericão, carne…" value={q} />
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+          <Pill active={cat === "all"} onClick={() => setCat("all")}>
+            Todos
+          </Pill>
+          {preps.length ? (
+            <Pill active={cat === "prep"} onClick={() => setCat("prep")}>
+              Preparos
+            </Pill>
+          ) : null}
+          {cats.map((c) => (
+            <Pill active={cat === c.value} key={c.value} onClick={() => setCat(c.value)}>
+              {c.label}
+            </Pill>
+          ))}
+        </div>
+        {s && !exact ? (
+          <button
+            className="w-full rounded-2xl border border-dashed px-4 py-3 text-left text-sm"
+            onClick={() => setCreating(true)}
+            type="button"
+          >
+            + Criar ingrediente <span className="font-medium">“{q.trim()}”</span>
+          </button>
+        ) : null}
         {ps.length ? (
           <ul className="divide-y rounded-2xl border bg-card">
             {ps.map((p) => (
@@ -552,16 +601,139 @@ function IngredientPicker({
             ))}
           </ul>
         ) : null}
-        <ul className="divide-y rounded-2xl border bg-card">
-          {items.map((i) => (
-            <li key={i._id}>
-              <button className="w-full px-4 py-2.5 text-left text-sm" onClick={() => onPick({ itemId: i._id })} type="button">
-                {i.name} <span className="text-muted-foreground text-xs">({i.unit})</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="text-muted-foreground text-xs">Não está na lista? Crie o item na aba Itens.</p>
+        {cat !== "prep" && items.length ? (
+          <ul className="divide-y rounded-2xl border bg-card">
+            {items.map((i) => (
+              <li key={i._id}>
+                <button
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm"
+                  onClick={() => onPick({ itemId: i._id })}
+                  type="button"
+                >
+                  <span>
+                    {i.name} <span className="text-muted-foreground text-xs">({i.unit})</span>
+                  </span>
+                  <span className="text-muted-foreground text-xs">{invCategoryLabel(i.category)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {!s ? (
+          <button
+            className="w-full rounded-2xl border border-dashed px-4 py-3 text-left text-muted-foreground text-sm"
+            onClick={() => setCreating(true)}
+            type="button"
+          >
+            + Criar ingrediente novo
+          </button>
+        ) : null}
+      </div>
+      {creating ? (
+        <NewIngredient
+          company={company}
+          initialCategory={cat === "all" || cat === "prep" ? "produce" : cat}
+          initialName={q.trim()}
+          onClose={() => setCreating(false)}
+          onCreated={(itemId) => {
+            setCreating(false);
+            onPick({ itemId });
+          }}
+        />
+      ) : null}
+    </FullPage>
+  );
+}
+
+/** Quick stock item from inside a sheet: name, category and how it is bought. */
+function NewIngredient({
+  company,
+  initialName,
+  initialCategory,
+  onCreated,
+  onClose,
+}: {
+  company: string;
+  initialName: string;
+  initialCategory: string;
+  onCreated: (id: Id<"invItems">) => void;
+  onClose: () => void;
+}) {
+  const start = NEW_DEFAULTS[initialCategory] ?? { unit: "un" as InvUnit, size: 1, container: "un" };
+  const [name, setName] = useState(initialName);
+  const [category, setCategory] = useState(initialCategory);
+  const [unit, setUnit] = useState<InvUnit>(start.unit);
+  const [size, setSize] = useState<number | undefined>(start.size);
+  const [container, setContainer] = useState(start.container);
+  const [busy, setBusy] = useState(false);
+  const pickCategory = (c: string) => {
+    setCategory(c);
+    const d = NEW_DEFAULTS[c];
+    if (d) {
+      setUnit(d.unit);
+      setSize(d.size);
+      setContainer(d.container);
+    }
+  };
+  const save = async () => {
+    setBusy(true);
+    const id = await sendPos(api.inv.saveItem, {
+      company,
+      name,
+      category,
+      unit,
+      size: unit === "un" ? Math.max(1, size ?? 1) : (size ?? 0),
+      container: container || "un",
+      barcodes: [],
+    });
+    setBusy(false);
+    if (id) {
+      onCreated(id);
+    }
+  };
+  return (
+    <FullPage
+      footer={
+        <Button className="w-full" disabled={busy || !name.trim() || !(size && size > 0)} onClick={save}>
+          Criar e adicionar à ficha
+        </Button>
+      }
+      onClose={onClose}
+      open
+      subtitle="Vira um item de estoque: entra na contagem, nos invoices e no custo da ficha."
+      title="Novo ingrediente"
+    >
+      <div className="mx-auto max-w-xl space-y-3 p-4">
+        <Field label="Nome">
+          <Input autoFocus onChange={(e) => setName(e.target.value)} placeholder="Ex.: Manjericão" value={name} />
+        </Field>
+        <Field label="Categoria">
+          <select className={SELECT} onChange={(e) => pickCategory(e.target.value)} value={category}>
+            {INV_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Medido em">
+            <select className={SELECT} onChange={(e) => setUnit(e.target.value as InvUnit)} value={unit}>
+              <option value="g">gramas</option>
+              <option value="ml">ml</option>
+              <option value="un">unidades</option>
+            </select>
+          </Field>
+          <Field label="Embalagem">
+            <Input onChange={(e) => setContainer(e.target.value)} placeholder="kg, garrafa, caixa" value={container} />
+          </Field>
+          <Field label={`Conteúdo (${unit})`}>
+            <NumberInput onChange={setSize} value={size} />
+          </Field>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Ex.: limão comprado por kg = gramas, embalagem “kg”, conteúdo 1000. Ovos = unidades, “caixa”, 30.
+        </p>
       </div>
     </FullPage>
   );
