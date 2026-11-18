@@ -263,4 +263,27 @@ describe("inventory ledger", () => {
     const o = await t.query(api.inv.overview, { session: token, company: "a" });
     expect(o.items.find((i) => i._id === a)?.barcodes).toEqual(["5011007003005"]);
   });
+
+  it("a code typed on a product reaches the same-name item and back", async () => {
+    const { t, token } = await setup();
+    const item = await gin(t, token, { name: "Jameson", barcodes: [] });
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { id: "p-jameson", name: "Jameson", category: "Whiskey", price: 3.5, color: "#000", available: true, barcode: "5011007003005" },
+    });
+    let o = await t.query(api.inv.overview, { session: token, company: "a" });
+    expect(o.items.find((i) => i._id === item)?.barcodes).toEqual(["5011007003005"]);
+    // An item code reaches products without one, in every bar of the group
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "b",
+      product: { id: "p-bombay", name: "Bombay", category: "Gin", price: 9, color: "#000", available: true },
+    });
+    await gin(t, token, { name: "Bombay", barcodes: ["5010677716000"] });
+    const cat = await t.query(api.pos.catalog, { session: token, company: "b" });
+    expect(cat?.products.find((p) => p.id === "p-bombay")?.barcode).toBe("5010677716000");
+    o = await t.query(api.inv.overview, { session: token, company: "a" });
+    expect(o.items).toHaveLength(2);
+  });
 });

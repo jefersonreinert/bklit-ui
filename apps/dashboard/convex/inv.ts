@@ -4,6 +4,7 @@ import {
   type BottleProfile,
   countedQty,
 } from "../lib/inventory/units";
+import { normalizeName } from "../lib/inventory/match";
 import { dayKey } from "../lib/inventory/reorder";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -45,6 +46,59 @@ export async function groupOf(ctx: QueryCtx, company: string) {
 
 const groupKey = async (ctx: QueryCtx, company: string) =>
   (await groupOf(ctx, company))?.key ?? company;
+
+/* ------------------------- barcodes: product ↔ item ------------------------ */
+// A POS product and the stock item with the same name are the same bottle:
+// a code scanned on either one is saved on the other too. Codes never move
+// from one item to another, and a product's own code is never replaced.
+
+/** Code typed on a POS product → the same-name stock item of its group. */
+export async function codeToItem(ctx: MutationCtx, company: string, name: string, code: string | undefined) {
+  const c = (code ?? "").trim();
+  if (!c) {
+    return;
+  }
+  const group = await groupKey(ctx, company);
+  const key = normalizeName(name);
+  const items = await ctx.db
+    .query("invItems")
+    .withIndex("by_group", (q) => q.eq("group", group))
+    .take(5000);
+  const item = items.find((i) => i.active && normalizeName(i.name) === key);
+  if (!item || item.barcodes.includes(c)) {
+    return;
+  }
+  const taken = await ctx.db
+    .query("invBarcodes")
+    .withIndex("by_code", (q) => q.eq("group", group).eq("code", c))
+    .first();
+  if (taken) {
+    return;
+  }
+  const codes = await setBarcodes(ctx, group, item._id, [...item.barcodes, c]);
+  await ctx.db.patch(item._id, { barcodes: codes, updatedAt: Date.now() });
+}
+
+/** Codes of a stock item → same-name POS products (of every bar in the group) without one. */
+export async function codesToProducts(ctx: MutationCtx, company: string, name: string, codes: string[]) {
+  const code = codes[0];
+  if (!code) {
+    return;
+  }
+  const companies = (await groupOf(ctx, company))?.companies ?? [company];
+  const key = normalizeName(name);
+  for (const c of companies) {
+    const products = await ctx.db
+      .query("posProducts")
+      .withIndex("by_company", (q) => q.eq("company", c))
+      .take(3000);
+    for (const p of products) {
+      if (!p.barcode && normalizeName(p.name) === key) {
+        await ctx.db.patch(p._id, { barcode: code, updatedAt: Date.now() });
+      }
+    }
+  }
+}
 
 async function itemInGroup(
   ctx: QueryCtx,
@@ -403,6 +457,7 @@ export const saveItem = mutation({
     }
     const barcodes = await setBarcodes(ctx, group, id, a.barcodes);
     await ctx.db.patch(id, { barcodes });
+    await codesToProducts(ctx, a.company, name, barcodes);
     // Levels and manual cost belong to this business
     const row = await stockRow(ctx, a.company, id);
     const levels = {
@@ -1005,5 +1060,30 @@ export const addBarcodes = internalMutation({
     }
     await audit(ctx, null, "Códigos copiados para o estoque", `${out.added} códigos`, company);
     return out;
+  },
+});
+
+/** Admin (CLI): copies codes both ways between same-name products and items of a bar. */
+export const syncCodes = internalMutation({
+  args: { company: v.string() },
+  handler: async (ctx, { company }) => {
+    const group = await groupKey(ctx, company);
+    const products = await ctx.db
+      .query("posProducts")
+      .withIndex("by_company", (q) => q.eq("company", company))
+      .take(3000);
+    for (const p of products) {
+      await codeToItem(ctx, company, p.name, p.barcode);
+    }
+    const items = await ctx.db
+      .query("invItems")
+      .withIndex("by_group", (q) => q.eq("group", group))
+      .take(5000);
+    for (const i of items) {
+      if (i.active && i.barcodes.length) {
+        await codesToProducts(ctx, company, i.name, i.barcodes);
+      }
+    }
+    return { products: products.length, items: items.length };
   },
 });

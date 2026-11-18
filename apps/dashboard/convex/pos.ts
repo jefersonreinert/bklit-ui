@@ -17,6 +17,7 @@ import {
   requireStaff,
   worksIn,
 } from "./access";
+import { codeToItem } from "./inv";
 import { requirePanel } from "./lib";
 import { settleLoyalty } from "./loyalty";
 import { modifierGroup, posItem, posWine } from "./schema";
@@ -916,6 +917,8 @@ export const saveProduct = mutation({
       });
       await audit(ctx, user, "Criou produto", fields.name, company);
     }
+    // The same bottle in stock gets the code too
+    await codeToItem(ctx, current ? companyOf(current) : company, fields.name, fields.barcode);
   },
 });
 
