@@ -282,7 +282,7 @@ describe("inventory ledger", () => {
     });
     await gin(t, token, { name: "Bombay", barcodes: ["5010677716000"] });
     const cat = await t.query(api.pos.catalog, { session: token, company: "b" });
-    expect(cat.products.find((p: { id: string }) => p.id === "p-bombay")?.barcode).toBe("5010677716000");
+    expect(cat?.products.find((p) => p.id === "p-bombay")?.barcode).toBe("5010677716000");
     o = await t.query(api.inv.overview, { session: token, company: "a" });
     expect(o.items).toHaveLength(2);
   });
