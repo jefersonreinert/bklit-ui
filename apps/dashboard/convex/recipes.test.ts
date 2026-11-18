@@ -157,5 +157,36 @@ describe("technical sheets", () => {
     expect([r?.productId, r?.lines.map((l) => [l.itemId, l.qty])]).toEqual(["negroni", [[gin, 30], [campari, 30]]]);
     expect(r?.cost).toBe(1.95);
   });
+
+  it("admin import creates preps before cocktails, links products and skips unknown ingredients", async () => {
+    const { t, token } = await setup();
+    const res = await t.mutation(internal.recipes.importSheets, {
+      company: "bar",
+      sheets: [
+        {
+          name: "Negroni",
+          kind: "menu",
+          category: "cocktail",
+          yieldQty: 1,
+          yieldUnit: "un",
+          lines: [
+            { name: "Gin", qty: 30 },
+            { name: "Xarope", qty: 10 },
+          ],
+          products: [{ company: "bar", productId: "negroni" }],
+        },
+        { name: "Xarope", kind: "prep", category: "other", yieldQty: 1600, yieldUnit: "ml", lines: [{ name: "Açúcar", qty: 1000 }] },
+        { name: "Mystery", kind: "menu", category: "cocktail", yieldQty: 1, yieldUnit: "un", lines: [{ name: "Unicorn", qty: 1 }] },
+      ],
+    });
+    expect(res).toEqual({ created: 2, updated: 0, linked: 1, skipped: ["Mystery: Unicorn"], linkErrors: [] });
+    const negroni = await find(t, token, "bar", "Negroni");
+    expect(negroni?.lines).toHaveLength(2);
+    const again = await t.mutation(internal.recipes.importSheets, {
+      company: "bar",
+      sheets: [{ name: "Negroni", kind: "menu", category: "cocktail", yieldQty: 1, yieldUnit: "un", lines: [{ name: "Gin", qty: 40 }], products: [{ company: "bar", productId: "negroni" }] }],
+    });
+    expect(again).toMatchObject({ created: 0, updated: 1, linked: 1 });
+  });
 });
 

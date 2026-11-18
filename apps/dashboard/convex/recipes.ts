@@ -8,7 +8,7 @@ import {
   suggestedPrice,
 } from "../lib/inventory/costing";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, type QueryCtx, query } from "./_generated/server";
+import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
 import { audit, type Perm, requireStaff } from "./access";
 import { groupOf } from "./inv";
 import { invUnit } from "./schema";
@@ -438,5 +438,119 @@ export const addUse = mutation({
     await ctx.db.insert("invRecipePrices", { company, recipeId: id, productId, updatedAt: now });
     await audit(ctx, user, "Ficha criada", `${product.name}: ${item.name} ${amount}`, company);
     return id;
+  },
+});
+
+/**
+ * Admin import (run from the CLI): technical sheets by name. Each line
+ * names a stock item or a prep of the group; a sheet is created or
+ * replaced by name, preps first, then linked to POS products of the
+ * bars. Sheets with an unknown ingredient are skipped and reported.
+ */
+export const importSheets = internalMutation({
+  args: {
+    company: v.string(),
+    sheets: v.array(
+      v.object({
+        name: v.string(),
+        kind: v.union(v.literal("menu"), v.literal("prep")),
+        category: v.string(),
+        yieldQty: v.number(),
+        yieldUnit: invUnit,
+        lines: v.array(v.object({ name: v.string(), qty: v.number() })),
+        method: v.optional(v.string()),
+        glass: v.optional(v.string()),
+        garnish: v.optional(v.string()),
+        products: v.optional(v.array(v.object({ company: v.string(), productId: v.string() }))),
+      })
+    ),
+  },
+  handler: async (ctx, { company, sheets }) => {
+    const group = await groupKey(ctx, company);
+    const items = await ctx.db
+      .query("invItems")
+      .withIndex("by_group", (q) => q.eq("group", group))
+      .take(5000);
+    const itemBy = new Map(items.filter((i) => i.active).map((i) => [i.name, i._id]));
+    const out = { created: 0, updated: 0, linked: 0, skipped: [] as string[], linkErrors: [] as string[] };
+    const ordered = [...sheets].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "prep" ? -1 : 1));
+    for (const s of ordered.slice(0, 300)) {
+      const name = clean(s.name);
+      const recipes = await ctx.db
+        .query("invRecipes")
+        .withIndex("by_group", (q) => q.eq("group", group))
+        .take(MAX);
+      const prepBy = new Map(recipes.filter((r) => r.kind === "prep" && r.active).map((r) => [r.name, r._id]));
+      const lines = [];
+      const missing: string[] = [];
+      for (const l of s.lines.slice(0, 60)) {
+        const itemId = itemBy.get(clean(l.name));
+        const prepId = itemId ? undefined : prepBy.get(clean(l.name));
+        if (!(itemId || prepId) || !(l.qty > 0)) {
+          missing.push(l.name);
+          continue;
+        }
+        lines.push({ itemId, prepId, qty: Math.round(l.qty * 1000) / 1000, waste: 0 });
+      }
+      if (!name || missing.length) {
+        out.skipped.push(`${name}: ${missing.join(", ")}`);
+        continue;
+      }
+      const yieldQty = s.kind === "menu" ? 1 : s.yieldQty;
+      const now = Date.now();
+      const fields = {
+        name,
+        kind: s.kind,
+        category: clean(s.category, 30) || "other",
+        yieldQty,
+        yieldUnit: s.kind === "menu" ? ("un" as const) : s.yieldUnit,
+        lines,
+        method: clean(s.method, 2000) || undefined,
+        glass: clean(s.glass, 80) || undefined,
+        garnish: clean(s.garnish, 120) || undefined,
+        active: true,
+        updatedAt: now,
+      };
+      const cur = recipes.find((r) => r.name === name);
+      let id: Id<"invRecipes">;
+      if (cur) {
+        await ctx.db.patch(cur._id, fields);
+        id = cur._id;
+        out.updated++;
+      } else {
+        id = await ctx.db.insert("invRecipes", { ...fields, group, createdAt: now });
+        out.created++;
+      }
+      for (const p of s.products ?? []) {
+        const prod = await ctx.db
+          .query("posProducts")
+          .withIndex("by_cid", (q) => q.eq("cid", p.productId))
+          .unique();
+        if (!prod || (prod.company ?? "main") !== p.company) {
+          out.linkErrors.push(`${name}: ${p.productId} não existe em ${p.company}`);
+          continue;
+        }
+        const taken = await ctx.db
+          .query("invRecipePrices")
+          .withIndex("by_product", (q) => q.eq("company", p.company).eq("productId", p.productId))
+          .first();
+        if (taken && taken.recipeId !== id) {
+          out.linkErrors.push(`${name}: ${prod.name} já está em outra ficha`);
+          continue;
+        }
+        const row = await ctx.db
+          .query("invRecipePrices")
+          .withIndex("by_recipe", (q) => q.eq("recipeId", id).eq("company", p.company))
+          .unique();
+        if (row) {
+          await ctx.db.patch(row._id, { productId: p.productId, updatedAt: now });
+        } else {
+          await ctx.db.insert("invRecipePrices", { company: p.company, recipeId: id, productId: p.productId, updatedAt: now });
+        }
+        out.linked++;
+      }
+    }
+    await audit(ctx, null, "Fichas técnicas importadas", `${out.created} novas, ${out.updated} atualizadas`, company);
+    return out;
   },
 });
