@@ -224,6 +224,7 @@ export const saveSupplier = mutation({
     phone: v.optional(v.string()),
     coverDays: v.optional(v.number()),
     note: v.optional(v.string()),
+    taxId: v.optional(v.string()),
   },
   handler: async (ctx, a) => {
     await requireStaff(ctx, a.session, "stock", a.company);
@@ -239,6 +240,7 @@ export const saveSupplier = mutation({
       coverDays:
         a.coverDays !== undefined && a.coverDays >= 1 && a.coverDays <= 90 ? Math.round(a.coverDays) : undefined,
       note: clean(a.note, 300) || undefined,
+      taxId: clean(a.taxId, 40) || undefined,
     };
     if (a.id) {
       const s = await ctx.db.get(a.id);
@@ -261,6 +263,71 @@ export const saveSupplier = mutation({
       active: true,
       createdAt: Date.now(),
     });
+  },
+});
+
+/** A supplier's card: what the app learned it sells (last price) and its invoices here. */
+export const supplierDetail = query({
+  args: { session: v.optional(v.string()), company: v.string(), id: v.id("invSuppliers") },
+  handler: async (ctx, { session, company, id }) => {
+    await requireStaff(ctx, session, READ, company);
+    const key = (await groupOf(ctx, company))?.key ?? company;
+    const s = await ctx.db.get(id);
+    if (s?.group !== key) {
+      return null;
+    }
+    const learned = await ctx.db
+      .query("invSupplierItems")
+      .withIndex("by_code", (q) => q.eq("supplierId", id))
+      .take(500);
+    const latest = new Map<string, (typeof learned)[number]>();
+    for (const l of learned) {
+      const cur = latest.get(l.itemId);
+      if (!cur || l.lastAt > cur.lastAt) {
+        latest.set(l.itemId, l);
+      }
+    }
+    const items = [];
+    for (const l of latest.values()) {
+      const item = await ctx.db.get(l.itemId);
+      if (item) {
+        items.push({
+          itemId: item._id,
+          name: item.name,
+          alias: l.alias,
+          code: l.code ?? null,
+          unit: item.unit,
+          size: item.size,
+          container: item.container,
+          perUnit: l.perUnit,
+          unitCost: l.lastCost * l.perUnit,
+          lastAt: l.lastAt,
+        });
+      }
+    }
+    const invoices = (
+      await ctx.db
+        .query("invInvoices")
+        .withIndex("by_supplier_number", (q) => q.eq("supplierId", id))
+        .take(300)
+    )
+      .filter((x) => x.company === company && x.status !== "void")
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const year = new Date().getFullYear().toString();
+    return {
+      supplier: s,
+      items: items.sort((a, b) => a.name.localeCompare(b.name)),
+      invoices: invoices.slice(0, 30).map((x) => ({
+        id: x._id,
+        number: x.number,
+        date: x.date,
+        total: x.total,
+        status: x.status,
+        paid: Boolean(x.paidAt),
+      })),
+      spentYear: invoices.filter((x) => x.status === "approved" && x.date.startsWith(year)).reduce((t, x) => t + x.total, 0),
+      unpaid: invoices.filter((x) => x.status === "approved" && !x.paidAt).reduce((t, x) => t + x.total, 0),
+    };
   },
 });
 

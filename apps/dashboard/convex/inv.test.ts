@@ -286,4 +286,18 @@ describe("inventory ledger", () => {
     o = await t.query(api.inv.overview, { session: token, company: "a" });
     expect(o.items).toHaveLength(2);
   });
+
+  it("the panel lists products on sale for nothing and bottles without a code", async () => {
+    const { t, token } = await setup();
+    await gin(t, token, { name: "Jameson", barcodes: [] });
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { id: "p-free", name: "Laphroaig", category: "Whiskey", price: 0, color: "#000", available: true },
+    });
+    const p = await t.query(api.inv.pending, { session: token, company: "a" });
+    expect(p.free.list.map((x) => x.name)).toEqual(["Laphroaig"]);
+    expect(p.noCode.list.map((x) => x.name)).toEqual(["Jameson"]);
+    expect(p.invoices.count).toBe(0);
+  });
 });

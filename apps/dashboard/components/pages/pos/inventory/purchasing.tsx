@@ -20,7 +20,7 @@ import { CARD, dateText, Field, type InvItem, type InvOverview, NumberInput, num
  * purchase orders sent by WhatsApp or email, and the suppliers' contacts.
  */
 
-type View = "suggest" | "orders" | "suppliers";
+type View = "suggest" | "orders";
 type Suggest = FunctionReturnType<typeof api.orders.suggestions>;
 type Order = Doc<"invOrders">;
 
@@ -51,9 +51,6 @@ export function PurchasingSection({ data }: { data: InvOverview }) {
         <Pill active={view === "orders"} onClick={() => setView("orders")}>
           Pedidos
         </Pill>
-        <Pill active={view === "suppliers"} onClick={() => setView("suppliers")}>
-          Fornecedores
-        </Pill>
       </div>
       {view === "suggest" ? (
         <Suggestions
@@ -65,7 +62,6 @@ export function PurchasingSection({ data }: { data: InvOverview }) {
         />
       ) : null}
       {view === "orders" ? <Orders onOpen={setOpen} /> : null}
-      {view === "suppliers" ? <Suppliers /> : null}
       {open ? <OrderDetail data={data} id={open} onClose={() => setOpen(null)} /> : null}
     </div>
   );
@@ -414,52 +410,16 @@ function OrderDetail({ id, data, onClose }: { id: Id<"invOrders">; data: InvOver
   );
 }
 
-function Suppliers() {
-  const company = useCompany();
-  const list = usePosQuery(api.orders.suppliers, { company });
-  const [editing, setEditing] = useState<Doc<"invSuppliers"> | "new" | null>(null);
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button onClick={() => setEditing("new")} size="sm">
-          Novo fornecedor
-        </Button>
-      </div>
-      {list?.length ? (
-        <ul className="divide-y rounded-2xl border bg-card">
-          {list.map((s) => (
-            <li key={s._id}>
-              <button className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40" onClick={() => setEditing(s)} type="button">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-sm">{s.name}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {[s.phone, s.email, s.taxId ? `VAT ${s.taxId}` : ""].filter(Boolean).join(" · ") || "sem contato"}
-                  </p>
-                </div>
-                <Tag tone="muted">{s.coverDays ?? 7} dias</Tag>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className={cn(CARD, "text-center text-muted-foreground text-sm")}>
-          Os fornecedores aparecem sozinhos com os invoices; aqui você completa telefone, email e dias de cobertura.
-        </p>
-      )}
-      {editing ? <SupplierEditor onClose={() => setEditing(null)} supplier={editing === "new" ? null : editing} /> : null}
-    </div>
-  );
-}
-
-function SupplierEditor({ supplier, onClose }: { supplier: Doc<"invSuppliers"> | null; onClose: () => void }) {
+export function SupplierEditor({ supplier, onClose }: { supplier: Doc<"invSuppliers"> | null; onClose: () => void }) {
   const company = useCompany();
   const [name, setName] = useState(supplier?.name ?? "");
   const [phone, setPhone] = useState(supplier?.phone ?? "");
   const [email, setEmail] = useState(supplier?.email ?? "");
   const [cover, setCover] = useState<number | undefined>(supplier?.coverDays ?? 7);
   const [note, setNote] = useState(supplier?.note ?? "");
+  const [taxId, setTaxId] = useState(supplier?.taxId ?? "");
   const save = async () => {
-    const id = await sendPos(api.orders.saveSupplier, { company, id: supplier?._id, name, phone, email, coverDays: cover, note });
+    const id = await sendPos(api.orders.saveSupplier, { company, id: supplier?._id, name, phone, email, coverDays: cover, note, taxId });
     if (id) {
       onClose();
     }
@@ -487,6 +447,9 @@ function SupplierEditor({ supplier, onClose }: { supplier: Doc<"invSuppliers"> |
         </Field>
         <Field hint="Quantos dias cada pedido deve durar: intervalo entre entregas + prazo de entrega." label="Dias de cobertura">
           <NumberInput onChange={setCover} value={cover} />
+        </Field>
+        <Field label="VAT / NIF">
+          <Input onChange={(e) => setTaxId(e.target.value)} value={taxId} />
         </Field>
         <Field label="Observações (contato, horário de pedido)">
           <Input onChange={(e) => setNote(e.target.value)} value={note} />
