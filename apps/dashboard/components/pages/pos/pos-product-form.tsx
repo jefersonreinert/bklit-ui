@@ -5,7 +5,6 @@ import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import type { CategoryNode } from "@/lib/pos/categories";
 import { api } from "@/convex/_generated/api";
 import {
   AI_PROVIDERS,
@@ -14,7 +13,9 @@ import {
 } from "@/lib/ai/providers-meta";
 import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
+import { descriptionWithSize, nameWithSize } from "@/lib/inventory/sizes";
 import { periodFor, productStats, usePosDaily } from "@/lib/pos/analytics";
+import type { CategoryNode } from "@/lib/pos/categories";
 import { TILE_COLORS } from "@/lib/pos/seed";
 import {
   deleteProduct,
@@ -22,12 +23,14 @@ import {
   money,
   moveStock,
   saveProduct,
+  uid,
   useCurrentCompany,
   usePos,
   usePosQuery,
 } from "@/lib/pos/store";
 import type { PosProduct, StockMove, StockMoveKind } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
+import { SizeCopy } from "./inventory/size-copy";
 import { cleanModifiers, ModifiersEditor } from "./pos-modifiers";
 import { WineEditor } from "./pos-wine";
 import { BarcodeScanner } from "./scan/barcode-scanner";
@@ -296,11 +299,38 @@ function ProductExtras({
 }) {
   const data = usePos();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copying, setCopying] = useState(false);
   const live = data.products.find((x) => x.id === product.id) ?? product;
+  /** Same product in another size: size in the name and the description. */
+  const duplicate = (ml: number) => {
+    saveProduct({
+      ...live,
+      id: uid(),
+      name: nameWithSize(live.name, ml),
+      description: descriptionWithSize(live.description, ml),
+      barcode: undefined,
+      sku: undefined,
+      stock: 0,
+    });
+    setCopying(false);
+    onClose();
+  };
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       {live.trackStock ? <StockPanel product={live} /> : null}
       <SalesPanel currency={data.settings.currency} product={live} />
+      <Button onClick={() => setCopying(true)} type="button" variant="outline">
+        <Icon className="size-4" name="IconSquareBehindSquare1" />
+        Duplicar com outro tamanho (1L, 700ml…)
+      </Button>
+      {copying ? (
+        <SizeCopy
+          name={live.name}
+          onClose={() => setCopying(false)}
+          onPick={duplicate}
+          what="produto"
+        />
+      ) : null}
       <Button
         onClick={() => {
           if (confirmDelete) {
@@ -339,8 +369,14 @@ function CategoryFields({
   const subs = node?.subs ?? [];
   const subKnown = !p.subcategory || subs.some((s) => s.name === p.subcategory);
   const [typingSub, setTypingSub] = useState(false);
-  const catOptions = known || !p.category ? tree.map((c) => c.name) : [p.category, ...tree.map((c) => c.name)];
-  const subOptions = subKnown || !p.subcategory ? subs.map((s) => s.name) : [p.subcategory, ...subs.map((s) => s.name)];
+  const catOptions =
+    known || !p.category
+      ? tree.map((c) => c.name)
+      : [p.category, ...tree.map((c) => c.name)];
+  const subOptions =
+    subKnown || !p.subcategory
+      ? subs.map((s) => s.name)
+      : [p.subcategory, ...subs.map((s) => s.name)];
   return (
     <div className="grid grid-cols-2 gap-3">
       <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-cat">
@@ -350,7 +386,9 @@ function CategoryFields({
             autoFocus={tree.length > 0}
             id="ppf-cat"
             onBlur={() => p.category && setTypingCat(false)}
-            onChange={(e) => onChange({ category: e.target.value, subcategory: undefined })}
+            onChange={(e) =>
+              onChange({ category: e.target.value, subcategory: undefined })
+            }
             placeholder="Ex.: Cervejas"
             value={p.category}
           />
@@ -384,7 +422,9 @@ function CategoryFields({
             autoFocus
             id="ppf-sub"
             onBlur={() => setTypingSub(false)}
-            onChange={(e) => onChange({ subcategory: e.target.value || undefined })}
+            onChange={(e) =>
+              onChange({ subcategory: e.target.value || undefined })
+            }
             placeholder="Ex.: IPA"
             value={p.subcategory ?? ""}
           />
@@ -420,7 +460,10 @@ function AiNote({ ai }: { ai: AiSuggestion }) {
   const meta = ai.provider ? AI_PROVIDERS[ai.provider] : null;
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-sm">
-      <Icon className="mt-0.5 size-4 shrink-0 text-primary" name="IconSparkle" />
+      <Icon
+        className="mt-0.5 size-4 shrink-0 text-primary"
+        name="IconSparkle"
+      />
       <div className="min-w-0 flex-1">
         <p className="font-medium">
           Preenchido pela IA{meta ? ` · ${meta.product}` : ""}
@@ -429,11 +472,13 @@ function AiNote({ ai }: { ai: AiSuggestion }) {
         <p className="text-muted-foreground text-xs">
           Confiança {Math.round(ai.product.confidence * 100)}%
           {ai.product.brand ? ` · ${ai.product.brand}` : ""}
-          {ai.product.size ? ` · ${ai.product.size}` : ""}. Confira antes de salvar.
+          {ai.product.size ? ` · ${ai.product.size}` : ""}. Confira antes de
+          salvar.
         </p>
         {ai.switched ? (
           <p className="mt-1 text-amber-700 text-xs dark:text-amber-300">
-            O provedor principal falhou; a resposta veio de {meta?.label ?? "outro provedor"}.
+            O provedor principal falhou; a resposta veio de{" "}
+            {meta?.label ?? "outro provedor"}.
           </p>
         ) : null}
       </div>
@@ -465,13 +510,19 @@ export function ProductForm({
   onClose: () => void;
 }) {
   const data = usePos();
-  const isNew = product ? !data.products.some((x) => x.id === product.id) : false;
+  const isNew = product
+    ? !data.products.some((x) => x.id === product.id)
+    : false;
   return (
     <FullPage
       backLabel="Itens"
       footer={
         product ? (
-          <Button className="h-12 w-full text-base" form="pos-product-form" type="submit">
+          <Button
+            className="h-12 w-full text-base"
+            form="pos-product-form"
+            type="submit"
+          >
             {isNew ? "Criar item" : "Salvar alterações"}
           </Button>
         ) : null
@@ -486,7 +537,13 @@ export function ProductForm({
       title={product ? (isNew ? "Novo item" : product.name || "Item") : ""}
     >
       {product ? (
-        <ProductEditor ai={ai} key={product.id} onClose={onClose} product={product} tree={tree} />
+        <ProductEditor
+          ai={ai}
+          key={product.id}
+          onClose={onClose}
+          product={product}
+          tree={tree}
+        />
       ) : null}
     </FullPage>
   );
@@ -554,209 +611,216 @@ function ProductEditor({
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-        <form className="flex flex-col gap-4 p-4" id="pos-product-form" onSubmit={submit}>
-          {ai && isNew ? <AiNote ai={ai} /> : null}
-          <Group title="Item">
-            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-1">
-              Nome
+      <form
+        className="flex flex-col gap-4 p-4"
+        id="pos-product-form"
+        onSubmit={submit}
+      >
+        {ai && isNew ? <AiNote ai={ai} /> : null}
+        <Group title="Item">
+          <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-1">
+            Nome
+            <Input
+              autoFocus={isNew && !p.name}
+              id="ppf-1"
+              onChange={(e) => setP({ ...p, name: e.target.value })}
+              value={p.name}
+            />
+          </label>
+          <CategoryFields
+            onChange={(patch) => setP({ ...p, ...patch })}
+            p={p}
+            tree={tree}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-4">
+              Código (SKU)
               <Input
-                autoFocus={isNew && !p.name}
-                id="ppf-1"
-                onChange={(e) => setP({ ...p, name: e.target.value })}
-                value={p.name}
+                autoCapitalize="characters"
+                id="ppf-4"
+                onChange={(e) => setP({ ...p, sku: e.target.value })}
+                value={p.sku ?? ""}
               />
             </label>
-            <CategoryFields onChange={(patch) => setP({ ...p, ...patch })} p={p} tree={tree} />
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-4">
-                Código (SKU)
-                <Input
-                  autoCapitalize="characters"
-                  id="ppf-4"
-                  onChange={(e) => setP({ ...p, sku: e.target.value })}
-                  value={p.sku ?? ""}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-3">
-                Unidade
-                <Input
-                  id="ppf-3"
-                  list="pos-units"
-                  onChange={(e) => setP({ ...p, unit: e.target.value })}
-                  value={p.unit ?? "un"}
-                />
-                <datalist id="pos-units">
-                  {UNITS.map((u) => (
-                    <option key={u} value={u} />
-                  ))}
-                </datalist>
-              </label>
-            </div>
-            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-5">
-              Código de barras
-              <span className="flex gap-2">
-                <Input
-                  className="flex-1 font-mono tabular-nums"
-                  id="ppf-5"
-                  inputMode="numeric"
-                  onChange={(e) => setP({ ...p, barcode: e.target.value })}
-                  placeholder="Escaneie ou digite"
-                  value={p.barcode ?? ""}
-                />
-                <Button
-                  aria-label="Escanear com a câmera"
-                  className="h-10 shrink-0"
-                  onClick={() => setScanning(true)}
-                  type="button"
-                  variant="outline"
-                >
-                  <Icon className="size-4" name="IconBarcode" />
-                  <span className="hidden sm:inline">Escanear</span>
-                </Button>
-              </span>
-              {duplicate ? (
-                <span className="text-destructive text-xs" role="alert">
-                  Este código já está em “{duplicate.name}”.
-                </span>
-              ) : (
-                <span className="text-muted-foreground text-xs">
-                  Também funciona com leitor Bluetooth/USB: toque no campo e leia o código.
-                </span>
-              )}
-            </label>
-            {p.description !== undefined || isNew ? (
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-desc">
-                Descrição
-                <Input
-                  id="ppf-desc"
-                  onChange={(e) => setP({ ...p, description: e.target.value || undefined })}
-                  value={p.description ?? ""}
-                />
-              </label>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              {TILE_COLORS.map((c) => (
-                <button
-                  aria-label={`Cor ${c}`}
-                  aria-pressed={p.color === c}
-                  className={cn(
-                    "size-8 rounded-full border-2",
-                    p.color === c
-                      ? "scale-110 border-foreground"
-                      : "border-transparent"
-                  )}
-                  key={c}
-                  onClick={() => setP({ ...p, color: c })}
-                  style={{ background: c }}
-                  type="button"
-                />
-              ))}
-            </div>
-            <span className="flex items-center justify-between text-sm">
-              Disponível no caixa
-              <Switch
-                aria-label="Disponível no caixa"
-                checked={p.available}
-                onCheckedChange={(available) => setP({ ...p, available })}
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-3">
+              Unidade
+              <Input
+                id="ppf-3"
+                list="pos-units"
+                onChange={(e) => setP({ ...p, unit: e.target.value })}
+                value={p.unit ?? "un"}
               />
+              <datalist id="pos-units">
+                {UNITS.map((u) => (
+                  <option key={u} value={u} />
+                ))}
+              </datalist>
+            </label>
+          </div>
+          <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-5">
+            Código de barras
+            <span className="flex gap-2">
+              <Input
+                className="flex-1 font-mono tabular-nums"
+                id="ppf-5"
+                inputMode="numeric"
+                onChange={(e) => setP({ ...p, barcode: e.target.value })}
+                placeholder="Escaneie ou digite"
+                value={p.barcode ?? ""}
+              />
+              <Button
+                aria-label="Escanear com a câmera"
+                className="h-10 shrink-0"
+                onClick={() => setScanning(true)}
+                type="button"
+                variant="outline"
+              >
+                <Icon className="size-4" name="IconBarcode" />
+                <span className="hidden sm:inline">Escanear</span>
+              </Button>
             </span>
-          </Group>
-          <Group title="Preço e custo">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-6">
-                Preço de venda
-                <Input
-                  id="ppf-6"
-                  inputMode="decimal"
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0,00"
-                  value={price}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-7">
-                Custo
-                <Input
-                  id="ppf-7"
-                  inputMode="decimal"
-                  onChange={(e) => setCost(e.target.value)}
-                  placeholder="0,00"
-                  value={cost}
-                />
-              </label>
-            </div>
-            <PriceStats cost={costValue} currency={cur} price={value} />
-          </Group>
-
-          {p.wine || company?.wine ? (
-            <Group title="Vinho">
-              <WineEditor
-                onChange={(wine) =>
-                  setP({
-                    ...p,
-                    wine,
-                    unit: wine ? "garrafa" : p.unit,
-                  })
+            {duplicate ? (
+              <span className="text-destructive text-xs" role="alert">
+                Este código já está em “{duplicate.name}”.
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-xs">
+                Também funciona com leitor Bluetooth/USB: toque no campo e leia
+                o código.
+              </span>
+            )}
+          </label>
+          {p.description !== undefined || isNew ? (
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-desc">
+              Descrição
+              <Input
+                id="ppf-desc"
+                onChange={(e) =>
+                  setP({ ...p, description: e.target.value || undefined })
                 }
-                value={p.wine}
+                value={p.description ?? ""}
               />
-            </Group>
+            </label>
           ) : null}
+          <div className="flex flex-wrap gap-2">
+            {TILE_COLORS.map((c) => (
+              <button
+                aria-label={`Cor ${c}`}
+                aria-pressed={p.color === c}
+                className={cn(
+                  "size-8 rounded-full border-2",
+                  p.color === c
+                    ? "scale-110 border-foreground"
+                    : "border-transparent"
+                )}
+                key={c}
+                onClick={() => setP({ ...p, color: c })}
+                style={{ background: c }}
+                type="button"
+              />
+            ))}
+          </div>
+          <span className="flex items-center justify-between text-sm">
+            Disponível no caixa
+            <Switch
+              aria-label="Disponível no caixa"
+              checked={p.available}
+              onCheckedChange={(available) => setP({ ...p, available })}
+            />
+          </span>
+        </Group>
+        <Group title="Preço e custo">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-6">
+              Preço de venda
+              <Input
+                id="ppf-6"
+                inputMode="decimal"
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0,00"
+                value={price}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-7">
+              Custo
+              <Input
+                id="ppf-7"
+                inputMode="decimal"
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="0,00"
+                value={cost}
+              />
+            </label>
+          </div>
+          <PriceStats cost={costValue} currency={cur} price={value} />
+        </Group>
 
-          <Group title="Opções (steps)">
-            <ModifiersEditor
-              onChange={(modifiers) => setP({ ...p, modifiers })}
-              value={p.modifiers ?? []}
+        {p.wine || company?.wine ? (
+          <Group title="Vinho">
+            <WineEditor
+              onChange={(wine) =>
+                setP({
+                  ...p,
+                  wine,
+                  unit: wine ? "garrafa" : p.unit,
+                })
+              }
+              value={p.wine}
             />
           </Group>
+        ) : null}
 
-          <Group title="Estoque">
-            <span className="flex items-center justify-between text-sm">
-              Controlar estoque
-              <Switch
-                aria-label="Controlar estoque"
-                checked={Boolean(p.trackStock)}
-                onCheckedChange={(trackStock) => setP({ ...p, trackStock })}
-              />
-            </span>
-            {p.trackStock ? (
-              <div className="grid grid-cols-2 gap-3">
-                {isNew ? (
-                  <label
-                    className="flex flex-col gap-1.5 text-sm"
-                    htmlFor="ppf-8"
-                  >
-                    Estoque inicial
-                    <Input
-                      id="ppf-8"
-                      inputMode="decimal"
-                      onChange={(e) => setStock(e.target.value)}
-                      value={stock}
-                    />
-                  </label>
-                ) : null}
+        <Group title="Opções (steps)">
+          <ModifiersEditor
+            onChange={(modifiers) => setP({ ...p, modifiers })}
+            value={p.modifiers ?? []}
+          />
+        </Group>
+
+        <Group title="Estoque">
+          <span className="flex items-center justify-between text-sm">
+            Controlar estoque
+            <Switch
+              aria-label="Controlar estoque"
+              checked={Boolean(p.trackStock)}
+              onCheckedChange={(trackStock) => setP({ ...p, trackStock })}
+            />
+          </span>
+          {p.trackStock ? (
+            <div className="grid grid-cols-2 gap-3">
+              {isNew ? (
                 <label
                   className="flex flex-col gap-1.5 text-sm"
-                  htmlFor="ppf-9"
+                  htmlFor="ppf-8"
                 >
-                  Avisar abaixo de
+                  Estoque inicial
                   <Input
-                    id="ppf-9"
+                    id="ppf-8"
                     inputMode="decimal"
-                    onChange={(e) => setMinStock(e.target.value)}
-                    value={minStock}
+                    onChange={(e) => setStock(e.target.value)}
+                    value={stock}
                   />
                 </label>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Ligado, cada venda desconta do estoque e você vê alertas de
-                estoque baixo.
-              </p>
-            )}
-          </Group>
-
-        </form>
-        {isNew ? null : <ProductExtras onClose={onClose} product={p} />}
+              ) : null}
+              <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-9">
+                Avisar abaixo de
+                <Input
+                  id="ppf-9"
+                  inputMode="decimal"
+                  onChange={(e) => setMinStock(e.target.value)}
+                  value={minStock}
+                />
+              </label>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Ligado, cada venda desconta do estoque e você vê alertas de
+              estoque baixo.
+            </p>
+          )}
+        </Group>
+      </form>
+      {isNew ? null : <ProductExtras onClose={onClose} product={p} />}
       <BarcodeScanner
         onClose={() => setScanning(false)}
         onCode={(r) => {
