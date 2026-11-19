@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Icon } from "@/lib/icons";
+import { descriptionWithSize, nameWithSize } from "@/lib/inventory/sizes";
 import {
   INV_CATEGORIES,
   type InvUnit,
@@ -16,7 +17,6 @@ import { sendPos, useCompany, usePos } from "@/lib/pos/store";
 import { onScan } from "@/lib/scan/hub";
 import { cn } from "@/lib/utils";
 import { BarcodeScanner } from "../scan/barcode-scanner";
-import { WineBarcodes } from "./wine-barcodes";
 import {
   CARD,
   Field,
@@ -29,6 +29,8 @@ import {
   Tag,
   useMoney,
 } from "./shared";
+import { SizeCopy } from "./size-copy";
+import { WineBarcodes } from "./wine-barcodes";
 
 /**
  * The group's stock catalog with this bar's balance: search, scan to
@@ -107,19 +109,28 @@ export function ItemsSection({ data }: { data: InvOverview }) {
         {data.seeCosts ? (
           <div className={CARD}>
             <p className="text-muted-foreground text-xs">Valor em estoque</p>
-            <p className="mt-1 font-semibold text-xl tabular-nums">{fmt(value)}</p>
+            <p className="mt-1 font-semibold text-xl tabular-nums">
+              {fmt(value)}
+            </p>
           </div>
         ) : null}
         <div className={CARD}>
           <p className="text-muted-foreground text-xs">Sem perfil de garrafa</p>
           <p className="mt-1 font-semibold text-xl tabular-nums">
-            {data.items.filter((i) => i.active && i.unit !== "un" && !i.emptyG).length}
+            {
+              data.items.filter((i) => i.active && i.unit !== "un" && !i.emptyG)
+                .length
+            }
           </p>
         </div>
         <div className={CARD}>
           <p className="text-muted-foreground text-xs">Abaixo do mínimo</p>
           <p className="mt-1 font-semibold text-destructive text-xl tabular-nums">
-            {data.items.filter((i) => i.active && i.min !== undefined && i.qty < i.min).length}
+            {
+              data.items.filter(
+                (i) => i.active && i.min !== undefined && i.qty < i.min
+              ).length
+            }
           </p>
         </div>
       </div>
@@ -174,13 +185,24 @@ export function ItemsSection({ data }: { data: InvOverview }) {
                   <p className="truncate font-medium text-sm">{i.name}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     <Tag tone="muted">{invCategoryLabel(i.category)}</Tag>
-                    {i.unit !== "un" && !i.emptyG ? <Tag tone="warn">sem perfil</Tag> : null}
-                    {i.min !== undefined && i.qty < i.min ? <Tag tone="warn">abaixo do mínimo</Tag> : null}
-                    {!i.barcodes.length ? <Tag tone="muted">sem código</Tag> : null}
+                    {i.unit !== "un" && !i.emptyG ? (
+                      <Tag tone="warn">sem perfil</Tag>
+                    ) : null}
+                    {i.min !== undefined && i.qty < i.min ? (
+                      <Tag tone="warn">abaixo do mínimo</Tag>
+                    ) : null}
+                    {i.barcodes.length ? null : (
+                      <Tag tone="muted">sem código</Tag>
+                    )}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className={cn("font-medium text-sm tabular-nums", i.qty < 0 && "text-destructive")}>
+                  <p
+                    className={cn(
+                      "font-medium text-sm tabular-nums",
+                      i.qty < 0 && "text-destructive"
+                    )}
+                  >
                     {qtyText(i.qty, i)}
                   </p>
                   {i.avgCost !== null && i.qty > 0 ? (
@@ -273,6 +295,10 @@ function draftOf(item: InvItem | null, code: string): Draft {
   };
 }
 
+/** Bottles (ml) can be copied in another size. */
+const copyable = (item: InvItem | null, unit: InvUnit) =>
+  item !== null && unit === "ml";
+
 const UNIT_LABEL: Record<InvUnit, string> = { ml: "ml", g: "g", un: "unidade" };
 
 function ItemEditor({
@@ -291,13 +317,15 @@ function ItemEditor({
   const [d, setD] = useState<Draft>(() => draftOf(item, code));
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [copying, setCopying] = useState(false);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
   const size = d.unit === "un" ? 1 : (d.size ?? 0);
   const weighable = d.unit !== "un";
 
   const save = async () => {
     setBusy(true);
-    const toBase = (n: number | undefined) => (n === undefined ? undefined : n * size);
+    const toBase = (n: number | undefined) =>
+      n === undefined ? undefined : n * size;
     const id = await sendPos(api.inv.saveItem, {
       company,
       id: item?._id,
@@ -325,11 +353,34 @@ function ItemEditor({
     }
   };
 
+  /** Same item in another bottle size: size in the name and the note. */
+  const duplicate = async (ml: number) => {
+    const id = await sendPos(api.inv.saveItem, {
+      company,
+      name: nameWithSize(d.name, ml),
+      category: d.category,
+      unit: d.unit,
+      size: ml,
+      container: d.container,
+      barcodes: [],
+      abv: d.abv,
+      note: descriptionWithSize(d.note, ml),
+    });
+    if (id) {
+      setCopying(false);
+      onClose();
+    }
+  };
+
   const archive = async () => {
     if (!item) {
       return;
     }
-    await sendPos(api.inv.setItemActive, { company, id: item._id, active: !item.active });
+    await sendPos(api.inv.setItemActive, {
+      company,
+      id: item._id,
+      active: !item.active,
+    });
     onClose();
   };
 
@@ -342,7 +393,21 @@ function ItemEditor({
               {item.active ? "Arquivar" : "Reativar"}
             </Button>
           ) : null}
-          <Button className="flex-1" disabled={busy || !d.name.trim() || !(size > 0)} onClick={save}>
+          {copyable(item, d.unit) ? (
+            <Button
+              aria-label="Duplicar com outro tamanho"
+              onClick={() => setCopying(true)}
+              variant="outline"
+            >
+              <Icon name="IconSquareBehindSquare1" size={18} />
+              <span className="hidden sm:inline">Duplicar</span>
+            </Button>
+          ) : null}
+          <Button
+            className="flex-1"
+            disabled={busy || !d.name.trim() || !(size > 0)}
+            onClick={save}
+          >
             Salvar
           </Button>
         </div>
@@ -379,7 +444,11 @@ function ItemEditor({
               className={SELECT}
               onChange={(e) => {
                 const unit = e.target.value as InvUnit;
-                set({ unit, size: unit === "un" ? 1 : d.size, container: unit === "un" ? "un" : d.container });
+                set({
+                  unit,
+                  size: unit === "un" ? 1 : d.size,
+                  container: unit === "un" ? "un" : d.container,
+                });
               }}
               value={d.unit}
             >
@@ -399,7 +468,11 @@ function ItemEditor({
               />
             </Field>
             <Field label={`Conteúdo (${UNIT_LABEL[d.unit]})`}>
-              <NumberInput onChange={(v) => set({ size: v })} placeholder="700" value={d.size} />
+              <NumberInput
+                onChange={(v) => set({ size: v })}
+                placeholder="700"
+                value={d.size}
+              />
             </Field>
           </div>
         ) : null}
@@ -410,18 +483,27 @@ function ItemEditor({
         >
           <div className="flex flex-wrap gap-1.5">
             {d.barcodes.map((b) => (
-              <span className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs tabular-nums" key={b}>
+              <span
+                className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs tabular-nums"
+                key={b}
+              >
                 {b}
                 <button
                   aria-label={`Remover ${b}`}
-                  onClick={() => set({ barcodes: d.barcodes.filter((x) => x !== b) })}
+                  onClick={() =>
+                    set({ barcodes: d.barcodes.filter((x) => x !== b) })
+                  }
                   type="button"
                 >
                   ✕
                 </button>
               </span>
             ))}
-            <Button onClick={() => setScanning(true)} size="sm" variant="outline">
+            <Button
+              onClick={() => setScanning(true)}
+              size="sm"
+              variant="outline"
+            >
               <Icon className="size-3.5" name="IconBarcode" />
               Adicionar
             </Button>
@@ -431,18 +513,27 @@ function ItemEditor({
         {weighable ? (
           <div className={cn(CARD, "space-y-3")}>
             <div>
-              <p className="font-medium text-sm">Perfil da garrafa (para pesar)</p>
+              <p className="font-medium text-sm">
+                Perfil da garrafa (para pesar)
+              </p>
               <p className="text-muted-foreground text-xs">
-                Pese uma garrafa vazia e uma cheia deste produto, com a tampa. Na contagem, a garrafa
-                aberta vai na balança e o app calcula quanto resta.
+                Pese uma garrafa vazia e uma cheia deste produto, com a tampa.
+                Na contagem, a garrafa aberta vai na balança e o app calcula
+                quanto resta.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Vazia (g)">
-                <NumberInput onChange={(v) => set({ emptyG: v })} value={d.emptyG} />
+                <NumberInput
+                  onChange={(v) => set({ emptyG: v })}
+                  value={d.emptyG}
+                />
               </Field>
               <Field label="Cheia (g)">
-                <NumberInput onChange={(v) => set({ fullG: v })} value={d.fullG} />
+                <NumberInput
+                  onChange={(v) => set({ fullG: v })}
+                  value={d.fullG}
+                />
               </Field>
               <Field label="Teor (%)">
                 <NumberInput onChange={(v) => set({ abv: v })} value={d.abv} />
@@ -450,17 +541,22 @@ function ItemEditor({
             </div>
             {d.emptyG && !d.fullG ? (
               <p className="text-amber-600 text-xs dark:text-amber-400">
-                Sem o peso cheio, o app estima pelo teor alcoólico. Pese uma cheia para ficar exato.
+                Sem o peso cheio, o app estima pelo teor alcoólico. Pese uma
+                cheia para ficar exato.
               </p>
             ) : null}
           </div>
         ) : null}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label={`Mínimo (${d.unit === "un" ? "un" : `${d.container}s`})`}>
+          <Field
+            label={`Mínimo (${d.unit === "un" ? "un" : `${d.container}s`})`}
+          >
             <NumberInput onChange={(v) => set({ min: v })} value={d.min} />
           </Field>
-          <Field label={`Ideal / par (${d.unit === "un" ? "un" : `${d.container}s`})`}>
+          <Field
+            label={`Ideal / par (${d.unit === "un" ? "un" : `${d.container}s`})`}
+          >
             <NumberInput onChange={(v) => set({ par: v })} value={d.par} />
           </Field>
         </div>
@@ -469,15 +565,24 @@ function ItemEditor({
             hint="Até os invoices entrarem, informe o custo de compra sem IVA. Depois ele vira o custo médio automático."
             label={`Custo por ${d.unit === "un" ? "unidade" : d.container} (${settings.currency ?? "EUR"})`}
           >
-            <NumberInput onChange={(v) => set({ containerCost: v })} value={d.containerCost} />
+            <NumberInput
+              onChange={(v) => set({ containerCost: v })}
+              value={d.containerCost}
+            />
           </Field>
         ) : null}
         <div className="grid grid-cols-2 gap-3">
           <Field label="SKU / código interno">
-            <Input onChange={(e) => set({ sku: e.target.value })} value={d.sku} />
+            <Input
+              onChange={(e) => set({ sku: e.target.value })}
+              value={d.sku}
+            />
           </Field>
           <Field label="Observação">
-            <Input onChange={(e) => set({ note: e.target.value })} value={d.note} />
+            <Input
+              onChange={(e) => set({ note: e.target.value })}
+              value={d.note}
+            />
           </Field>
         </div>
       </div>
@@ -492,26 +597,49 @@ function ItemEditor({
         open={scanning}
         title="Código do item"
       />
+      {copying ? (
+        <SizeCopy
+          current={d.size}
+          name={d.name}
+          onClose={() => setCopying(false)}
+          onPick={duplicate}
+          what="item"
+        />
+      ) : null}
     </FullPage>
   );
 }
 
 /** Picks POS products to become stock items (wines as bottles in ml). */
-function ImportFromPos({ data, onClose }: { data: InvOverview; onClose: () => void }) {
+function ImportFromPos({
+  data,
+  onClose,
+}: {
+  data: InvOverview;
+  onClose: () => void;
+}) {
   const company = useCompany();
   const { products } = usePos();
-  const names = useMemo(() => new Set(data.items.map((i) => i.name.toLowerCase())), [data.items]);
+  const names = useMemo(
+    () => new Set(data.items.map((i) => i.name.toLowerCase())),
+    [data.items]
+  );
   const candidates = useMemo(
     () =>
       products
         .filter((p) => !names.has(p.name.trim().toLowerCase()))
-        .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
+        .sort(
+          (a, b) =>
+            a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+        ),
     [products, names]
   );
   const [picked, setPicked] = useState<Set<string>>(
     () =>
       new Set(
-        candidates.filter((p) => p.wine || p.unit === "garrafa" || p.trackStock).map((p) => p.id)
+        candidates
+          .filter((p) => p.wine || p.unit === "garrafa" || p.trackStock)
+          .map((p) => p.id)
       )
   );
   const [q, setQ] = useState("");
@@ -532,7 +660,10 @@ function ImportFromPos({ data, onClose }: { data: InvOverview; onClose: () => vo
     });
   const run = async () => {
     setBusy(true);
-    const n = await sendPos(api.inv.importFromPos, { company, productIds: [...picked] });
+    const n = await sendPos(api.inv.importFromPos, {
+      company,
+      productIds: [...picked],
+    });
     setBusy(false);
     if (n !== undefined) {
       setDone(n);
@@ -542,7 +673,11 @@ function ImportFromPos({ data, onClose }: { data: InvOverview; onClose: () => vo
     <FullPage
       footer={
         done === null ? (
-          <Button className="w-full" disabled={busy || !picked.size} onClick={run}>
+          <Button
+            className="w-full"
+            disabled={busy || !picked.size}
+            onClick={run}
+          >
             Criar {picked.size} itens de estoque
           </Button>
         ) : (
@@ -558,15 +693,30 @@ function ImportFromPos({ data, onClose }: { data: InvOverview; onClose: () => vo
     >
       <div className="mx-auto max-w-xl space-y-3 p-4">
         {done !== null ? (
-          <p className={cn(CARD, "text-sm")}>{done} itens criados. Agora complete o conteúdo, o código de barras e o perfil de cada garrafa.</p>
+          <p className={cn(CARD, "text-sm")}>
+            {done} itens criados. Agora complete o conteúdo, o código de barras
+            e o perfil de cada garrafa.
+          </p>
         ) : (
           <>
-            <Input onChange={(e) => setQ(e.target.value)} placeholder="Filtrar…" value={q} />
+            <Input
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Filtrar…"
+              value={q}
+            />
             <div className="flex gap-2 text-sm">
-              <button className="underline" onClick={() => setPicked(new Set(shown.map((p) => p.id)))} type="button">
+              <button
+                className="underline"
+                onClick={() => setPicked(new Set(shown.map((p) => p.id)))}
+                type="button"
+              >
                 Marcar todos
               </button>
-              <button className="underline" onClick={() => setPicked(new Set())} type="button">
+              <button
+                className="underline"
+                onClick={() => setPicked(new Set())}
+                type="button"
+              >
                 Desmarcar
               </button>
             </div>
@@ -574,12 +724,20 @@ function ImportFromPos({ data, onClose }: { data: InvOverview; onClose: () => vo
               {shown.map((p) => (
                 <li key={p.id}>
                   <label className="flex items-center gap-3 px-4 py-2.5">
-                    <input checked={picked.has(p.id)} onChange={() => toggle(p.id)} type="checkbox" />
+                    <input
+                      checked={picked.has(p.id)}
+                      onChange={() => toggle(p.id)}
+                      type="checkbox"
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm">{p.name}</span>
-                      <span className="block text-muted-foreground text-xs">{p.category}</span>
+                      <span className="block text-muted-foreground text-xs">
+                        {p.category}
+                      </span>
                     </span>
-                    {p.wine ? <Tag tone="muted">{p.wine.bottleMl} ml</Tag> : null}
+                    {p.wine ? (
+                      <Tag tone="muted">{p.wine.bottleMl} ml</Tag>
+                    ) : null}
                   </label>
                 </li>
               ))}
