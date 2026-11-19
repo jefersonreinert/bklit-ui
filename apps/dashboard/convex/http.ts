@@ -16,6 +16,7 @@ import { type ActionCtx, httpAction } from "./_generated/server";
 import { syncArgs } from "./eatrade";
 import { callback as lightspeedCallback } from "./lightspeed";
 import { webhook as lightspeedWebhook } from "./lightspeedops";
+import { webhook as tableoWebhook } from "./tableo";
 import { ingestOhlc } from "./ohlc";
 
 /**
@@ -474,6 +475,13 @@ http.route({
     }
     return reply({ ok: true });
   }),
+});
+
+/** Tableo booking events, signed with the webhook secret (convex/tableo.ts). */
+http.route({
+  path: "/tableo/webhook",
+  method: "POST",
+  handler: tableoWebhook,
 });
 
 /** Lightspeed K-Series OAuth redirect (convex/lightspeed.ts). */

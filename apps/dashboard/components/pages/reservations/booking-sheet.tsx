@@ -470,7 +470,7 @@ function GuestFields({
               onChange={(e) => set("source", e.target.value as Source)}
               value={f.source}
             >
-              {SOURCES.map((s) => (
+              {SOURCES.filter((s) => s !== "tableo").map((s) => (
                 <option key={s} value={s}>
                   {SOURCE_META[s].label}
                 </option>

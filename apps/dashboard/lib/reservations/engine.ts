@@ -14,7 +14,8 @@ export type Source =
   | "google"
   | "phone"
   | "walkin"
-  | "manual";
+  | "manual"
+  | "tableo";
 
 export type Status =
   | "pending"
@@ -33,6 +34,7 @@ export const SOURCES: Source[] = [
   "phone",
   "walkin",
   "manual",
+  "tableo",
 ];
 
 export const STATUSES: Status[] = [

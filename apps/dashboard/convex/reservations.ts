@@ -17,8 +17,14 @@ import {
   type TableInfo,
   type VenueSettings,
 } from "../lib/reservations/engine";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, type QueryCtx, query } from "./_generated/server";
+import {
+  type MutationCtx,
+  mutation,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
 import { meta } from "./access";
 import { upsertGuest } from "./guests";
 import { isPanel, requirePanel } from "./lib";
@@ -76,13 +82,13 @@ export async function tablesOf(ctx: QueryCtx, c: string): Promise<TableInfo[]> {
   );
 }
 
-const dayOf = (ctx: QueryCtx, c: string, date: string) =>
+export const dayOf = (ctx: QueryCtx, c: string, date: string) =>
   ctx.db
     .query("reservations")
     .withIndex("by_company_date", (q) => q.eq("company", c).eq("date", date))
     .take(1000);
 
-const asBooking = (r: Doc<"reservations">): Booking => ({
+export const asBooking = (r: Doc<"reservations">): Booking => ({
   id: r._id,
   date: r.date,
   time: r.time,
@@ -92,7 +98,7 @@ const asBooking = (r: Doc<"reservations">): Booking => ({
   status: r.status as Status,
 });
 
-const view = (r: Doc<"reservations">) => ({
+export const view = (r: Doc<"reservations">) => ({
   id: r._id,
   company: r.company,
   ref: r.ref,
@@ -113,6 +119,10 @@ const view = (r: Doc<"reservations">) => ({
   event: Boolean(r.event),
   customerId: r.customerId ?? null,
   guestId: r.guestId ?? null,
+  tableoRef: r.tableoRef ?? null,
+  tableoTables: r.tableoTables ?? [],
+  tableoError: r.tableoError ?? null,
+  blocked: Boolean(r.blocked),
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
   log: r.log,
@@ -498,6 +508,7 @@ export const create = mutation({
       updatedAt: now,
       log: [{ at: now, by: "Painel", what: `Criada (${a.source})` }],
     });
+    await queuePush(ctx, c, id, "save");
     return { id, ref };
   },
 });
@@ -577,10 +588,11 @@ export const update = mutation({
         },
       ].slice(-50),
     });
+    await queuePush(ctx, r.company, r._id, "save");
   },
 });
 
-const STATUS_LABEL: Record<Status, string> = {
+export const STATUS_LABEL: Record<Status, string> = {
   pending: "Pendente",
   confirmed: "Confirmada",
   seated: "Sentada",
@@ -588,6 +600,91 @@ const STATUS_LABEL: Record<Status, string> = {
   cancelled: "Cancelada",
   no_show: "No-show",
 };
+
+/**
+ * Sends a booking to Tableo after the transaction commits, when the venue
+ * is linked and sending is on (convex/tableo.ts push).
+ */
+export async function queuePush(
+  ctx: MutationCtx,
+  c: string,
+  id: Id<"reservations">,
+  op: "save" | "status",
+  prev?: Status
+) {
+  const link = await ctx.db
+    .query("tableoLinks")
+    .withIndex("by_company", (q) => q.eq("company", c))
+    .unique();
+  if (link?.push && link.state === "active") {
+    await ctx.scheduler.runAfter(0, internal.tableo.push, { id, op, prev });
+  }
+}
+
+/** Moves a booking to a status (re-activation must not double book). */
+export async function changeStatus(
+  ctx: MutationCtx,
+  r: Doc<"reservations">,
+  next: Status,
+  by: string
+) {
+  if (r.status === next) {
+    return;
+  }
+  if (
+    ACTIVE.includes(next) &&
+    !ACTIVE.includes(r.status as Status) &&
+    r.tables.length
+  ) {
+    const [s, tables, day] = await Promise.all([
+      settingsOf(ctx, r.company),
+      tablesOf(ctx, r.company),
+      dayOf(ctx, r.company, r.date),
+    ]);
+    const others = day.filter((x) => x._id !== r._id).map(asBooking);
+    refuse(
+      check(s, { ...asBooking(r), status: next }, others, tables, {
+        override: true,
+      })
+    );
+  }
+  const now = Date.now();
+  await ctx.db.patch(r._id, {
+    status: next,
+    updatedAt: now,
+    log: [...r.log, { at: now, by, what: STATUS_LABEL[next] }].slice(-50),
+  });
+  await queuePush(ctx, r.company, r._id, "status", r.status as Status);
+}
+
+/**
+ * POS paid the check of a table: the booking seated there is finished.
+ * Looks at the service date and the one before (after midnight).
+ */
+export async function finishTableBooking(
+  ctx: MutationCtx,
+  c: string,
+  tableId: string,
+  day: string,
+  by: string
+) {
+  if (!isDate(day)) {
+    return;
+  }
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  const before = d.toISOString().slice(0, 10);
+  for (const date of [day, before]) {
+    const rows = await dayOf(ctx, c, date);
+    const seated = rows.find(
+      (r) => r.status === "seated" && r.tables.includes(tableId)
+    );
+    if (seated) {
+      await changeStatus(ctx, seated, "completed", by);
+      return;
+    }
+  }
+}
 
 export const setStatus = mutation({
   args: { id: v.id("reservations"), status: v.string() },
@@ -600,34 +697,7 @@ export const setStatus = mutation({
     if (!STATUSES.includes(a.status as Status)) {
       throw new ConvexError("Status inválido.");
     }
-    const next = a.status as Status;
-    // Re-activating a booking must not double book its table
-    if (
-      ACTIVE.includes(next) &&
-      !ACTIVE.includes(r.status as Status) &&
-      r.tables.length
-    ) {
-      const [s, tables, day] = await Promise.all([
-        settingsOf(ctx, r.company),
-        tablesOf(ctx, r.company),
-        dayOf(ctx, r.company, r.date),
-      ]);
-      const others = day.filter((x) => x._id !== r._id).map(asBooking);
-      refuse(
-        check(s, { ...asBooking(r), status: next }, others, tables, {
-          override: true,
-        })
-      );
-    }
-    const now = Date.now();
-    await ctx.db.patch(r._id, {
-      status: next,
-      updatedAt: now,
-      log: [
-        ...r.log,
-        { at: now, by: "Painel", what: STATUS_LABEL[next] },
-      ].slice(-50),
-    });
+    await changeStatus(ctx, r, a.status as Status, "Painel");
   },
 });
 

@@ -16,6 +16,13 @@ import {
 import type { FloorArea, PosData, PosTable, TableShape } from "@/lib/pos/types";
 import { cn } from "@/lib/utils";
 import { useCan } from "./pos-auth";
+import {
+  BookingSheet,
+  BookingsToday,
+  type TableBooking,
+  TableBookingBadge,
+  useTableBookings,
+} from "./pos-table-bookings";
 import { TableInspector } from "./pos-table-inspector";
 
 export const FLOOR_W = 1000;
@@ -38,6 +45,7 @@ function TableShapeView({
   data,
   editing,
   selected,
+  booking,
   onPointerDown,
   onClick,
 }: {
@@ -45,6 +53,7 @@ function TableShapeView({
   data: PosData;
   editing: boolean;
   selected: boolean;
+  booking?: TableBooking;
   onPointerDown?: (e: PointerEvent<HTMLButtonElement>) => void;
   onClick: () => void;
 }) {
@@ -72,6 +81,7 @@ function TableShapeView({
       }}
       type="button"
     >
+      {booking ? <TableBookingBadge b={booking} /> : null}
       <span className="font-semibold text-sm leading-none sm:text-lg">
         {table.name}
       </span>
@@ -159,6 +169,11 @@ export function TablesView({
   const can = useCan();
   const areas = draft ?? data.areas;
   const area = areas.find((a) => a.id === areaId) ?? areas[0];
+  const bookings = useTableBookings();
+  const [picked, setPicked] = useState<{
+    b: TableBooking;
+    tableId?: string;
+  } | null>(null);
 
   const patchTable = (id: string, patch: Partial<PosTable>) =>
     setDraft((d) =>
@@ -175,6 +190,12 @@ export function TablesView({
 
   const openTable = (t: PosTable) => {
     const existing = openOrderFor(data, t.id);
+    const booking = bookings.byTable.get(t.id);
+    // A booked table without a check: seat the guests first
+    if (!existing && booking) {
+      setPicked({ b: booking, tableId: t.id });
+      return;
+    }
     onOpenOrder(existing ? existing.id : createOrder({ tableId: t.id }).id);
   };
 
@@ -327,6 +348,7 @@ export function TablesView({
         >
           {area?.tables.map((t) => (
             <TableShapeView
+              booking={editing ? undefined : bookings.byTable.get(t.id)}
               data={data}
               editing={editing}
               key={t.id}
@@ -383,14 +405,39 @@ export function TablesView({
             table={selected}
           />
         ) : (
-          <TablesLegend data={data} />
+          <TablesLegend data={data}>
+            <BookingsToday
+              data={data}
+              list={bookings.list}
+              onPick={(b) => setPicked({ b })}
+              tableo={bookings.tableo}
+            />
+          </TablesLegend>
         )}
       </div>
+      {picked ? (
+        <BookingSheet
+          booking={picked.b}
+          data={data}
+          hasOrder={Boolean(
+            openOrderFor(data, picked.tableId ?? picked.b.tables[0] ?? "")
+          )}
+          onClose={() => setPicked(null)}
+          onOpenOrder={onOpenOrder}
+          tableId={picked.tableId}
+        />
+      ) : null}
     </div>
   );
 }
 
-function TablesLegend({ data }: { data: PosData }) {
+function TablesLegend({
+  data,
+  children,
+}: {
+  data: PosData;
+  children?: React.ReactNode;
+}) {
   const all = data.areas.flatMap((a) => a.tables);
   const busy = all.filter((t) => openOrderFor(data, t.id));
   const open = busy.reduce((sum, t) => {
@@ -418,6 +465,7 @@ function TablesLegend({ data }: { data: PosData }) {
         <span className="size-3 rounded-full border-2 border-[#c96442]" />
         Mesa com pedido aberto — toque para abrir no caixa
       </p>
+      {children}
     </div>
   );
 }

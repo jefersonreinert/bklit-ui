@@ -28,6 +28,7 @@ import { BookingSheet, type Reservation } from "./booking-sheet";
 import { MonthView, WeekView } from "./calendar-views";
 import { FloorView } from "./floor-view";
 import { GuestsView } from "./guests-view";
+import { TableoSheet } from "./tableo-sheet";
 import {
   errText,
   localDay,
@@ -64,6 +65,7 @@ type Sheetstate =
   | { kind: "walkin" }
   | { kind: "edit"; booking: Reservation }
   | { kind: "settings" }
+  | { kind: "tableo" }
   | { kind: "preset"; time: string; tables: string[] }
   | null;
 
@@ -135,12 +137,20 @@ function Reservations() {
             Walk-in
           </Button>
           {company === "all" ? null : (
-            <Button
-              onClick={() => setSheet({ kind: "settings" })}
-              variant="ghost"
-            >
-              Configurações
-            </Button>
+            <>
+              <Button
+                onClick={() => setSheet({ kind: "tableo" })}
+                variant="outline"
+              >
+                Tableo
+              </Button>
+              <Button
+                onClick={() => setSheet({ kind: "settings" })}
+                variant="ghost"
+              >
+                Configurações
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -344,6 +354,9 @@ function Sheets({
       {sheet?.kind === "settings" ? (
         <SettingsSheet company={company} onClose={() => setSheet(null)} />
       ) : null}
+      {sheet?.kind === "tableo" ? (
+        <TableoSheet company={company} onClose={() => setSheet(null)} />
+      ) : null}
     </>
   );
 }
@@ -532,6 +545,7 @@ const NEXT: Partial<Record<Status, { to: Status; label: string }>> = {
   seated: { to: "completed", label: "Concluir" },
 };
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: card with its actions
 function BookingCard({
   b,
   guest,
@@ -546,6 +560,7 @@ function BookingCard({
   onEdit: () => void;
 }) {
   const setStatus = useMutation(api.reservations.setStatus);
+  const retry = useMutation(api.tableo.retry);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const next = NEXT[b.status];
@@ -587,8 +602,17 @@ function BookingCard({
             />
             {src.label}
             {showVenue ? ` · ${VENUE_NAMES[b.company] ?? b.company}` : ""}
-            {tableNames ? ` · Mesa ${tableNames}` : " · sem mesa"}
+            {tableNames ? ` · Mesa ${tableNames}` : ""}
+            {!tableNames && b.tableoTables.length
+              ? ` · Tableo ${b.tableoTables.join("+")} (sem mesa ligada)`
+              : ""}
+            {tableNames || b.tableoTables.length ? "" : " · sem mesa"}
             {` · ${b.ref}`}
+            {b.tableoRef ? (
+              <span className="ml-1.5 rounded-full bg-violet-500/15 px-1.5 text-violet-700 dark:text-violet-300">
+                Tableo {b.tableoRef}
+              </span>
+            ) : null}
           </p>
           {b.requests || b.occasion ? (
             <p className="truncate text-xs">
@@ -655,6 +679,20 @@ function BookingCard({
         ) : null}
       </div>
       {error ? <p className="text-destructive text-xs">{error}</p> : null}
+      {b.tableoError ? (
+        <p className="flex flex-wrap items-center gap-2 text-amber-700 text-xs dark:text-amber-300">
+          Não enviada ao Tableo: {b.tableoError}
+          <Button
+            onClick={() =>
+              retry({ id: b.id }).catch((e) => setError(errText(e)))
+            }
+            size="sm"
+            variant="outline"
+          >
+            Tentar de novo
+          </Button>
+        </p>
+      ) : null}
       {more ? (
         <ul className="border-t pt-2 text-muted-foreground text-xs">
           {b.log
