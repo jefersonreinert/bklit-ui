@@ -20,6 +20,7 @@ import {
 import { codeToItem } from "./inv";
 import { requirePanel } from "./lib";
 import { settleLoyalty } from "./loyalty";
+import { finishTableBooking } from "./reservations";
 import { modifierGroup, posItem, posWine } from "./schema";
 
 /**
@@ -848,6 +849,16 @@ export const pay = mutation({
       closedAt: now,
       closedBy: user.name,
     });
+    // The reservation seated at this table is finished (and Tableo told)
+    if (order.tableId) {
+      await finishTableBooking(
+        ctx,
+        company,
+        order.tableId,
+        day,
+        `POS · ${user.name}`
+      );
+    }
     return order.number;
   },
 });
@@ -918,7 +929,12 @@ export const saveProduct = mutation({
       await audit(ctx, user, "Criou produto", fields.name, company);
     }
     // The same bottle in stock gets the code too
-    await codeToItem(ctx, current ? companyOf(current) : company, fields.name, fields.barcode);
+    await codeToItem(
+      ctx,
+      current ? companyOf(current) : company,
+      fields.name,
+      fields.barcode
+    );
   },
 });
 
@@ -1125,7 +1141,11 @@ export const setFloor = internalMutation({
   args: {
     company: v.string(),
     areas: v.array(
-      v.object({ id: v.string(), name: v.string(), tables: v.array(floorTable) })
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        tables: v.array(floorTable),
+      })
     ),
   },
   handler: async (ctx, { company, areas }) => {
@@ -1158,7 +1178,9 @@ export const setFloor = internalMutation({
     const today = new Date().toISOString().slice(0, 10);
     const bookings = await ctx.db
       .query("reservations")
-      .withIndex("by_company_date", (q) => q.eq("company", company).gte("date", today))
+      .withIndex("by_company_date", (q) =>
+        q.eq("company", company).gte("date", today)
+      )
       .take(2000);
     const booked = bookings.filter(
       (r) =>
@@ -1181,7 +1203,13 @@ export const setFloor = internalMutation({
         })),
       })),
     });
-    await audit(ctx, null, "Novo mapa de mesas", `${areas.length} áreas, ${ids.size} mesas`, company);
+    await audit(
+      ctx,
+      null,
+      "Novo mapa de mesas",
+      `${areas.length} áreas, ${ids.size} mesas`,
+      company
+    );
     return { areas: areas.length, tables: ids.size };
   },
 });

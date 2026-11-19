@@ -49,6 +49,7 @@ import type * as sales from "../sales.js";
 import type * as sommelier from "../sommelier.js";
 import type * as staff from "../staff.js";
 import type * as stores from "../stores.js";
+import type * as tableo from "../tableo.js";
 import type * as team from "../team.js";
 import type * as telegram from "../telegram.js";
 import type * as tgmedia from "../tgmedia.js";
@@ -103,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   sommelier: typeof sommelier;
   staff: typeof staff;
   stores: typeof stores;
+  tableo: typeof tableo;
   team: typeof team;
   telegram: typeof telegram;
   tgmedia: typeof tgmedia;

@@ -20,6 +20,7 @@ export const SOURCE_META: Record<Source, { label: string; dot: string }> = {
   phone: { label: "Telefone", dot: "bg-slate-500" },
   walkin: { label: "Walk-in", dot: "bg-teal-500" },
   manual: { label: "Manual", dot: "bg-zinc-400" },
+  tableo: { label: "Tableo", dot: "bg-violet-500" },
 };
 
 export const STATUS_META: Record<Status, { label: string; tone: string }> = {

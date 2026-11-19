@@ -1045,6 +1045,17 @@ export default defineSchema({
     customerId: v.optional(v.id("posCustomers")),
     /** Guest profile in the reservations CRM (resGuests). */
     guestId: v.optional(v.id("resGuests")),
+    /** Same booking at Tableo (convex/tableo.ts). */
+    tableoId: v.optional(v.number()),
+    tableoRef: v.optional(v.string()),
+    /** Tableo table names (shown when a table is not linked to the POS). */
+    tableoTables: v.optional(v.array(v.string())),
+    tableoChannel: v.optional(v.string()),
+    tableoSyncedAt: v.optional(v.number()),
+    /** Last failed send to Tableo (cleared on success). */
+    tableoError: v.optional(v.string()),
+    /** Tables held by Tableo without guests (private event, repairs). */
+    blocked: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
     /** Who changed what, newest last. */
@@ -1056,7 +1067,57 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_ref", ["ref"])
     .index("by_phone", ["phone"])
-    .index("by_guest", ["guestId", "date"]),
+    .index("by_guest", ["guestId", "date"])
+    .index("by_tableo", ["company", "tableoId"]),
+
+  /**
+   * Tableo connection of a venue: restaurant token (never sent to the
+   * browser), our webhook at Tableo and its signing secret, the dining
+   * areas and the Tableo table → POS table links.
+   */
+  tableoLinks: defineTable({
+    company: v.string(),
+    env: v.string(),
+    token: v.string(),
+    /** Random key in our webhook URL (/tableo/webhook?k=…). */
+    hookKey: v.string(),
+    webhookId: v.optional(v.number()),
+    secret: v.optional(v.string()),
+    restaurantId: v.optional(v.number()),
+    restaurantName: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    defaultDuration: v.optional(v.number()),
+    /** TableoArea[] of lib/reservations/tableo.ts. */
+    areas: v.any(),
+    /** Tableo table id → POS table id. */
+    tableMap: v.any(),
+    /** Dining area for bookings without a linked table. */
+    defaultArea: v.optional(v.number()),
+    /** Send bookings made in the app to Tableo. */
+    push: v.boolean(),
+    state: v.string(),
+    lastError: v.optional(v.string()),
+    lastPull: v.optional(v.number()),
+    lastEvent: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company", ["company"])
+    .index("by_hook", ["hookKey"]),
+
+  /** Tableo webhook deliveries and API calls (dedupe + activity log). */
+  tableoEvents: defineTable({
+    company: v.string(),
+    /** X-Webhook-Id for deliveries (deduplication), else empty. */
+    eventId: v.string(),
+    kind: v.string(),
+    ok: v.boolean(),
+    note: v.optional(v.string()),
+    bookingId: v.optional(v.number()),
+    at: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_company_at", ["company", "at"]),
 
   /**
    * Guests of every venue (CRM), keyed by phone or e-mail. Visit and
