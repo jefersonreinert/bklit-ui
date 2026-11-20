@@ -203,10 +203,16 @@ export function titleCase(s: string) {
 }
 
 const COLOR_WORDS: [WineColor, RegExp][] = [
-  ["sparkling", /sparkl|espum|prosecco|champagne|cava|cr[eé]mant|frizz|spumante/i],
+  [
+    "sparkling",
+    /sparkl|espum|prosecco|champagne|cava|cr[eé]mant|frizz|spumante/i,
+  ],
   ["rose", /ros[eé]|rosat|rosado|rosato|blush/i],
   ["orange", /orange|laranja|macerat|skin.contact|ramato/i],
-  ["dessert", /dessert|sweet|sobremesa|port\b|porto|moscato|passito|sauternes|tokaj/i],
+  [
+    "dessert",
+    /dessert|sweet|sobremesa|port\b|porto|moscato|passito|sauternes|tokaj/i,
+  ],
   ["white", /white|branco|blanc|bianco|blanco/i],
   ["red", /\bred\b|tinto|rouge|rosso/i],
 ];
@@ -229,7 +235,7 @@ const knownColor = (c: string | undefined): WineColor =>
 const cellarColor: Record<string, WineColor> = {
   Red: "red",
   White: "white",
-  "Rosé": "rose",
+  Rosé: "rose",
   Sparkling: "sparkling",
   Sweet: "dessert",
   Orange: "orange",
@@ -276,7 +282,9 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
       vintage: clean(w.vintage),
       abv: null,
       onTap: false,
-      pours: (w.pours ?? []).filter((x) => x.price > 0).sort((a, b) => a.ml - b.ml),
+      pours: (w.pours ?? [])
+        .filter((x) => x.price > 0)
+        .sort((a, b) => a.ml - b.ml),
       bottle: p.price > 0 ? r2(p.price) : null,
       takeaway: w.takeaway ? r2(w.takeaway) : null,
       story: "",
@@ -292,7 +300,9 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
   // Dispensers: what is really pourable right now
   // The portal reuses SKUs: the wine must also carry the same name
   const infoOf = (pos: WmPositionIn) => {
-    const same = input.wmWines.filter((w) => w.sku && String(w.sku) === String(pos.sku));
+    const same = input.wmWines.filter(
+      (w) => w.sku && String(w.sku) === String(pos.sku)
+    );
     const name = clean(pos.wine);
     return (
       same.find((w) => clean(w.name) === name) ??
@@ -304,7 +314,7 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
     if (!name) {
       continue;
     }
-    const info = pos.sku ? infoOf(pos) ?? undefined : undefined;
+    const info = pos.sku ? (infoOf(pos) ?? undefined) : undefined;
     const minLeft = info?.minResidueMl ?? 15;
     if ((pos.residueMl ?? 0) <= minLeft || info?.valid === false) {
       continue;
@@ -365,7 +375,15 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
     entry.image = clean(c.imageUrl);
   }
 
-  const order: WineColor[] = ["sparkling", "white", "rose", "orange", "red", "dessert", ""];
+  const order: WineColor[] = [
+    "sparkling",
+    "white",
+    "rose",
+    "orange",
+    "red",
+    "dessert",
+    "",
+  ];
   return out
     .filter((e) => available.has(e.id))
     .sort(
@@ -415,7 +433,10 @@ export function catalogText(wines: SommelierWine[], food: FoodItem[]) {
       w.name,
       COLOR_NAME[w.color],
       w.grape && `grape: ${w.grape}`,
-      [w.producer && `by ${w.producer}`, [w.region, w.country].filter(Boolean).join(", ")]
+      [
+        w.producer && `by ${w.producer}`,
+        [w.region, w.country].filter(Boolean).join(", "),
+      ]
         .filter(Boolean)
         .join(", "),
       w.vintage && `vintage ${w.vintage}`,
@@ -441,7 +462,9 @@ export function catalogText(wines: SommelierWine[], food: FoodItem[]) {
     `WINE LIST (${wines.length} wines; ${wines.filter((w) => w.onTap).length} on tap now):`,
     ...lines,
     "",
-    dishes.length ? `FOOD MENU (${dishes.length} items):` : "FOOD MENU: not available.",
+    dishes.length
+      ? `FOOD MENU (${dishes.length} items):`
+      : "FOOD MENU: not available.",
     ...dishes,
   ].join("\n");
 }
@@ -449,7 +472,20 @@ export function catalogText(wines: SommelierWine[], food: FoodItem[]) {
 /** Shown to guests next to the conversation (no prices, costs or stock). */
 export type PublicWine = Pick<
   SommelierWine,
-  "id" | "name" | "producer" | "color" | "grape" | "country" | "region" | "onTap" | "image"
+  | "id"
+  | "name"
+  | "producer"
+  | "color"
+  | "grape"
+  | "country"
+  | "region"
+  | "onTap"
+  | "image"
+  | "vintage"
+  | "abv"
+  | "story"
+  | "notes"
+  | "pairing"
 > & {
   /** Pour sizes on the dispenser (ml). */
   sizes: number[];
@@ -468,10 +504,18 @@ export const publicWine = (w: SommelierWine): PublicWine => ({
   sizes: w.pours.map((p) => p.ml),
   bottle: !!w.bottle,
   image: w.image,
+  vintage: w.vintage,
+  abv: w.abv,
+  story: w.story,
+  notes: w.notes,
+  pairing: w.pairing,
 });
 
 /** Wines the answer talks about, in the order they are mentioned. */
-export function mentioned<T extends { name: string }>(answer: string, wines: T[]) {
+export function mentioned<T extends { name: string }>(
+  answer: string,
+  wines: T[]
+) {
   const text = ` ${words(answer).join(" ")} `;
   const hits: { w: T; at: number }[] = [];
   for (const w of wines) {

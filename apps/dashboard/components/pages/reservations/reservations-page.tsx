@@ -136,21 +136,19 @@ function Reservations() {
           >
             Walk-in
           </Button>
+          <Button
+            onClick={() => setSheet({ kind: "tableo" })}
+            variant="outline"
+          >
+            Tableo
+          </Button>
           {company === "all" ? null : (
-            <>
-              <Button
-                onClick={() => setSheet({ kind: "tableo" })}
-                variant="outline"
-              >
-                Tableo
-              </Button>
-              <Button
-                onClick={() => setSheet({ kind: "settings" })}
-                variant="ghost"
-              >
-                Configurações
-              </Button>
-            </>
+            <Button
+              onClick={() => setSheet({ kind: "settings" })}
+              variant="ghost"
+            >
+              Configurações
+            </Button>
           )}
         </div>
       </div>

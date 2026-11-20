@@ -16,7 +16,7 @@ import { api } from "@/convex/_generated/api";
 import { Icon } from "@/lib/icons";
 import { TABLEO_ENVS, type TableoEnv } from "@/lib/reservations/tableo";
 import { cn } from "@/lib/utils";
-import { errText, VENUE_NAMES } from "./reservations-shared";
+import { errText, VENUE_KEYS, VENUE_NAMES } from "./reservations-shared";
 
 /**
  * Tableo link of a venue: token, webhook, sending bookings made here,
@@ -46,12 +46,16 @@ const when = (ts: number | null) =>
     : "—";
 
 export function TableoSheet({
-  company,
+  company: initial,
   onClose,
 }: {
   company: string;
   onClose: () => void;
 }) {
+  // Opened from "Todos os bares": pick the venue inside the sheet
+  const [company, setCompany] = useState(
+    initial === "all" ? (VENUE_KEYS[0] ?? "main") : initial
+  );
   const data = useQuery(api.tableo.status, { company });
   return (
     <Sheet onOpenChange={(o) => (o ? null : onClose())} open>
@@ -68,6 +72,23 @@ export function TableoSheet({
             Reservas do Tableo em tempo real nas Reservas e nas mesas do POS
           </SheetDescription>
         </SheetHeader>
+        <div className="flex flex-wrap gap-1.5 border-b px-5 py-3">
+          {VENUE_KEYS.map((k) => (
+            <button
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs",
+                company === k
+                  ? "border-foreground bg-foreground text-background"
+                  : "hover:bg-muted"
+              )}
+              key={k}
+              onClick={() => setCompany(k)}
+              type="button"
+            >
+              {VENUE_NAMES[k]}
+            </button>
+          ))}
+        </div>
         {data === undefined ? (
           <p className="p-5 text-muted-foreground text-sm">Carregando…</p>
         ) : null}
@@ -77,7 +98,7 @@ export function TableoSheet({
           </p>
         ) : null}
         {data ? (
-          <div className="flex flex-col gap-5 p-5">
+          <div className="flex flex-col gap-5 p-5" key={company}>
             {data.link ? <Linked company={company} data={data} /> : null}
             <Connect company={company} linked={Boolean(data.link)} />
             {data.link ? <Activity data={data} /> : null}

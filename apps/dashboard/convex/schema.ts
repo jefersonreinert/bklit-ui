@@ -2047,6 +2047,19 @@ export default defineSchema({
     .index("by_sid", ["sid", "at"])
     .index("by_ip", ["ip", "at"]),
 
+  /** Wine sheets written by the AI sommelier, per wine and language. */
+  sommelierProfiles: defineTable({
+    company: v.string(),
+    wineId: v.string(),
+    lang: v.string(),
+    /** WineProfile of lib/sommelier/profile.ts. */
+    profile: v.any(),
+    model: v.optional(v.string()),
+    at: v.number(),
+  })
+    .index("by_wine", ["company", "wineId", "lang"])
+    .index("by_company_at", ["company", "at"]),
+
   /** Wine Monitor cards (prepaid credit / debit tab) of a business. */
   wmCards: defineTable({
     company: v.string(),

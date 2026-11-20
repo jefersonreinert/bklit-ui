@@ -10,8 +10,14 @@ import {
   type WmWineIn,
 } from "../lib/sommelier/catalog";
 import { DEFAULT_MODEL } from "../lib/sommelier/prompt";
+import { cleanProfile, type WineProfile } from "../lib/sommelier/profile";
 import type { Doc } from "./_generated/dataModel";
-import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
+import {
+  internalMutation,
+  mutation,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
 import { audit, canReadPos, meta, newToken, requireStaff } from "./access";
 import { requireRouter } from "./ai";
 
@@ -32,7 +38,11 @@ const SPEECH_PER_GUEST = 400;
 const SPEECH_PER_IP = 1200;
 const CELLAR_KEY = "cb:cellar:v1";
 
-const VOICES = v.union(v.literal("browser"), v.literal("openai"), v.literal("live"));
+const VOICES = v.union(
+  v.literal("browser"),
+  v.literal("openai"),
+  v.literal("live")
+);
 const LIVE_PER_GUEST = 12;
 const LIVE_PER_IP = 40;
 
@@ -79,7 +89,8 @@ async function catalogOf(ctx: QueryCtx, company: string) {
   let cellar: CellarWineIn[] = [];
   try {
     cellar = cellarDoc
-      ? ((JSON.parse(cellarDoc.value) as { wines?: CellarWineIn[] }).wines ?? [])
+      ? ((JSON.parse(cellarDoc.value) as { wines?: CellarWineIn[] }).wines ??
+        [])
       : [];
   } catch {
     cellar = [];
@@ -94,7 +105,9 @@ async function catalogOf(ctx: QueryCtx, company: string) {
     wine: p.wine as PosProductIn["wine"],
   }));
   const wines = buildCatalog({
-    positions: (Array.isArray(wm?.positions) ? wm.positions : []) as WmPositionIn[],
+    positions: (Array.isArray(wm?.positions)
+      ? wm.positions
+      : []) as WmPositionIn[],
     wmWines: (Array.isArray(wm?.wines) ? wm.wines : []) as WmWineIn[],
     products: items,
     cellar,
@@ -189,7 +202,13 @@ export const save = mutation({
     } else {
       await ctx.db.insert("sommelierSettings", { ...doc, token: newToken() });
     }
-    await audit(ctx, user, "Sommelier IA", input.enabled ? "ligado" : "desligado", company);
+    await audit(
+      ctx,
+      user,
+      "Sommelier IA",
+      input.enabled ? "ligado" : "desligado",
+      company
+    );
     return true;
   },
 });
@@ -203,7 +222,10 @@ export const rotate = mutation({
     if (!current) {
       throw new ConvexError("Salve as configurações primeiro.");
     }
-    await ctx.db.patch(current._id, { token: newToken(), updatedAt: Date.now() });
+    await ctx.db.patch(current._id, {
+      token: newToken(),
+      updatedAt: Date.now(),
+    });
     await audit(ctx, user, "Sommelier IA", "novo link", company);
     return true;
   },
@@ -227,6 +249,88 @@ export const venue = query({
       voice: s.voice,
       wines: wines.map(publicWine),
     };
+  },
+});
+
+/* ------------------------------- wine sheets ------------------------------- */
+
+/** New sheets per business and day (each one is a Claude call). */
+const PROFILES_PER_DAY = 150;
+const LANG_CODE = /^[a-z]{2}$/;
+
+/** App server: the wine to describe, or the kept sheet. */
+export const profileJob = mutation({
+  args: { token: v.string(), wineId: v.string(), lang: v.string() },
+  handler: async (ctx, { token, wineId, lang }) => {
+    await requireRouter(ctx);
+    const s = await byToken(ctx, token);
+    if (!(s && LANG_CODE.test(lang))) {
+      return { ok: false as const, reason: "closed" };
+    }
+    const kept = await ctx.db
+      .query("sommelierProfiles")
+      .withIndex("by_wine", (q) =>
+        q.eq("company", s.company).eq("wineId", wineId).eq("lang", lang)
+      )
+      .first();
+    if (kept) {
+      return { ok: true as const, profile: kept.profile as WineProfile };
+    }
+    const { wines } = await catalogOf(ctx, s.company);
+    const wine = wines.find((w) => w.id === wineId);
+    if (!wine) {
+      return { ok: false as const, reason: "unknown" };
+    }
+    const today = await ctx.db
+      .query("sommelierProfiles")
+      .withIndex("by_company_at", (q) =>
+        q.eq("company", s.company).gt("at", since())
+      )
+      .take(PROFILES_PER_DAY);
+    if (today.length >= PROFILES_PER_DAY) {
+      return { ok: false as const, reason: "venue" };
+    }
+    return {
+      ok: true as const,
+      company: s.company,
+      wine,
+      model: s.model || DEFAULT_MODEL,
+    };
+  },
+});
+
+export const saveProfile = mutation({
+  args: {
+    company: v.string(),
+    wineId: v.string(),
+    lang: v.string(),
+    profile: v.any(),
+    model: v.optional(v.string()),
+  },
+  handler: async (ctx, a) => {
+    await requireRouter(ctx);
+    const clean = cleanProfile(a.profile);
+    if (!(clean && LANG_CODE.test(a.lang))) {
+      return null;
+    }
+    const kept = await ctx.db
+      .query("sommelierProfiles")
+      .withIndex("by_wine", (q) =>
+        q.eq("company", a.company).eq("wineId", a.wineId).eq("lang", a.lang)
+      )
+      .first();
+    if (kept) {
+      return kept.profile as WineProfile;
+    }
+    await ctx.db.insert("sommelierProfiles", {
+      company: a.company,
+      wineId: a.wineId,
+      lang: a.lang,
+      profile: clean,
+      model: a.model,
+      at: Date.now(),
+    });
+    return clean;
   },
 });
 
@@ -261,7 +365,9 @@ async function overLimit(
   }
   const all = await ctx.db
     .query("sommelierChats")
-    .withIndex("by_company_at", (q) => q.eq("company", s.company).gt("at", from))
+    .withIndex("by_company_at", (q) =>
+      q.eq("company", s.company).gt("at", from)
+    )
     .take(s.dailyLimit);
   return all.length >= s.dailyLimit ? "venue" : null;
 }
@@ -349,7 +455,12 @@ export const speech = mutation({
     if (used.length >= SPEECH_PER_GUEST || net.length >= SPEECH_PER_IP) {
       return { ok: false as const, reason: "guest" };
     }
-    await ctx.db.insert("sommelierSpeech", { company: s.company, sid, ip, at: Date.now() });
+    await ctx.db.insert("sommelierSpeech", {
+      company: s.company,
+      sid,
+      ip,
+      at: Date.now(),
+    });
     return { ok: true as const, voice: s.openaiVoice ?? "marin" };
   },
 });
