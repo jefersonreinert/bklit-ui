@@ -286,7 +286,8 @@ export const profileJob = mutation({
         q.eq("company", s.company).eq("wineId", wineId).eq("lang", lang)
       )
       .first();
-    if (kept) {
+    // Sheets from before the quick view are written again
+    if (kept && (kept.profile as WineProfile).short?.taste) {
       return { ok: true as const, profile: kept.profile as WineProfile };
     }
     const { wines } = await catalogOf(ctx, s.company);
@@ -332,8 +333,16 @@ export const saveProfile = mutation({
         q.eq("company", a.company).eq("wineId", a.wineId).eq("lang", a.lang)
       )
       .first();
-    if (kept) {
+    if (kept && (kept.profile as WineProfile).short?.taste) {
       return kept.profile as WineProfile;
+    }
+    if (kept) {
+      await ctx.db.patch(kept._id, {
+        profile: clean,
+        model: a.model,
+        at: Date.now(),
+      });
+      return clean;
     }
     await ctx.db.insert("sommelierProfiles", {
       company: a.company,

@@ -263,7 +263,7 @@ describe("AI sommelier", () => {
     const job = await r.mutation(api.sommelier.profileJob, args);
     expect(job.ok && "wine" in job && job.wine?.name).toBe(w.name);
     const profile = parseProfile(
-      'Here: ```json {"summary":"Tinto macio","body":4,"tannin":9,"vegan":"maybe","tasting":{"nose":"Ameixa"},"styles":["Encorpado"]} ```'
+      'Here: ```json {"summary":"Tinto macio","short":{"taste":"Ameixa e pimenta","pairing":"Carnes grelhadas"},"body":4,"tannin":9,"vegan":"maybe","tasting":{"nose":"Ameixa"},"styles":["Encorpado"]} ```'
     );
     expect(profile).toMatchObject({
       summary: "Tinto macio",
