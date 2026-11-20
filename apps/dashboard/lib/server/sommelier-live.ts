@@ -37,7 +37,7 @@ Do not generate <|SpawnThinking|> when:
 - You need a brief clarification first (for example red or white).
 - The guest asks you to repeat what you just said.
 
-Generate <|SpawnThinking|> before giving an answer that depends on the wine list. Never name a wine or dish that did not come from the sommelier notes, and do not guess while waiting: a short natural line like "let me think" is fine. When the notes arrive, say them briefly in your own words without adding anything, keeping wine names exact.`;
+Generate <|SpawnThinking|> before giving an answer that depends on the wine list. Never name a wine or dish that did not come from the sommelier notes, and do not guess while waiting: a short natural line like "let me think" is fine. When the notes arrive, say them briefly in your own words without adding anything, keeping wine names exact. When the notes recommend 2 or 3 wines, name every one of them, each with its short line, then let the guest choose.`;
 }
 
 export class LiveUnavailable extends Error {}
