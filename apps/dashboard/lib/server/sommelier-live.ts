@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import { langOf } from "@/lib/sommelier/prompt";
+import { langOf, liveVoiceOf } from "@/lib/sommelier/prompt";
 import { providerKey, routerClient } from "./ai/service";
 
 /**
@@ -13,8 +13,6 @@ import { providerKey, routerClient } from "./ai/service";
  */
 
 export const LIVE_MODEL = "gpt-live-1";
-/** GPT-Live voices that read well in every language we offer. */
-const LIVE_VOICES = new Set(["marin", "cedar"]);
 
 export function liveInstructions(venue: string, langName: string) {
   return `You are the sommelier of ${venue}, a wine bar in Malta, talking by voice with a guest on their phone at the bar. Guests pour wine themselves from self-service dispensers (taster, glass or large glass) or order bottles.
@@ -39,7 +37,7 @@ Do not generate <|SpawnThinking|> when:
 - You need a brief clarification first (for example red or white).
 - The guest asks you to repeat what you just said.
 
-Generate <|SpawnThinking|> before giving an answer that depends on the wine list. Never name a wine or dish that did not come from the sommelier notes, and do not guess while waiting: a short natural line like "let me think" is fine. When the notes arrive, say them briefly in your own words without adding anything, keeping wine names exact.`;
+Generate <|SpawnThinking|> before giving an answer that depends on the wine list. Never name a wine or dish that did not come from the sommelier notes, and do not guess while waiting: a short natural line like "let me think" is fine. When the notes arrive, say them briefly in your own words without adding anything, keeping wine names exact. When the notes recommend 2 or 3 wines, name every one of them, each with its short line, then let the guest choose.`;
 }
 
 export class LiveUnavailable extends Error {}
@@ -80,7 +78,8 @@ export async function startLive(input: {
         instructions: liveInstructions(allowed.name, lang),
         audio: {
           output: {
-            voice: LIVE_VOICES.has(allowed.voice) ? allowed.voice : "marin",
+            // Female voice of the guest's language (settings, else default)
+            voice: liveVoiceOf(langOf(input.lang).code, allowed.liveVoices),
           },
         },
         delegation: { type: "client" },

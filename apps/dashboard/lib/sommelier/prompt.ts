@@ -17,18 +17,75 @@ export interface SommelierLang {
 }
 
 export const SOMMELIER_LANGS: SommelierLang[] = [
-  { code: "en", country: "gb", speech: "en-GB", label: "English", flag: "🇬🇧", name: "English" },
-  { code: "pt", country: "br", speech: "pt-BR", label: "Português", flag: "🇧🇷", name: "Portuguese (Brazilian)" },
-  { code: "it", country: "it", speech: "it-IT", label: "Italiano", flag: "🇮🇹", name: "Italian" },
-  { code: "es", country: "es", speech: "es-ES", label: "Español", flag: "🇪🇸", name: "Spanish" },
-  { code: "fr", country: "fr", speech: "fr-FR", label: "Français", flag: "🇫🇷", name: "French" },
-  { code: "de", country: "de", speech: "de-DE", label: "Deutsch", flag: "🇩🇪", name: "German" },
-  { code: "nl", country: "nl", speech: "nl-NL", label: "Nederlands", flag: "🇳🇱", name: "Dutch" },
-  { code: "pl", country: "pl", speech: "pl-PL", label: "Polski", flag: "🇵🇱", name: "Polish" },
+  {
+    code: "en",
+    country: "gb",
+    speech: "en-GB",
+    label: "English",
+    flag: "🇬🇧",
+    name: "English",
+  },
+  {
+    code: "pt",
+    country: "br",
+    speech: "pt-BR",
+    label: "Português",
+    flag: "🇧🇷",
+    name: "Portuguese (Brazilian)",
+  },
+  {
+    code: "it",
+    country: "it",
+    speech: "it-IT",
+    label: "Italiano",
+    flag: "🇮🇹",
+    name: "Italian",
+  },
+  {
+    code: "es",
+    country: "es",
+    speech: "es-ES",
+    label: "Español",
+    flag: "🇪🇸",
+    name: "Spanish",
+  },
+  {
+    code: "fr",
+    country: "fr",
+    speech: "fr-FR",
+    label: "Français",
+    flag: "🇫🇷",
+    name: "French",
+  },
+  {
+    code: "de",
+    country: "de",
+    speech: "de-DE",
+    label: "Deutsch",
+    flag: "🇩🇪",
+    name: "German",
+  },
+  {
+    code: "nl",
+    country: "nl",
+    speech: "nl-NL",
+    label: "Nederlands",
+    flag: "🇳🇱",
+    name: "Dutch",
+  },
+  {
+    code: "pl",
+    country: "pl",
+    speech: "pl-PL",
+    label: "Polski",
+    flag: "🇵🇱",
+    name: "Polish",
+  },
 ];
 
 export const langOf = (code: string | undefined) =>
-  SOMMELIER_LANGS.find((l) => l.code === code) ?? (SOMMELIER_LANGS[0] as SommelierLang);
+  SOMMELIER_LANGS.find((l) => l.code === code) ??
+  (SOMMELIER_LANGS[0] as SommelierLang);
 
 /** OpenAI voices offered in the settings (gpt-4o-mini-tts). */
 /** Realtime voices; marin and cedar sound the most natural. */
@@ -47,6 +104,75 @@ export const OPENAI_VOICES = [
 
 export const DEFAULT_VOICE = "marin";
 
+/**
+ * GPT-Live voices (OpenAI "Managing GPT-Live sessions", voice options).
+ * marin and cedar speak every language; the others are native voices of
+ * one language and accent.
+ */
+export interface LiveVoice {
+  id: string;
+  lang: string;
+  accent: string;
+  female: boolean;
+}
+
+export const LIVE_VOICES: LiveVoice[] = [
+  { id: "marin", lang: "*", accent: "multilíngue", female: true },
+  { id: "cedar", lang: "*", accent: "multilíngue", female: false },
+  { id: "gleam", lang: "en", accent: "norte-americano", female: true },
+  { id: "willow", lang: "en", accent: "irlandês", female: true },
+  { id: "quartz", lang: "en", accent: "australiano", female: true },
+  { id: "delta", lang: "en", accent: "sul dos EUA", female: true },
+  { id: "meridian", lang: "en", accent: "norte-americano", female: false },
+  { id: "vesper", lang: "en", accent: "britânico", female: false },
+  { id: "stone", lang: "en", accent: "irlandês", female: false },
+  { id: "ripple", lang: "en", accent: "australiano", female: false },
+  { id: "beacon", lang: "en", accent: "filipino", female: false },
+  { id: "cinder", lang: "en", accent: "sul dos EUA", female: false },
+  { id: "bossa", lang: "pt", accent: "brasileiro", female: true },
+  { id: "tempo", lang: "pt", accent: "brasileiro", female: false },
+  { id: "nuri", lang: "de", accent: "alemão", female: true },
+  { id: "juni", lang: "de", accent: "alemão", female: true },
+  { id: "flitz", lang: "de", accent: "alemão", female: false },
+  { id: "brise", lang: "fr", accent: "francês", female: true },
+  { id: "sillage", lang: "fr", accent: "francês", female: false },
+];
+
+export const LIVE_VOICE_IDS = new Set(LIVE_VOICES.map((v) => v.id));
+
+/**
+ * Best female voice per guest language: a native GPT-Live voice where
+ * OpenAI has one (natural recordings), else marin (OpenAI's recommended
+ * voice, speaks every language).
+ */
+export const LIVE_FEMALE: Record<string, string> = {
+  en: "gleam",
+  pt: "bossa",
+  de: "nuri",
+  fr: "brise",
+  it: "marin",
+  es: "marin",
+  nl: "marin",
+  pl: "marin",
+};
+
+/** Voices offered for a language in the settings (female first). */
+export const liveVoicesFor = (lang: string) =>
+  LIVE_VOICES.filter((v) => v.lang === lang || v.lang === "*").sort(
+    (a, b) => Number(b.female) - Number(a.female)
+  );
+
+/** The voice a live call uses for the guest's language. */
+export function liveVoiceOf(
+  lang: string,
+  chosen: Record<string, string> | undefined
+) {
+  const pick = chosen?.[lang];
+  return pick && LIVE_VOICE_IDS.has(pick)
+    ? pick
+    : (LIVE_FEMALE[lang] ?? "marin");
+}
+
 export const DEFAULT_MODEL = "claude-opus-5-5";
 
 export function instructions(venue: string, houseNotes: string) {
@@ -55,6 +181,7 @@ export function instructions(venue: string, houseNotes: string) {
 How you talk:
 - This is a spoken conversation. Sound like a warm, relaxed, knowledgeable sommelier at the table, never like a brochure. No markdown, lists, headings, emojis or symbols.
 - Short and spot-on: one or two sentences, about 35 words at most. Give only the most valuable and interesting thing to know (the wine to pick and why, one striking fact or taste). No filler: don't repeat the question, no "great choice", "lovely", "of course", no generic descriptions that fit any wine, no closing summaries.
+- Recommendations: when the guest asks what to drink, for a suggestion or "something like…", offer 2 or 3 wines, never just one and never more than three. Give each its exact name and one short, spot-on line on what makes it the right pick (its taste or style in a few vivid words, tied to what the guest said), then let them choose. About 60 words in total, spoken naturally ("You could try…, or…, and if you fancy something bolder…"), not as a list.
 - Only when the guest explicitly asks for more (a tasting guide, the full story, a comparison) go longer, still under about 80 words.
 - Ask a question only when you truly can't answer without it (red or white, for example), and keep it to a few words.
 
@@ -75,7 +202,11 @@ ${houseNotes.trim() ? `\nNotes from the owner (follow them):\n${houseNotes.trim(
 export const PHOTO_TASK = `[The guest just took this photo at the bar, most likely of a wine bottle, a label or a dispenser.]
 Read the label and check it against the WINE LIST. Answer in at most three short sentences: what the wine is (its exact list name if we pour it, and whether it is on tap now), then the one or two most interesting things to know about it (its style and taste in a few words, a striking fact, or the best dish from our menu). No filler, no long descriptions. If we don't pour it, say what it is in one line and name the closest wine we do. If you can't read the label, ask for a closer photo of the front label in one line. Never guess a wine you can't read.`;
 
-export function turnContext(langName: string, now: Date, timeZone = "Europe/Malta") {
+export function turnContext(
+  langName: string,
+  now: Date,
+  timeZone = "Europe/Malta"
+) {
   const time = now.toLocaleString("en-GB", {
     timeZone,
     weekday: "long",

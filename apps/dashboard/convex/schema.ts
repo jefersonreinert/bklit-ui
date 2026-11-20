@@ -2006,6 +2006,8 @@ export default defineSchema({
     notes: v.optional(v.string()),
     voice: v.union(v.literal("browser"), v.literal("openai"), v.literal("live")),
     openaiVoice: v.optional(v.string()),
+    /** Live call voice per guest language ("pt" → "bossa"). */
+    liveVoices: v.optional(v.record(v.string(), v.string())),
     model: v.optional(v.string()),
     /** Questions per 24 h for the whole business (cost cap). */
     dailyLimit: v.number(),

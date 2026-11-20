@@ -9,7 +9,15 @@ import { api } from "@/convex/_generated/api";
 import { appLocale } from "@/lib/i18n/locale";
 import { Icon } from "@/lib/icons";
 import { sendPos, useCompany, usePosQuery } from "@/lib/pos/store";
-import { DEFAULT_MODEL, langOf, OPENAI_VOICES } from "@/lib/sommelier/prompt";
+import {
+  DEFAULT_MODEL,
+  LIVE_FEMALE,
+  langOf,
+  liveVoiceOf,
+  liveVoicesFor,
+  OPENAI_VOICES,
+  SOMMELIER_LANGS,
+} from "@/lib/sommelier/prompt";
 import { cn } from "@/lib/utils";
 import { useCan } from "./pos-auth";
 import { QrCode } from "./pos-qr";
@@ -44,6 +52,7 @@ export function SommelierView() {
   const [notes, setNotes] = useState("");
   const [voice, setVoice] = useState<"browser" | "openai" | "live">("browser");
   const [openaiVoice, setOpenaiVoice] = useState("marin");
+  const [liveVoices, setLiveVoices] = useState<Record<string, string>>({});
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [dailyLimit, setDailyLimit] = useState("300");
   const [busy, setBusy] = useState(false);
@@ -61,6 +70,7 @@ export function SommelierView() {
     setNotes(data.notes);
     setVoice(data.voice);
     setOpenaiVoice(data.openaiVoice);
+    setLiveVoices(data.liveVoices);
     setModel(data.model);
     setDailyLimit(String(data.dailyLimit));
   }, [loaded]);
@@ -83,19 +93,27 @@ export function SommelierView() {
         notes,
         voice,
         openaiVoice,
+        liveVoices,
         model,
         dailyLimit: Number(dailyLimit) || 300,
       });
       setMsg({ ok: true, text: "Salvo." });
     } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : String(err) });
+      setMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setBusy(false);
     }
   };
 
   const rotate = async () => {
-    if (!window.confirm("Gerar um link novo? Os QR codes impressos param de funcionar.")) {
+    if (
+      !window.confirm(
+        "Gerar um link novo? Os QR codes impressos param de funcionar."
+      )
+    ) {
       return;
     }
     await sendPos(api.sommelier.rotate, { company }).catch((err) =>
@@ -130,10 +148,11 @@ export function SommelierView() {
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold">Sommelier IA para clientes</h2>
             <p className="text-muted-foreground text-sm">
-              O cliente lê o QR code na mesa e conversa por voz com o Claude sobre os
-              vinhos: recomendações, notas de prova, harmonização, guias de
-              degustação e a história de cada vinho. Usa a chave Anthropic de
-              Configurações → AI Providers (ou a chave Claude do servidor).
+              O cliente lê o QR code na mesa e conversa por voz com o Claude
+              sobre os vinhos: recomendações, notas de prova, harmonização,
+              guias de degustação e a história de cada vinho. Usa a chave
+              Anthropic de Configurações → AI Providers (ou a chave Claude do
+              servidor).
             </p>
           </div>
           <Switch
@@ -162,7 +181,11 @@ export function SommelierView() {
               <Button onClick={copy} size="sm" variant="outline">
                 {copied ? "Copiado!" : "Copiar link"}
               </Button>
-              <Button onClick={() => window.open(link, "_blank", "noopener")} size="sm" variant="outline">
+              <Button
+                onClick={() => window.open(link, "_blank", "noopener")}
+                size="sm"
+                variant="outline"
+              >
                 Abrir como cliente
               </Button>
               {canEdit ? (
@@ -227,10 +250,54 @@ export function SommelierView() {
             />
           </div>
         </Field>
-        {voice !== "browser" ? (
+        {voice === "live" ? (
+          <Field label="Voz por idioma (a conversa usa a do idioma do cliente)">
+            <div className="flex flex-col gap-1.5">
+              {SOMMELIER_LANGS.map((l) => {
+                const cur = liveVoiceOf(l.code, liveVoices);
+                return (
+                  <label
+                    className="flex items-center gap-2 text-sm"
+                    key={l.code}
+                  >
+                    <span className="w-32 shrink-0">
+                      {l.flag} {l.label}
+                    </span>
+                    <select
+                      className="h-9 min-w-0 flex-1 rounded-md border bg-transparent px-2 capitalize"
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        setLiveVoices({
+                          ...liveVoices,
+                          [l.code]: e.target.value,
+                        })
+                      }
+                      value={cur}
+                    >
+                      {liveVoicesFor(l.code).map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.id} · {v.female ? "feminina" : "masculina"} ·{" "}
+                          {v.accent}
+                          {v.lang === l.code ? " · nativa" : ""}
+                          {LIVE_FEMALE[l.code] === v.id ? " ★ recomendada" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+              <p className="text-muted-foreground text-xs">
+                ★ = melhor voz feminina do idioma: as nativas da OpenAI (inglês,
+                português do Brasil, alemão, francês) ou Marin, que fala todos
+                os idiomas, para italiano, espanhol, holandês e polonês.
+              </p>
+            </div>
+          </Field>
+        ) : null}
+        {voice === "openai" ? (
           <Field label="Timbre">
             <div className="flex flex-wrap gap-1.5">
-              {(voice === "live" ? OPENAI_VOICES.slice(0, 2) : OPENAI_VOICES).map((v) => (
+              {OPENAI_VOICES.map((v) => (
                 <button
                   className={cn(
                     "rounded-full border px-3 py-1 text-sm capitalize",
@@ -271,7 +338,12 @@ export function SommelierView() {
               {busy ? "Salvando…" : "Salvar"}
             </Button>
             {msg ? (
-              <span className={cn("text-sm", msg.ok ? "text-emerald-600" : "text-destructive")}>
+              <span
+                className={cn(
+                  "text-sm",
+                  msg.ok ? "text-emerald-600" : "text-destructive"
+                )}
+              >
                 {msg.text}
               </span>
             ) : null}
@@ -287,25 +359,36 @@ export function SommelierView() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="font-semibold">O que os clientes perguntam</h3>
           <p className="text-muted-foreground text-xs">
-            Últimas 24 h: {data.usage.today} perguntas · {data.usage.guests} clientes
-            {data.usage.failed ? ` · ${data.usage.failed} com erro` : ""} · ≈ US$
+            Últimas 24 h: {data.usage.today} perguntas · {data.usage.guests}{" "}
+            clientes
+            {data.usage.failed ? ` · ${data.usage.failed} com erro` : ""} · ≈
+            US$
             {cost.toFixed(2)}
           </p>
         </div>
         {data.recent.length === 0 ? (
-          <p className="mt-3 text-muted-foreground text-sm">Nenhuma pergunta ainda.</p>
+          <p className="mt-3 text-muted-foreground text-sm">
+            Nenhuma pergunta ainda.
+          </p>
         ) : (
           <ul className="mt-3 divide-y">
             {data.recent.map((c) => (
-              <li className="space-y-1 py-2.5" key={`${c.at}-${c.question.slice(0, 20)}`}>
+              <li
+                className="space-y-1 py-2.5"
+                key={`${c.at}-${c.question.slice(0, 20)}`}
+              >
                 <p className="flex items-center gap-2 text-muted-foreground text-xs">
                   <span>{when(c.at)}</span>
                   <span>{langOf(c.lang).flag}</span>
-                  {c.ok === false ? <span className="text-destructive">erro</span> : null}
+                  {c.ok === false ? (
+                    <span className="text-destructive">erro</span>
+                  ) : null}
                 </p>
                 <p className="font-medium text-sm">{c.question}</p>
                 {c.answer ? (
-                  <p className="line-clamp-3 text-muted-foreground text-sm">{c.answer}</p>
+                  <p className="line-clamp-3 text-muted-foreground text-sm">
+                    {c.answer}
+                  </p>
                 ) : null}
               </li>
             ))}
