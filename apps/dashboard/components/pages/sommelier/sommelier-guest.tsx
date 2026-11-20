@@ -2,12 +2,29 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReturnType } from "convex/server";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "@/convex/_generated/api";
 import { mentioned, type PublicWine } from "@/lib/sommelier/catalog";
 import { langOf, SOMMELIER_LANGS, takeSentences } from "@/lib/sommelier/prompt";
-import { addFragment, LiveCall, type LiveTurn, questionTurns } from "@/lib/sommelier/live";
-import { canListen, ListenError, listenOnce, Speaker } from "@/lib/sommelier/voice";
+import {
+  addFragment,
+  LiveCall,
+  type LiveTurn,
+  questionTurns,
+} from "@/lib/sommelier/live";
+import {
+  canListen,
+  ListenError,
+  listenOnce,
+  Speaker,
+} from "@/lib/sommelier/voice";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
@@ -35,7 +52,9 @@ interface Turn {
 
 /** Shrinks a camera photo to a JPEG the AI can read (≈1280 px, base64). */
 async function shrinkPhoto(file: File) {
-  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const bitmap = await createImageBitmap(file, {
+    imageOrientation: "from-image",
+  });
   const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
@@ -119,6 +138,8 @@ export function SommelierGuest() {
   const listenCtl = useRef<AbortController | null>(null);
   const askCtl = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
+  const scroller = useRef<HTMLElement | null>(null);
+  const stick = useRef(true);
   const camera = useRef<HTMLInputElement | null>(null);
   const field = useRef<HTMLInputElement | null>(null);
   // Live voice conversation (GPT-Live; Claude answers the wine questions)
@@ -134,7 +155,10 @@ export function SommelierGuest() {
     () => venue?.voice === "live" && LiveCall.supported(),
     [venue]
   );
-  const micOk = useMemo(() => (typeof window === "undefined" ? true : canListen()), []);
+  const micOk = useMemo(
+    () => (typeof window === "undefined" ? true : canListen()),
+    []
+  );
 
   useEffect(() => {
     sid.current = guestId();
@@ -193,8 +217,19 @@ export function SommelierGuest() {
     return () => clearInterval(timer);
   }, [inCall]);
 
+  // Follow the answer while it arrives, unless the guest scrolled up to
+  // read; a new question brings the view back to the bottom.
+  const asked = turns.filter((x) => x.role === "user").length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-stick on each new question
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    stick.current = true;
+  }, [asked]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when the conversation grows
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && stick.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [turns, interim]);
 
   const setLang = (code: string) => {
@@ -227,7 +262,6 @@ export function SommelierGuest() {
     }
   };
 
-
   const ask = useCallback(
     async (question: string, photo?: { data: string; url: string }) => {
       const text = question.trim().slice(0, 600);
@@ -255,13 +289,17 @@ export function SommelierGuest() {
             t: token,
             sid: sid.current,
             lang: langRef.current,
-            turns: history.slice(-12).map(({ role, content }) => ({ role, content })),
+            turns: history
+              .slice(-12)
+              .map(({ role, content }) => ({ role, content })),
             image: photo?.data,
           }),
           signal: ctl.signal,
         });
         if (!(res.ok && res.body)) {
-          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          const body = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
           answer = body?.error ?? guestStrings(langRef.current).error;
           updateTurns([...history, { role: "assistant", content: answer }]);
           say(answer);
@@ -313,7 +351,12 @@ export function SommelierGuest() {
     setPhase("listening");
     setInterim("");
     try {
-      const text = await listenOnce(langOf(langRef.current).speech, setInterim, ctl.signal, true);
+      const text = await listenOnce(
+        langOf(langRef.current).speech,
+        setInterim,
+        ctl.signal,
+        true
+      );
       setInterim("");
       if (text) {
         ask(text);
@@ -336,7 +379,6 @@ export function SommelierGuest() {
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs only
   }, [ask]);
 
-
   /** A wine question inside a live call: Claude answers, GPT-Live says it. */
   const answerLive = async (id: string | null, image?: string) => {
     const c = call.current;
@@ -345,7 +387,10 @@ export function SommelierGuest() {
       return;
     }
     if (!asked) {
-      c.note("The guest has not asked anything yet: ask what they would like.", id);
+      c.note(
+        "The guest has not asked anything yet: ask what they would like.",
+        id
+      );
       return;
     }
     let answer = "";
@@ -363,7 +408,9 @@ export function SommelierGuest() {
         }),
       });
       if (!(res.ok && res.body)) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         c.say(body?.error ?? guestStrings(langRef.current).error, id);
         return;
       }
@@ -381,13 +428,21 @@ export function SommelierGuest() {
           if (sentences.length) {
             const first = sentences.join(" ");
             sent = answer.indexOf(first) + first.length;
-            c.say(`Sommelier notes (say this briefly, add nothing, wine names exact): ${first}`, id);
+            c.say(
+              `Sommelier notes (say this briefly, add nothing, wine names exact): ${first}`,
+              id
+            );
           }
         }
       }
       const rest = answer.slice(sent).trim();
       if (rest) {
-        c.say(sent ? rest : `Sommelier notes (say this briefly, add nothing, wine names exact): ${rest}`, id);
+        c.say(
+          sent
+            ? rest
+            : `Sommelier notes (say this briefly, add nothing, wine names exact): ${rest}`,
+          id
+        );
       }
       setBrain(answer);
     } catch {
@@ -399,7 +454,11 @@ export function SommelierGuest() {
   const showPhoto = (photo: { data: string; url: string }) => {
     liveTurns.current = [
       ...liveTurns.current,
-      { role: "user", content: guestStrings(langRef.current).photoAsk, photo: photo.url },
+      {
+        role: "user",
+        content: guestStrings(langRef.current).photoAsk,
+        photo: photo.url,
+      },
     ];
     updateTurns(liveTurns.current);
   };
@@ -437,7 +496,10 @@ export function SommelierGuest() {
       if (quietTimer.current) {
         clearTimeout(quietTimer.current);
       }
-      quietTimer.current = setTimeout(() => setPhase((p) => (p === "speaking" ? "listening" : p)), 1200);
+      quietTimer.current = setTimeout(
+        () => setPhase((p) => (p === "speaking" ? "listening" : p)),
+        1200
+      );
     };
     const c = new LiveCall({
       onReady: () => {
@@ -448,7 +510,10 @@ export function SommelierGuest() {
         if (photo) {
           photoLive(photo, true);
         } else {
-          c.say(`Greet the guest now, in your own words, along the lines of: "${greeting}". Then pause and listen.`, null);
+          c.say(
+            `Greet the guest now, in your own words, along the lines of: "${greeting}". Then pause and listen.`,
+            null
+          );
         }
       },
       onUser: (delta) => {
@@ -573,7 +638,10 @@ export function SommelierGuest() {
     if (inCall && call.current) {
       // Typed inside a live call: Claude answers, the voice says it
       lastHeard.current = Date.now();
-      liveTurns.current = [...liveTurns.current, { role: "user", content: text }];
+      liveTurns.current = [
+        ...liveTurns.current,
+        { role: "user", content: text },
+      ];
       updateTurns(liveTurns.current);
       setBrain("");
       answerLive(null);
@@ -603,7 +671,10 @@ export function SommelierGuest() {
     }
     unlock();
     try {
-      const photo = { data: await shrinkPhoto(file), url: URL.createObjectURL(file) };
+      const photo = {
+        data: await shrinkPhoto(file),
+        url: URL.createObjectURL(file),
+      };
       // Live voice venues: the answer comes as a spoken conversation
       if (inCall && call.current) {
         photoLive(photo);
@@ -652,14 +723,20 @@ export function SommelierGuest() {
       <header className="flex items-center gap-2.5 px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-1.5">
         <Logo company={venue.company} />
         <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          <h1 className="truncate font-serif text-lg text-foreground leading-tight">{venue.name}</h1>
-          <span className="shrink-0 text-(--gold) text-[9px] uppercase tracking-[0.18em]">AI Sommelier</span>
+          <h1 className="truncate font-serif text-lg text-foreground leading-tight">
+            {venue.name}
+          </h1>
+          <span className="shrink-0 text-(--gold) text-[9px] uppercase tracking-[0.18em]">
+            AI Sommelier
+          </span>
         </div>
         <button
           aria-label={t.onTap}
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-full border",
-            showList ? "border-(--gold)/60 bg-(--gold)/15" : "border-border bg-card"
+            showList
+              ? "border-(--gold)/60 bg-(--gold)/15"
+              : "border-border bg-card"
           )}
           onClick={() => setShowList((v) => !v)}
           title={t.onTap}
@@ -670,17 +747,34 @@ export function SommelierGuest() {
         <LanguagePicker onChange={setLang} value={lang}>
           <ThemeToggle className="w-full justify-between [&>button]:flex-1 [&>button]:justify-center" />
           {turns.length ? (
-            <button className="block text-muted-foreground text-xs" onClick={restart} type="button">
+            <button
+              className="block text-muted-foreground text-xs"
+              onClick={restart}
+              type="button"
+            >
               ↺ {t.newChat}
             </button>
           ) : null}
-          <p className="text-[10px] text-muted-foreground/70 leading-snug">{t.privacy}</p>
+          <p className="text-[10px] text-muted-foreground/70 leading-snug">
+            {t.privacy}
+          </p>
         </LanguagePicker>
       </header>
 
-      <main className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
+      <main
+        className="flex flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-4"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+        }}
+        ref={scroller}
+      >
         {turns.length === 0 && phase === "idle" && !inCall ? (
-          <AskAnything hints={t.ideas} onClick={() => field.current?.focus()} title={t.askAnything} />
+          <AskAnything
+            hints={t.ideas}
+            onClick={() => field.current?.focus()}
+            title={t.askAnything}
+          />
         ) : null}
         {turns.map((turn, i) => (
           <div key={`${i}-${turn.role}`}>
@@ -690,12 +784,17 @@ export function SommelierGuest() {
               role={turn.role}
               text={turn.content}
             />
-            {turn.role === "assistant" && turn.content && turn === lastAnswer ? (
+            {turn.role === "assistant" &&
+            turn.content &&
+            turn === lastAnswer ? (
               <WineSheets
                 lang={lang}
                 onAsk={(w) => onIdea(t.askAbout(w.name))}
                 token={token ?? ""}
-                wines={mentioned(inCall || brain ? brain : turn.content, venue.wines).slice(0, 4)}
+                wines={mentioned(
+                  inCall || brain ? brain : turn.content,
+                  venue.wines
+                ).slice(0, 4)}
               />
             ) : null}
           </div>
@@ -839,7 +938,9 @@ function Bubble({
 }) {
   const mine = role === "user";
   return (
-    <div className={cn("mt-3 flex flex-col", mine ? "items-end" : "items-start")}>
+    <div
+      className={cn("mt-3 flex flex-col", mine ? "items-end" : "items-start")}
+    >
       {photo ? (
         // biome-ignore lint/performance/noImgElement: local photo preview
         <img
@@ -941,7 +1042,9 @@ function TalkButton({
       onPointerUp={onEnd}
       type="button"
     >
-      {live ? <span className="absolute inset-0 animate-pulse bg-white/20" /> : null}
+      {live ? (
+        <span className="absolute inset-0 animate-pulse bg-white/20" />
+      ) : null}
       {phase === "thinking" ? (
         <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-[#2a1c08]/30 border-t-[#2a1c08]" />
       ) : phase === "speaking" ? (
@@ -961,7 +1064,10 @@ function Bars() {
         <span
           className="w-1 animate-pulse rounded-full bg-[#2a1c08]"
           key={`${i}-${d}`}
-          style={{ height: `${[8, 16, 11, 18, 7][i]}px`, animationDelay: `${d}ms` }}
+          style={{
+            height: `${[8, 16, 11, 18, 7][i]}px`,
+            animationDelay: `${d}ms`,
+          }}
         />
       ))}
     </span>
@@ -989,7 +1095,10 @@ type Strings = ReturnType<typeof guestStrings>;
 
 /** How the wine is served (sizes, bottle), never the price. */
 function serveLine(w: PublicWine, t: Strings) {
-  return [w.sizes.length ? `${w.sizes.join(" · ")} ml` : "", w.bottle ? t.bottle : ""]
+  return [
+    w.sizes.length ? `${w.sizes.join(" · ")} ml` : "",
+    w.bottle ? t.bottle : "",
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -1035,7 +1144,9 @@ function WineList({
                 <span className="block truncate text-muted-foreground text-xs">
                   {[w.grape, w.country].filter(Boolean).join(" · ")}
                 </span>
-                <span className="block text-(--gold) text-xs">{serveLine(w, t)}</span>
+                <span className="block text-(--gold) text-xs">
+                  {serveLine(w, t)}
+                </span>
               </span>
               <span className="shrink-0 rounded-full bg-(--gold) px-3 py-1 font-medium text-(--on-gold) text-xs">
                 {t.ask}

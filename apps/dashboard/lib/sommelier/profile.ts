@@ -10,6 +10,8 @@ import type { SommelierWine } from "./catalog";
 export interface WineProfile {
   /** One or two sentences that sell the wine. */
   summary: string;
+  /** Quick view: a few words each, spot on. */
+  short: { taste: string; pairing: string; highlight: string };
   type: string;
   origin: string;
   appellation: string;
@@ -49,9 +51,15 @@ export function cleanProfile(raw: unknown): WineProfile | null {
   }
   const r = raw as Record<string, unknown>;
   const t = (r.tasting ?? {}) as Record<string, unknown>;
+  const short = (r.short ?? {}) as Record<string, unknown>;
   const vegan = text(r.vegan, 8).toLowerCase();
   const p: WineProfile = {
     summary: text(r.summary, 400),
+    short: {
+      taste: text(short.taste, 90),
+      pairing: text(short.pairing, 90),
+      highlight: text(short.highlight, 90),
+    },
     type: text(r.type, 60),
     origin: text(r.origin, 120),
     appellation: text(r.appellation, 120),
@@ -101,12 +109,13 @@ export function parseProfile(answer: string): WineProfile | null {
 
 export const PROFILE_SYSTEM = `You write the technical sheet of one wine for a wine bar's guests, like the sheet a winery prints.
 Answer with ONE JSON object only, no other text, with these keys:
-summary, type, origin, appellation, grapes, winery, tasting {colour, nose, palate}, pairing,
+summary, short {taste, pairing, highlight}, type, origin, appellation, grapes, winery, tasting {colour, nose, palate}, pairing,
 body, tannin, acidity, sweetness (integers 1-5), serving, decanting, ageing,
 vineyards, soils, climate, winemaking, vegan ("yes" | "no" | ""), styles (up to 5 short tags).
 Rules:
 - The house notes and facts given are true: use them first and never contradict them.
 - Add what is well known about this wine, producer, grape and region. When you are not sure of a fact about this exact wine (blend percentages, oak months, soil, vegan certification), describe what is typical for the grape and region in general words, or leave the field "" — never invent precise numbers, awards or certifications.
+- short is the quick view a guest reads in two seconds: taste = the main flavours (max 8 words), pairing = 2-3 foods (max 8 words), highlight = the one thing that makes this wine special (max 10 words). No full sentences, no wine name.
 - Short, warm, concrete sentences a guest reads on a phone. serving like "16–18 °C".
 - Write every text value in the requested language.`;
 

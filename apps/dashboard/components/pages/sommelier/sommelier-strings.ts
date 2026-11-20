@@ -300,6 +300,7 @@ export interface SheetStrings {
   winemaking: string;
   more: string;
   less: string;
+  highlight: string;
   ask: string;
   loading: string;
   aiNote: string;
@@ -336,6 +337,7 @@ const sheetEn: SheetStrings = {
   winemaking: "Winemaking",
   more: "Full sheet",
   less: "Less",
+  highlight: "Highlight",
   ask: "Ask about it",
   loading: "Preparing the full sheet…",
   aiNote:
@@ -380,6 +382,7 @@ const sheetPt: SheetStrings = {
   winemaking: "Vinificação",
   more: "Ficha completa",
   less: "Menos",
+  highlight: "Destaque",
   ask: "Perguntar",
   loading: "Preparando a ficha completa…",
   aiNote:
@@ -425,6 +428,7 @@ const sheetIt: SheetStrings = {
   winemaking: "Vinificazione",
   more: "Scheda completa",
   less: "Meno",
+  highlight: "Il punto forte",
   ask: "Chiedi",
   loading: "Preparo la scheda completa…",
   aiNote:
@@ -470,6 +474,7 @@ const sheetEs: SheetStrings = {
   winemaking: "Elaboración",
   more: "Ficha completa",
   less: "Menos",
+  highlight: "Lo especial",
   ask: "Preguntar",
   loading: "Preparando la ficha completa…",
   aiNote:
@@ -515,6 +520,7 @@ const sheetFr: SheetStrings = {
   winemaking: "Vinification",
   more: "Fiche complète",
   less: "Moins",
+  highlight: "L'atout",
   ask: "Demander",
   loading: "Préparation de la fiche complète…",
   aiNote:
@@ -560,6 +566,7 @@ const sheetDe: SheetStrings = {
   winemaking: "Ausbau",
   more: "Ganzes Datenblatt",
   less: "Weniger",
+  highlight: "Besonders",
   ask: "Fragen",
   loading: "Datenblatt wird erstellt…",
   aiNote:
