@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 import { api, internal } from "./_generated/api";
 import { parseProfile } from "../lib/sommelier/profile";
+import { liveVoiceOf } from "../lib/sommelier/prompt";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -286,5 +287,33 @@ describe("AI sommelier", () => {
       lang: "en",
     });
     expect(en.ok && "wine" in en).toBe(true);
+  });
+
+  it("picks the best female live voice for each language", async () => {
+    expect(liveVoiceOf("pt", {})).toBe("bossa");
+    expect(liveVoiceOf("de", undefined)).toBe("nuri");
+    expect(liveVoiceOf("fr", {})).toBe("brise");
+    expect(liveVoiceOf("en", {})).toBe("gleam");
+    expect(liveVoiceOf("it", {})).toBe("marin");
+    expect(liveVoiceOf("en", { en: "willow" })).toBe("willow");
+    expect(liveVoiceOf("en", { en: "nope" })).toBe("gleam");
+    const { t, token } = await setup();
+    await t.mutation(api.sommelier.save, {
+      session: token,
+      company: "vinomad",
+      enabled: true,
+      greeting: "",
+      notes: "",
+      voice: "live",
+      openaiVoice: "marin",
+      liveVoices: { en: "willow", pt: "bad-voice", xx: "marin" },
+      model: "claude-opus-5-5",
+      dailyLimit: 300,
+    });
+    const s = await t.query(api.sommelier.settings, {
+      session: token,
+      company: "vinomad",
+    });
+    expect(s?.liveVoices).toEqual({ en: "willow" });
   });
 });

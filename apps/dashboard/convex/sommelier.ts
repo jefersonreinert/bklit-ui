@@ -9,7 +9,11 @@ import {
   type WmPositionIn,
   type WmWineIn,
 } from "../lib/sommelier/catalog";
-import { DEFAULT_MODEL } from "../lib/sommelier/prompt";
+import {
+  DEFAULT_MODEL,
+  LIVE_VOICE_IDS,
+  SOMMELIER_LANGS,
+} from "../lib/sommelier/prompt";
 import { cleanProfile, type WineProfile } from "../lib/sommelier/profile";
 import type { Doc } from "./_generated/dataModel";
 import {
@@ -142,6 +146,7 @@ export const settings = query({
       notes: s?.notes ?? "",
       voice: s?.voice ?? "browser",
       openaiVoice: s?.openaiVoice ?? "marin",
+      liveVoices: s?.liveVoices ?? {},
       model: s?.model || DEFAULT_MODEL,
       dailyLimit: s?.dailyLimit ?? 300,
       usage: {
@@ -176,6 +181,7 @@ export const save = mutation({
     notes: v.string(),
     voice: VOICES,
     openaiVoice: v.string(),
+    liveVoices: v.optional(v.record(v.string(), v.string())),
     model: v.string(),
     dailyLimit: v.number(),
   },
@@ -192,6 +198,13 @@ export const save = mutation({
       notes: input.notes.trim().slice(0, 3000),
       voice: input.voice,
       openaiVoice: input.openaiVoice.trim().slice(0, 30) || "marin",
+      liveVoices: Object.fromEntries(
+        Object.entries(input.liveVoices ?? {}).filter(
+          ([lang, id]) =>
+            SOMMELIER_LANGS.some((l) => l.code === lang) &&
+            LIVE_VOICE_IDS.has(id)
+        )
+      ),
       model,
       dailyLimit: Math.min(Math.max(Math.round(input.dailyLimit), 10), 5000),
       updatedAt: Date.now(),
@@ -498,6 +511,7 @@ export const live = mutation({
     return {
       ok: true as const,
       voice: s.openaiVoice ?? "marin",
+      liveVoices: s.liveVoices ?? {},
       name: await venueName(ctx, s.company),
     };
   },

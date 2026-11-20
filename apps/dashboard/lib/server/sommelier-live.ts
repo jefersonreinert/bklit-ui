@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import { langOf } from "@/lib/sommelier/prompt";
+import { langOf, liveVoiceOf } from "@/lib/sommelier/prompt";
 import { providerKey, routerClient } from "./ai/service";
 
 /**
@@ -13,8 +13,6 @@ import { providerKey, routerClient } from "./ai/service";
  */
 
 export const LIVE_MODEL = "gpt-live-1";
-/** GPT-Live voices that read well in every language we offer. */
-const LIVE_VOICES = new Set(["marin", "cedar"]);
 
 export function liveInstructions(venue: string, langName: string) {
   return `You are the sommelier of ${venue}, a wine bar in Malta, talking by voice with a guest on their phone at the bar. Guests pour wine themselves from self-service dispensers (taster, glass or large glass) or order bottles.
@@ -80,7 +78,8 @@ export async function startLive(input: {
         instructions: liveInstructions(allowed.name, lang),
         audio: {
           output: {
-            voice: LIVE_VOICES.has(allowed.voice) ? allowed.voice : "marin",
+            // Female voice of the guest's language (settings, else default)
+            voice: liveVoiceOf(langOf(input.lang).code, allowed.liveVoices),
           },
         },
         delegation: { type: "client" },
