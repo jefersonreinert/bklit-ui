@@ -15,6 +15,7 @@ import { AskAnything } from "./ask-anything";
 import { LanguagePicker } from "./language-picker";
 import { StippleArt } from "./stipple";
 import { guestStrings } from "./sommelier-strings";
+import { WineSheets } from "./wine-sheet";
 
 /**
  * Public page of the AI sommelier (/sommelier/?t=<token>): the guest
@@ -690,8 +691,10 @@ export function SommelierGuest() {
               text={turn.content}
             />
             {turn.role === "assistant" && turn.content && turn === lastAnswer ? (
-              <WineCards
-                t={t}
+              <WineSheets
+                lang={lang}
+                onAsk={(w) => onIdea(t.askAbout(w.name))}
+                token={token ?? ""}
                 wines={mentioned(inCall || brain ? brain : turn.content, venue.wines).slice(0, 4)}
               />
             ) : null}
@@ -989,49 +992,6 @@ function serveLine(w: PublicWine, t: Strings) {
   return [w.sizes.length ? `${w.sizes.join(" · ")} ml` : "", w.bottle ? t.bottle : ""]
     .filter(Boolean)
     .join(" · ");
-}
-
-function WineCards({ wines, t }: { wines: PublicWine[]; t: Strings }) {
-  if (!wines.length) {
-    return null;
-  }
-  return (
-    <div className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
-      {wines.map((w) => (
-        <div
-          className="w-56 shrink-0 snap-start rounded-2xl border border-border bg-card p-3"
-          key={w.id}
-        >
-          <div className="flex items-start gap-2">
-            <span
-              className="mt-1 size-3 shrink-0 rounded-full"
-              style={{ background: SWATCH[w.color] ?? SWATCH[""] }}
-            />
-            <div className="min-w-0">
-              <p className="font-medium text-sm leading-snug">{w.name}</p>
-              <p className="truncate text-muted-foreground text-xs">
-                {[w.grape, w.region || w.country].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-          </div>
-          {w.onTap ? (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {w.sizes.map((ml) => (
-                <span
-                  className="rounded-full bg-(--gold)/15 px-2 py-0.5 text-(--gold) text-[11px]"
-                  key={ml}
-                >
-                  {ml} ml
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-2 text-muted-foreground text-xs">{serveLine(w, t)}</p>
-          )}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function WineList({
