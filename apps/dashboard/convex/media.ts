@@ -1,7 +1,15 @@
 import { ConvexError, v } from "convex/values";
 import { normalizeName } from "../lib/inventory/match";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation } from "./_generated/server";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  mutation,
+  type QueryCtx,
+} from "./_generated/server";
 import { audit, companyOf, requireStaff } from "./access";
 import { groupOf } from "./inv";
 
@@ -74,89 +82,189 @@ async function stillUsed(
   return items.some((i) => i.imageId === id || i.logoId === id);
 }
 
+const attachArgs = {
+  session: v.optional(v.string()),
+  company: v.string(),
+  target: v.union(v.literal("product"), v.literal("item")),
+  id: v.string(),
+  kind: v.union(v.literal("image"), v.literal("logo")),
+  storageId: v.optional(v.id("_storage")),
+};
+
+interface AttachIn {
+  company: string;
+  target: "product" | "item";
+  id: string;
+  kind: Kind;
+  storageId?: Id<"_storage">;
+}
+
+/** Name of the product (POS id) or stock item, checked against the bar. */
+async function nameOf(
+  ctx: QueryCtx,
+  a: Pick<AttachIn, "company" | "target" | "id">
+) {
+  if (a.target === "product") {
+    const p = await ctx.db
+      .query("posProducts")
+      .withIndex("by_cid", (q) => q.eq("cid", a.id))
+      .unique();
+    if (!p || companyOf(p) !== a.company) {
+      throw new ConvexError("Produto não encontrado.");
+    }
+    return p;
+  }
+  const id = ctx.db.normalizeId("invItems", a.id);
+  const item = id ? await ctx.db.get(id) : null;
+  if (
+    !item ||
+    item.group !== ((await groupOf(ctx, a.company))?.key ?? a.company)
+  ) {
+    throw new ConvexError("Item não encontrado.");
+  }
+  return item;
+}
+
+async function applyMedia(
+  ctx: MutationCtx,
+  a: AttachIn,
+  user: Pick<Doc<"posUsers">, "name">
+) {
+  const name = (await nameOf(ctx, a)).name;
+  let url: string | undefined;
+  if (a.storageId) {
+    const meta = await ctx.db.system.get(a.storageId);
+    // Convex keeps the upload's Content-Type; refuse anything but images
+    const type = meta?.contentType ?? "";
+    const ok =
+      meta && (!type || type.startsWith("image/")) && meta.size <= MAX_BYTES;
+    if (!ok) {
+      await ctx.storage.delete(a.storageId);
+      throw new ConvexError("Envie uma imagem (JPG, PNG ou WebP) de até 6 MB.");
+    }
+    url = (await ctx.storage.getUrl(a.storageId)) ?? undefined;
+    if (!url) {
+      throw new ConvexError("Não foi possível ler a imagem enviada.");
+    }
+  }
+  const kind = a.kind as Kind;
+  const idField = ID_FIELD[kind];
+  const { products, items, companies, group } = await sameBottle(
+    ctx,
+    a.company,
+    name
+  );
+  const old = new Set<Id<"_storage">>();
+  const now = Date.now();
+  const patch = { [kind]: url, [idField]: a.storageId, updatedAt: now };
+  for (const doc of [...products, ...items]) {
+    const prev = doc[idField];
+    if (prev && prev !== a.storageId) {
+      old.add(prev);
+    }
+    await ctx.db.patch(doc._id, patch);
+  }
+  for (const id of old) {
+    if (!(await stillUsed(ctx, companies, group, id))) {
+      await ctx.storage.delete(id);
+    }
+  }
+  await audit(
+    ctx,
+    user,
+    kind === "image" ? "Foto do produto" : "Logo da marca",
+    `${name}: ${url ? "enviada" : "removida"} (${products.length} produtos, ${items.length} itens)`,
+    a.company
+  );
+  return { url: url ?? null, products: products.length, items: items.length };
+}
+
 /**
  * Puts (or removes, without storageId) the photo or logo of a product
  * (by its POS id) or stock item, and of its same-name twins.
  */
 export const attach = mutation({
-  args: {
-    session: v.optional(v.string()),
-    company: v.string(),
-    target: v.union(v.literal("product"), v.literal("item")),
-    id: v.string(),
-    kind: v.union(v.literal("image"), v.literal("logo")),
-    storageId: v.optional(v.id("_storage")),
+  args: attachArgs,
+  handler: async (ctx, { session, ...a }) => {
+    const user = await requireStaff(ctx, session, [...EDIT], a.company);
+    return await applyMedia(ctx, a, user);
   },
-  handler: async (ctx, a) => {
-    const user = await requireStaff(ctx, a.session, [...EDIT], a.company);
-    let name: string;
-    if (a.target === "product") {
-      const p = await ctx.db
-        .query("posProducts")
-        .withIndex("by_cid", (q) => q.eq("cid", a.id))
-        .unique();
-      if (!p || companyOf(p) !== a.company) {
-        throw new ConvexError("Produto não encontrado.");
-      }
-      name = p.name;
-    } else {
-      const id = ctx.db.normalizeId("invItems", a.id);
-      const item = id ? await ctx.db.get(id) : null;
-      if (
-        !item ||
-        item.group !== ((await groupOf(ctx, a.company))?.key ?? a.company)
-      ) {
-        throw new ConvexError("Item não encontrado.");
-      }
-      name = item.name;
+});
+
+export const attachInternal = internalMutation({
+  args: attachArgs,
+  handler: async (ctx, { session, ...a }) => {
+    const user = await requireStaff(ctx, session, [...EDIT], a.company);
+    return await applyMedia(ctx, a, user);
+  },
+});
+
+/* --------------------------- background removal -------------------------- */
+
+const pick = {
+  session: v.optional(v.string()),
+  company: v.string(),
+  target: v.union(v.literal("product"), v.literal("item")),
+  id: v.string(),
+  kind: v.union(v.literal("image"), v.literal("logo")),
+};
+
+/** The photo to clean (after checking the user may edit it). */
+export const photoOf = internalQuery({
+  args: pick,
+  handler: async (ctx, { session, kind, ...a }) => {
+    await requireStaff(ctx, session, [...EDIT], a.company);
+    const doc = await nameOf(ctx, a);
+    return doc[ID_FIELD[kind]] ?? null;
+  },
+});
+
+/**
+ * Removes the photo's (or logo's) background (transparent PNG) with the self-hosted
+ * rembg service (/opt/rembg, U2Net, behind Caddy at REMBG_URL with
+ * REMBG_KEY) and puts the result in place of the photo.
+ */
+export const removeBackground = action({
+  args: pick,
+  handler: async (ctx, a): Promise<{ url: string | null }> => {
+    const imageId = await ctx.runQuery(internal.media.photoOf, a);
+    if (!imageId) {
+      throw new ConvexError("Envie a imagem primeiro.");
     }
-    let url: string | undefined;
-    if (a.storageId) {
-      const meta = await ctx.db.system.get(a.storageId);
-      // Convex keeps the upload's Content-Type; refuse anything but images
-      const type = meta?.contentType ?? "";
-      const ok =
-        meta && (!type || type.startsWith("image/")) && meta.size <= MAX_BYTES;
-      if (!ok) {
-        await ctx.storage.delete(a.storageId);
-        throw new ConvexError(
-          "Envie uma imagem (JPG, PNG ou WebP) de até 6 MB."
-        );
-      }
-      url = (await ctx.storage.getUrl(a.storageId)) ?? undefined;
-      if (!url) {
-        throw new ConvexError("Não foi possível ler a imagem enviada.");
-      }
+    const url = process.env.REMBG_URL;
+    const key = process.env.REMBG_KEY;
+    if (!(url && key)) {
+      throw new ConvexError("Remoção de fundo não configurada no servidor.");
     }
-    const kind = a.kind as Kind;
-    const idField = ID_FIELD[kind];
-    const { products, items, companies, group } = await sameBottle(
-      ctx,
-      a.company,
-      name
-    );
-    const old = new Set<Id<"_storage">>();
-    const now = Date.now();
-    const patch = { [kind]: url, [idField]: a.storageId, updatedAt: now };
-    for (const doc of [...products, ...items]) {
-      const prev = doc[idField];
-      if (prev && prev !== a.storageId) {
-        old.add(prev);
-      }
-      await ctx.db.patch(doc._id, patch);
+    const photo = await ctx.storage.get(imageId);
+    if (!photo) {
+      throw new ConvexError("Foto não encontrada.");
     }
-    for (const id of old) {
-      if (!(await stillUsed(ctx, companies, group, id))) {
-        await ctx.storage.delete(id);
-      }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-Key": key,
+        "Content-Type": photo.type || "application/octet-stream",
+      },
+      body: photo,
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!res.ok) {
+      throw new ConvexError(
+        `Não consegui remover o fundo (serviço respondeu ${res.status}).`
+      );
     }
-    await audit(
-      ctx,
-      user,
-      kind === "image" ? "Foto do produto" : "Logo da marca",
-      `${name}: ${url ? "enviada" : "removida"} (${products.length} produtos, ${items.length} itens)`,
-      a.company
-    );
-    return { url: url ?? null, products: products.length, items: items.length };
+    const png = new Blob([await res.arrayBuffer()], { type: "image/png" });
+    const storageId = await ctx.storage.store(png);
+    try {
+      const r = await ctx.runMutation(internal.media.attachInternal, {
+        ...a,
+        storageId,
+      });
+      return { url: r.url };
+    } catch (err) {
+      await ctx.storage.delete(storageId);
+      throw err;
+    }
   },
 });

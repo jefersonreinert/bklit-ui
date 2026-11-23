@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -64,6 +64,10 @@ const product = (t: T, cid: string) =>
   );
 
 describe("product photos and logos", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("goes on the same-name products of every bar and the stock item", async () => {
     const { t, token, itemId } = await setup();
     const file = await store(t);
@@ -125,5 +129,53 @@ describe("product photos and logos", () => {
     await expect(
       t.mutation(api.media.uploadUrl, { company: "a" })
     ).rejects.toThrow();
+  });
+
+  it("removes the background with the rembg service", async () => {
+    const { t, token } = await setup();
+    const photo = await store(t, "image/jpeg");
+    await t.mutation(api.media.attach, {
+      session: token,
+      company: "a",
+      target: "product",
+      id: "a-gin",
+      kind: "image",
+      storageId: photo,
+    });
+    process.env.REMBG_URL = "https://rembg.test/remove";
+    process.env.REMBG_KEY = "k";
+    const calls: { url: string; key: string | null }[] = [];
+    vi.stubGlobal("fetch", (url: string, init: RequestInit) => {
+      calls.push({ url, key: new Headers(init.headers).get("X-Key") });
+      return Promise.resolve(
+        new Response(new Uint8Array([137, 80, 78, 71]), {
+          status: 200,
+          headers: { "Content-Type": "image/png" },
+        })
+      );
+    });
+    const r = await t.action(api.media.removeBackground, {
+      session: token,
+      company: "a",
+      target: "product",
+      id: "a-gin",
+      kind: "image",
+    });
+    expect(calls).toEqual([{ url: "https://rembg.test/remove", key: "k" }]);
+    const p = await product(t, "b-gin");
+    expect(p?.image).toBe(r.url);
+    expect(p?.imageId).not.toBe(photo);
+    // The original photo is no longer used: deleted
+    expect(await t.run((ctx) => ctx.storage.getUrl(photo))).toBeNull();
+    // No photo yet: nothing to clean
+    await expect(
+      t.action(api.media.removeBackground, {
+        session: token,
+        company: "a",
+        target: "product",
+        id: "a-vodka",
+        kind: "image",
+      })
+    ).rejects.toThrow("primeiro");
   });
 });

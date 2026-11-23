@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Icon } from "@/lib/icons";
-import { sendPos } from "@/lib/pos/store";
+import { errorText, getSession, sendPos } from "@/lib/pos/store";
+import { convexClient } from "@/lib/sync/convex-client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,14 +60,16 @@ function Slot({
   disabled,
   onPick,
   onRemove,
+  onClean,
   busy,
 }: {
   kind: Kind;
   url?: string;
   disabled: boolean;
-  busy: boolean;
+  busy: string | null;
   onPick: (file: File) => void;
   onRemove: () => void;
+  onClean: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const label =
@@ -78,10 +81,12 @@ function Slot({
         className={cn(
           "relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border bg-muted/40 transition-colors hover:bg-muted",
           kind === "logo" && "aspect-[4/3]",
-          url ? "border-solid" : "border-dashed",
+          url
+            ? "border-solid bg-[conic-gradient(var(--muted)_25%,transparent_0_50%,var(--muted)_0_75%,transparent_0)] bg-[length:16px_16px]"
+            : "border-dashed",
           disabled && "opacity-50"
         )}
-        disabled={disabled || busy}
+        disabled={disabled || Boolean(busy)}
         onClick={() => input.current?.click()}
         type="button"
       >
@@ -103,12 +108,12 @@ function Slot({
               className="size-6"
               name={kind === "image" ? "IconBottle" : "IconSparklesSoft"}
             />
-            {busy ? "Enviando…" : "Toque para enviar"}
+            {busy ?? "Toque para enviar"}
           </span>
         )}
         {busy && url ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-xs">
-            Enviando…
+          <span className="absolute inset-0 flex items-center justify-center bg-background/70 px-2 text-center text-xs">
+            {busy}
           </span>
         ) : null}
       </button>
@@ -126,10 +131,19 @@ function Slot({
         type="file"
       />
       {url && !disabled ? (
-        <div className="flex gap-3 text-xs">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          <button
+            className="flex items-center gap-1 font-medium underline"
+            disabled={Boolean(busy)}
+            onClick={onClean}
+            type="button"
+          >
+            <Icon className="size-3.5" name="IconSparklesSoft" />
+            Remover fundo
+          </button>
           <button
             className="text-muted-foreground underline"
-            disabled={busy}
+            disabled={Boolean(busy)}
             onClick={() => input.current?.click()}
             type="button"
           >
@@ -137,7 +151,7 @@ function Slot({
           </button>
           <button
             className="text-destructive underline"
-            disabled={busy}
+            disabled={Boolean(busy)}
             onClick={onRemove}
             type="button"
           >
@@ -167,7 +181,7 @@ export function MediaPicker({
   disabled?: boolean;
   note?: string;
 }) {
-  const [busy, setBusy] = useState<Kind | null>(null);
+  const [busy, setBusy] = useState<{ kind: Kind; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shown, setShown] = useState<{ image?: string; logo?: string }>({});
   const urlOf = (kind: Kind) => {
@@ -177,9 +191,10 @@ export function MediaPicker({
     return kind === "image" ? image : logo;
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: shrink, upload and attach in one go
   const put = async (kind: Kind, file: File | null) => {
     setError(null);
-    setBusy(kind);
+    setBusy({ kind, text: file ? "Enviando…" : "Removendo…" });
     try {
       let storageId: string | undefined;
       if (file) {
@@ -218,17 +233,42 @@ export function MediaPicker({
     }
   };
 
+  /** Transparent background (self-hosted rembg, convex/media.ts). */
+  const clean = async (kind: Kind) => {
+    setError(null);
+    setBusy({ kind, text: "Removendo o fundo… (alguns segundos)" });
+    try {
+      const client = convexClient();
+      if (!client) {
+        throw new Error("Sem conexão com o servidor.");
+      }
+      const r = await client.action(api.media.removeBackground, {
+        session: getSession() ?? undefined,
+        company,
+        target,
+        id,
+        kind,
+      });
+      setShown((s) => ({ ...s, [kind]: r.url ?? undefined }));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const off = disabled || !id;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-3">
         {(["image", "logo"] as const).map((kind) => (
           <Slot
-            busy={busy === kind}
+            busy={busy?.kind === kind ? busy.text : null}
             disabled={off}
             key={kind}
             kind={kind}
             onPick={(f) => put(kind, f)}
+            onClean={() => clean(kind)}
             onRemove={() => put(kind, null)}
             url={urlOf(kind)}
           />
