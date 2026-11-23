@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaPicker } from "./media-picker";
 import { type ReactNode, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
@@ -579,6 +580,7 @@ function ProductEditor({
     value >= 0 &&
     (costValue === undefined || Number.isFinite(costValue));
   const isNew = !data.products.some((x) => x.id === product.id);
+  const live = data.products.find((x) => x.id === product.id);
   const barcode = p.barcode?.trim();
   const duplicate = barcode
     ? data.products.find((x) => x.id !== p.id && x.barcode?.trim() === barcode)
@@ -589,9 +591,13 @@ function ProductEditor({
     if (!valid) {
       return;
     }
-    const live = data.products.find((x) => x.id === p.id);
     saveProduct({
       ...p,
+      // Photo and logo change only through the picker (media.attach)
+      image: live?.image,
+      imageId: live?.imageId,
+      logo: live?.logo,
+      logoId: live?.logoId,
       name: p.name.trim(),
       category: p.category.trim() || "Outros",
       subcategory: p.subcategory?.trim() || undefined,
@@ -617,6 +623,16 @@ function ProductEditor({
         onSubmit={submit}
       >
         {ai && isNew ? <AiNote ai={ai} /> : null}
+        <Group title="Foto e logo">
+          <MediaPicker
+            company={company?.key ?? ""}
+            id={isNew ? "" : p.id}
+            image={live?.image}
+            logo={live?.logo}
+            note="Vale também para o item de estoque e os produtos com o mesmo nome nos outros bares."
+            target="product"
+          />
+        </Group>
         <Group title="Item">
           <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-1">
             Nome

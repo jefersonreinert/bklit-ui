@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaThumb } from "./media-picker";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -112,8 +113,11 @@ function ProductGrid({
             style={{ borderLeftColor: p.color }}
             type="button"
           >
-            <span className="line-clamp-2 font-medium text-sm leading-snug">
-              {p.name}
+            <span className="flex items-start justify-between gap-2">
+              <span className="line-clamp-2 font-medium text-sm leading-snug">
+                {p.name}
+              </span>
+              <MediaThumb className="size-9" image={p.image} logo={p.logo} />
             </span>
             <span className="text-muted-foreground text-sm tabular-nums">
               {p.wine?.pours.length

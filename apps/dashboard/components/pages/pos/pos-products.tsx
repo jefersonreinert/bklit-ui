@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaThumb } from "./media-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
@@ -150,11 +151,15 @@ function ProductRow({
   const margin = marginOf(p);
   return (
     <li className="flex items-center gap-3 px-3">
-      <span
-        aria-hidden
-        className="size-3 shrink-0 rounded-full"
-        style={{ background: p.color }}
-      />
+      {p.image || p.logo ? (
+        <MediaThumb className="size-10" image={p.image} logo={p.logo} />
+      ) : (
+        <span
+          aria-hidden
+          className="size-3 shrink-0 rounded-full"
+          style={{ background: p.color }}
+        />
+      )}
       <button
         className="flex min-h-14 min-w-0 flex-1 flex-col justify-center py-2 text-left active:opacity-60"
         onClick={onOpen}
@@ -301,13 +306,20 @@ function useItemActions(tree: CategoryNode[]) {
   const [editing, setEditing] = useState<PosProduct | null>(null);
   const [ai, setAi] = useState<AiSuggestion | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null);
-  const [context, setContext] = useState<{ category?: string; subcategory?: string }>({});
+  const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(
+    null
+  );
+  const [context, setContext] = useState<{
+    category?: string;
+    subcategory?: string;
+  }>({});
 
   const findByCode = useCallback(
     (code: string) => {
       const c = code.trim();
-      return data.products.find((p) => p.barcode?.trim() === c || p.sku?.trim() === c);
+      return data.products.find(
+        (p) => p.barcode?.trim() === c || p.sku?.trim() === c
+      );
     },
     [data.products]
   );
@@ -319,7 +331,8 @@ function useItemActions(tree: CategoryNode[]) {
 
   const newItem = (patch: Partial<PosProduct> = {}) => {
     setAi(null);
-    const category = patch.category ?? context.category ?? tree[0]?.name ?? "Outros";
+    const category =
+      patch.category ?? context.category ?? tree[0]?.name ?? "Outros";
     setEditing({ ...blankProduct(category, context.subcategory), ...patch });
   };
 
@@ -338,7 +351,10 @@ function useItemActions(tree: CategoryNode[]) {
         text: `Código ${code} ainda não cadastrado${source === "hid" ? " (leitor externo)" : ""}. Complete o novo item.`,
       });
       const category = context.category ?? tree[0]?.name ?? "Outros";
-      setEditing({ ...blankProduct(category, context.subcategory), barcode: code });
+      setEditing({
+        ...blankProduct(category, context.subcategory),
+        barcode: code,
+      });
     },
     [context, findByCode, tree]
   );
@@ -350,7 +366,10 @@ function useItemActions(tree: CategoryNode[]) {
       requestId: newRequestId(),
       image: photo.dataUrl,
       barcode: photo.code,
-      categories: tree.map((c) => ({ name: c.name, subs: c.subs.map((s) => s.name) })),
+      categories: tree.map((c) => ({
+        name: c.name,
+        subs: c.subs.map((s) => s.name),
+      })),
     });
     if (!(res.ok && res.product)) {
       const tried = res.attempts
@@ -370,7 +389,10 @@ function useItemActions(tree: CategoryNode[]) {
     const code = photo.code ?? r.barcode;
     const existing = code ? findByCode(code) : undefined;
     if (existing) {
-      setNotice({ tone: "info", text: `Esse produto já existe: ${existing.name}` });
+      setNotice({
+        tone: "info",
+        text: `Esse produto já existe: ${existing.name}`,
+      });
       openItem(existing);
       return;
     }
@@ -387,14 +409,21 @@ function useItemActions(tree: CategoryNode[]) {
           }
         : null
     );
-    setAi({ product: r, provider: res.provider, cached: res.cached, switched: res.switched });
+    setAi({
+      product: r,
+      provider: res.provider,
+      cached: res.cached,
+      switched: res.switched,
+    });
     setEditing({
       ...blankProduct(cat?.name ?? r.category ?? context.category ?? "Outros"),
       name: r.name ?? "",
-      subcategory: sub?.name ?? (cat ? undefined : (r.subcategory ?? undefined)),
+      subcategory:
+        sub?.name ?? (cat ? undefined : (r.subcategory ?? undefined)),
       barcode: code ?? undefined,
       description:
-        [r.brand, r.size, r.description].filter(Boolean).join(" · ") || undefined,
+        [r.brand, r.size, r.description].filter(Boolean).join(" · ") ||
+        undefined,
     });
   };
 
@@ -440,7 +469,13 @@ function useItemActions(tree: CategoryNode[]) {
 
 type Actions = ReturnType<typeof useItemActions>;
 
-function ItemPages({ actions, tree }: { actions: Actions; tree: CategoryNode[] }) {
+function ItemPages({
+  actions,
+  tree,
+}: {
+  actions: Actions;
+  tree: CategoryNode[];
+}) {
   const can = useCan();
   return (
     <>
@@ -479,7 +514,7 @@ function SearchBar({
     <div className="flex gap-2">
       <div className="relative flex-1">
         <Icon
-          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           name="IconMagnifyingGlass"
         />
         <Input
@@ -563,14 +598,20 @@ function NoticeBar({ actions }: { actions: Actions }) {
     if (!n || n.tone === "busy") {
       return;
     }
-    const t = setTimeout(() => setNotice(null), n.tone === "bad" ? 12_000 : 5000);
+    const t = setTimeout(
+      () => setNotice(null),
+      n.tone === "bad" ? 12_000 : 5000
+    );
     return () => clearTimeout(t);
   }, [n, setNotice]);
   if (!n) {
     return null;
   }
   return (
-    <Notice onClose={n.tone === "busy" ? undefined : () => setNotice(null)} tone={n.tone}>
+    <Notice
+      onClose={n.tone === "busy" ? undefined : () => setNotice(null)}
+      tone={n.tone}
+    >
       {n.text}
     </Notice>
   );
@@ -621,7 +662,8 @@ export function ProductsView() {
   const catHits = q
     ? tree.filter(
         (c) =>
-          fold(c.name).includes(q) || c.subs.some((s) => fold(s.name).includes(q))
+          fold(c.name).includes(q) ||
+          c.subs.some((s) => fold(s.name).includes(q))
       )
     : [];
 
@@ -659,7 +701,12 @@ export function ProductsView() {
         query={query}
       />
       {openCat ? null : <NoticeBar actions={actions} />}
-      <FilterChips filter={filter} onFilter={setFilter} onSort={setSort} sort={sort} />
+      <FilterChips
+        filter={filter}
+        onFilter={setFilter}
+        onSort={setSort}
+        sort={sort}
+      />
 
       {flat ? (
         <>
@@ -732,7 +779,10 @@ export function ProductsView() {
             </ul>
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-8 text-center">
-              <Icon className="size-8 text-muted-foreground" name="IconFolder1" />
+              <Icon
+                className="size-8 text-muted-foreground"
+                name="IconFolder1"
+              />
               <p className="text-muted-foreground text-sm">
                 Nenhum item ainda. Escaneie um código ou crie o primeiro item.
               </p>
@@ -763,7 +813,10 @@ export function ProductsView() {
 function ExternalReader({ actions }: { actions: Actions }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border bg-card px-3 py-2.5">
-      <Icon className="size-5 shrink-0 text-muted-foreground" name="IconBluetooth" />
+      <Icon
+        className="size-5 shrink-0 text-muted-foreground"
+        name="IconBluetooth"
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm">Leitor de código externo</p>
         <p className="text-muted-foreground text-xs">
@@ -852,7 +905,10 @@ function CategoryPage({
   useEffect(() => {
     setContext(
       name
-        ? { category: name, subcategory: sub && sub !== NO_SUB ? sub : undefined }
+        ? {
+            category: name,
+            subcategory: sub && sub !== NO_SUB ? sub : undefined,
+          }
         : {}
     );
   }, [name, sub, setContext]);

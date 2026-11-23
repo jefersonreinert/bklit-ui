@@ -56,6 +56,11 @@ const productFields = {
   recipe: v.optional(
     v.array(v.object({ productId: v.string(), qty: v.number() }))
   ),
+  /** Photo and brand logo, set by convex/media.ts (URL + storage id). */
+  image: v.optional(v.string()),
+  imageId: v.optional(v.id("_storage")),
+  logo: v.optional(v.string()),
+  logoId: v.optional(v.id("_storage")),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
