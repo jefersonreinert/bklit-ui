@@ -143,10 +143,22 @@ function WineSheet({
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-card text-sm shadow-sm">
       <div className="flex items-start gap-2.5 px-3.5 pt-3">
-        <span
-          className="mt-1.5 size-2.5 shrink-0 rounded-full"
-          style={{ background: SWATCH[w.color] ?? SWATCH[""] }}
-        />
+        {w.image ? (
+          // biome-ignore lint/performance/noImgElement: storage URL, any size
+          <img
+            alt=""
+            className="h-14 w-10 shrink-0 object-contain"
+            height={56}
+            width={40}
+            loading="lazy"
+            src={w.image}
+          />
+        ) : (
+          <span
+            className="mt-1.5 size-2.5 shrink-0 rounded-full"
+            style={{ background: SWATCH[w.color] ?? SWATCH[""] }}
+          />
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="font-serif text-base leading-tight">{w.name}</h3>
           {sub ? (

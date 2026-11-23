@@ -73,6 +73,8 @@ export interface PosProductIn {
   price: number;
   available: boolean;
   description?: string;
+  /** Photo uploaded in the POS (convex/media.ts). */
+  image?: string;
   wine?: {
     color?: string;
     country?: string;
@@ -290,7 +292,7 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
       story: "",
       notes: clean(p.description),
       pairing: [],
-      image: "",
+      image: p.image ?? "",
     });
   }
   const available = new Set(
@@ -372,7 +374,8 @@ export function buildCatalog(input: CatalogInput): SommelierWine[] {
     entry.story = clean(c.story);
     entry.notes = clean(c.tastingNotes) || entry.notes;
     entry.pairing = (c.foodPairing ?? []).map(clean).filter(Boolean);
-    entry.image = clean(c.imageUrl);
+    // A photo uploaded in the POS wins over the cellar's
+    entry.image = entry.image || clean(c.imageUrl);
   }
 
   const order: WineColor[] = [

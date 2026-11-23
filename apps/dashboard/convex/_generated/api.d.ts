@@ -33,6 +33,7 @@ import type * as lib from "../lib.js";
 import type * as lightspeed from "../lightspeed.js";
 import type * as lightspeedops from "../lightspeedops.js";
 import type * as loyalty from "../loyalty.js";
+import type * as media from "../media.js";
 import type * as metatrader from "../metatrader.js";
 import type * as mtproto from "../mtproto.js";
 import type * as notes from "../notes.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   lightspeed: typeof lightspeed;
   lightspeedops: typeof lightspeedops;
   loyalty: typeof loyalty;
+  media: typeof media;
   metatrader: typeof metatrader;
   mtproto: typeof mtproto;
   notes: typeof notes;

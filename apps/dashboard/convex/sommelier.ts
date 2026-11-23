@@ -106,6 +106,7 @@ async function catalogOf(ctx: QueryCtx, company: string) {
     price: p.price,
     available: p.available,
     description: p.description,
+    image: p.image,
     wine: p.wine as PosProductIn["wine"],
   }));
   const wines = buildCatalog({

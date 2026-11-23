@@ -1,3 +1,4 @@
+import type { Id } from "@/convex/_generated/dataModel";
 /** Point of sale: products, floor plan, orders and payment settings. */
 
 export interface PosProduct {
@@ -28,6 +29,11 @@ export interface PosProduct {
   wine?: WineInfo;
   /** Recipe (technical sheet): ingredients used by one sale. */
   recipe?: { productId: string; qty: number }[];
+  /** Bottle/product photo and brand logo (URLs in Convex storage). */
+  image?: string;
+  imageId?: Id<"_storage">;
+  logo?: string;
+  logoId?: Id<"_storage">;
 }
 
 export type WineColor =

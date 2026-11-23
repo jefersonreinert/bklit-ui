@@ -459,6 +459,11 @@ export default defineSchema({
     recipe: v.optional(
       v.array(v.object({ productId: v.string(), qty: v.number() }))
     ),
+    /** Bottle/product photo and brand logo (Convex storage, convex/media.ts). */
+    image: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
+    logo: v.optional(v.string()),
+    logoId: v.optional(v.id("_storage")),
     /** Business (posMeta key); missing = "main". */
     company: v.optional(v.string()),
     updatedAt: v.number(),
@@ -2147,6 +2152,11 @@ export default defineSchema({
     abv: v.optional(v.number()),
     sku: v.optional(v.string()),
     note: v.optional(v.string()),
+    /** Bottle/product photo and brand logo (Convex storage, convex/media.ts). */
+    image: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
+    logo: v.optional(v.string()),
+    logoId: v.optional(v.id("_storage")),
     active: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),

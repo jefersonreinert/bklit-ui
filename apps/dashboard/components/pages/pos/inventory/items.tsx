@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaPicker, MediaThumb } from "../media-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
 import { Button } from "@/components/ui/button";
@@ -181,6 +182,7 @@ export function ItemsSection({ data }: { data: InvOverview }) {
                 onClick={() => setEditing(i)}
                 type="button"
               >
+                <MediaThumb className="size-11" image={i.image} logo={i.logo} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-sm">{i.name}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -417,6 +419,14 @@ function ItemEditor({
       title={item ? item.name : "Novo item de estoque"}
     >
       <div className="mx-auto max-w-xl space-y-4 p-4">
+        <MediaPicker
+          company={company}
+          id={item?._id ?? ""}
+          image={item?.image}
+          logo={item?.logo}
+          note="A foto e o logo também aparecem no produto do POS com o mesmo nome."
+          target="item"
+        />
         <Field label="Nome">
           <Input
             autoFocus={!item}
