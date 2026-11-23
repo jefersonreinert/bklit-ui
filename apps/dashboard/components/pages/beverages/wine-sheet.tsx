@@ -1,5 +1,6 @@
 "use client";
 
+import { CountrySelect } from "@/components/country-select";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,7 +203,11 @@ function WineForm({
         />
       </Field>
       <Field label="País">
-        <Input {...text("country")} />
+        <CountrySelect
+          onChange={(country) => set({ country: country ?? "" })}
+          value={wine.country}
+          wine
+        />
       </Field>
       <Field label="Região">
         <Input {...text("region")} />
