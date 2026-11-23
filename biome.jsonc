@@ -29,6 +29,13 @@
       "assist": { "enabled": false }
     },
     {
+      // Vendored from stackedlol/ascii-sharks (MIT, kept unchanged)
+      "includes": ["apps/dashboard/lib/ascii-sharks/**"],
+      "formatter": { "enabled": false },
+      "linter": { "enabled": false },
+      "assist": { "enabled": false }
+    },
+    {
       // Vendored from jefersonreinert/mt5-chart-platform (kept close to upstream)
       "includes": ["apps/dashboard/components/pages/trading/mt5/**"],
       "formatter": { "enabled": false },
