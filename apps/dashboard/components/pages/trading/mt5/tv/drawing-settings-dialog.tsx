@@ -540,7 +540,7 @@ export function DrawingSettingsDialog({
             </button>
             <button
               onClick={handleOk}
-              className="h-8 px-5 bg-accent text-white text-xs font-mono font-medium hover:bg-accent/90 transition-colors cursor-pointer"
+              className="h-8 px-5 bg-accent text-[var(--draw-accent-ink)] text-xs font-mono font-medium hover:bg-accent/90 transition-colors cursor-pointer"
             >
               Ok
             </button>

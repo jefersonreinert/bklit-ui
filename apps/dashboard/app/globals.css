@@ -489,27 +489,34 @@
 }
 
 /*
- * Chart drawing toolbars: follow the theme, Anthropic palette with a
- * terracotta highlight. Icons are black on light/beige and white on dark.
+ * Chart drawing toolbars: follow the theme, monochrome highlight —
+ * black on light, manila on beige, white on dark. --draw-line is the
+ * colour of new drawings (deeper manila on beige so lines stay visible).
  */
 :root,
 .light {
   --draw-bar: #faf9f5;
   --draw-border: #e8e6dc;
   --draw-icon: #141413;
-  --draw-accent: #d97757;
+  --draw-accent: #141413;
+  --draw-accent-ink: #faf9f5;
+  --draw-line: #141413;
 }
 .beige {
   --draw-bar: #e8e6dc;
   --draw-border: #b0aea5;
   --draw-icon: #141413;
-  --draw-accent: #d97757;
+  --draw-accent: #d6b77c;
+  --draw-accent-ink: #141413;
+  --draw-line: #a8834a;
 }
 .dark {
   --draw-bar: #141413;
   --draw-border: color-mix(in oklab, #faf9f5 14%, transparent);
   --draw-icon: #faf9f5;
-  --draw-accent: #d97757;
+  --draw-accent: #faf9f5;
+  --draw-accent-ink: #141413;
+  --draw-line: #faf9f5;
 }
 
 /* Charting platform (vendored mt5-chart-platform) — scoped tokens */
