@@ -34,6 +34,8 @@ export interface PosProduct {
   imageId?: Id<"_storage">;
   logo?: string;
   logoId?: Id<"_storage">;
+  /** Country of origin, English short name ("France"). */
+  country?: string;
 }
 
 export type WineColor =

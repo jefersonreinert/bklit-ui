@@ -1,5 +1,6 @@
 "use client";
 
+import { CountryFlag, CountrySelect } from "@/components/country-select";
 import { MediaPicker, MediaThumb } from "../media-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
@@ -184,7 +185,10 @@ export function ItemsSection({ data }: { data: InvOverview }) {
               >
                 <MediaThumb className="size-11" image={i.image} logo={i.logo} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-sm">{i.name}</p>
+                  <p className="flex items-center gap-1.5 font-medium text-sm">
+                    <CountryFlag size={14} value={i.country} />
+                    <span className="truncate">{i.name}</span>
+                  </p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     <Tag tone="muted">{invCategoryLabel(i.category)}</Tag>
                     {i.unit !== "un" && !i.emptyG ? (
@@ -265,6 +269,8 @@ interface Draft {
   abv: number | undefined;
   sku: string;
   note: string;
+  /** Country of origin, English short name ("" = none). */
+  country: string;
   min: number | undefined;
   par: number | undefined;
   /** Cost of one container (the screen's unit); saved per base unit. */
@@ -287,6 +293,7 @@ function draftOf(item: InvItem | null, code: string): Draft {
     abv: item?.abv,
     sku: item?.sku ?? "",
     note: item?.note ?? "",
+    country: item?.country ?? "",
     // Levels show in containers, stored in the base unit
     min: per(item?.min),
     par: per(item?.par),
@@ -342,6 +349,7 @@ function ItemEditor({
       abv: d.abv,
       sku: d.sku,
       note: d.note,
+      country: d.country,
       min: toBase(d.min),
       par: toBase(d.par),
       avgCost:
@@ -367,6 +375,7 @@ function ItemEditor({
       barcodes: [],
       abv: d.abv,
       note: descriptionWithSize(d.note, ml),
+      country: d.country,
     });
     if (id) {
       setCopying(false);
@@ -433,6 +442,13 @@ function ItemEditor({
             onChange={(e) => set({ name: e.target.value })}
             placeholder="Ex.: Gin Tanqueray 70cl"
             value={d.name}
+          />
+        </Field>
+        <Field label="País de origem">
+          <CountrySelect
+            onChange={(country) => set({ country: country ?? "" })}
+            value={d.country || undefined}
+            wine={d.category === "wine"}
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">

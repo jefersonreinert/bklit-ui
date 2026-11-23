@@ -1,5 +1,6 @@
 "use client";
 
+import { CountryFlag } from "@/components/country-select";
 import { MediaThumb } from "./media-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
@@ -171,6 +172,7 @@ function ProductRow({
             !p.available && "text-muted-foreground line-through"
           )}
         >
+          <CountryFlag size={14} value={p.country || p.wine?.country} />
           <span className="truncate">{p.name}</span>
           <StockBadge p={p} />
         </span>

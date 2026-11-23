@@ -17,7 +17,7 @@ import {
   requireStaff,
   worksIn,
 } from "./access";
-import { codeToItem } from "./inv";
+import { codeToItem, countryToTwins } from "./inv";
 import { requirePanel } from "./lib";
 import { settleLoyalty } from "./loyalty";
 import { finishTableBooking } from "./reservations";
@@ -61,6 +61,8 @@ const productFields = {
   imageId: v.optional(v.id("_storage")),
   logo: v.optional(v.string()),
   logoId: v.optional(v.id("_storage")),
+  /** Country of origin, English short name. */
+  country: v.optional(v.string()),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
@@ -887,6 +889,16 @@ export const saveProduct = mutation({
   args: { session: v.string(), product, ...companyArg },
   handler: async (ctx, { session, product: p, company = MAIN }) => {
     const { id, ...fields } = p;
+    // One country per bottle: top level, and wine.country for wines ("" clears)
+    const touched = fields.country !== undefined || fields.wine !== undefined;
+    const country =
+      fields.country?.trim() || fields.wine?.country?.trim() || undefined;
+    if (touched) {
+      fields.country = country;
+      if (fields.wine) {
+        fields.wine = { ...fields.wine, country };
+      }
+    }
     const current = await ctx.db
       .query("posProducts")
       .withIndex("by_cid", (q) => q.eq("cid", id))
@@ -940,6 +952,15 @@ export const saveProduct = mutation({
       fields.name,
       fields.barcode
     );
+    // …and the country (stock item and the other bars' products)
+    if (touched && country !== (current?.country ?? current?.wine?.country)) {
+      await countryToTwins(
+        ctx,
+        current ? companyOf(current) : company,
+        fields.name,
+        country
+      );
+    }
   },
 });
 

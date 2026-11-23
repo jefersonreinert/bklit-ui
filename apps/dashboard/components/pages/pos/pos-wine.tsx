@@ -1,6 +1,5 @@
 "use client";
 
-import { CountrySelect } from "@/components/country-select";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -528,15 +527,6 @@ export function WineEditor({
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5 text-sm" htmlFor="wine-country">
-          País
-          <CountrySelect
-            id="wine-country"
-            onChange={(country) => set({ country })}
-            value={value.country}
-            wine
-          />
-        </label>
         {text("Região", "region")}
         {text("Uva", "grape")}
         {text("Produtor", "producer")}
