@@ -887,7 +887,8 @@ function BarButton({
       aria-label={label}
       className={cn(
         "flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-        active && "bg-[#2962ff]/12 text-[#2962ff]"
+        active &&
+          "bg-draw-accent/20 text-foreground ring-1 ring-draw-accent ring-inset"
       )}
       onClick={onClick}
       title={label}

@@ -20,7 +20,7 @@ const TEXT_TYPES = new Set(["text", "price_label"])
 const FONT_SIZES = [9, 10, 11, 12, 14, 16, 18, 20, 24]
 
 function Sep() {
-  return <div className="w-px h-5 bg-[var(--border)] mx-0.5 shrink-0" />
+  return <div className="w-px h-5 bg-draw-border mx-0.5 shrink-0" />
 }
 
 function Btn({
@@ -39,10 +39,10 @@ function Btn({
       title={title}
       onClick={onClick}
       className={cn(
-        "w-7 h-7 flex items-center justify-center shrink-0 transition-colors cursor-pointer",
+        "w-7 h-7 flex items-center justify-center shrink-0 rounded-md transition-colors cursor-pointer",
         active
-          ? "bg-muted text-foreground"
-          : "text-[var(--fg-muted)] hover:text-foreground hover:bg-muted/50"
+          ? "bg-draw-accent/20 text-draw-icon ring-1 ring-draw-accent ring-inset"
+          : "text-draw-icon hover:bg-draw-border/60"
       )}
     >
       {children}
@@ -68,7 +68,7 @@ export function DrawingPropertiesBar({
     <div
       style={posStyle}
       className={cn(
-        "absolute z-[60] flex items-center bg-card border border-[var(--border)] rounded shadow-2xl select-none",
+        "absolute z-[60] flex items-center bg-draw-bar text-draw-icon border border-draw-border rounded-lg shadow-2xl select-none",
         className,
       )}
       onMouseDown={e => e.stopPropagation()}
@@ -78,10 +78,10 @@ export function DrawingPropertiesBar({
       <button
         title="Color"
         onClick={() => colorRef.current?.click()}
-        className="w-7 h-7 flex items-center justify-center hover:bg-muted/50 transition-colors relative shrink-0 cursor-pointer"
+        className="w-7 h-7 flex items-center justify-center hover:bg-draw-border/60 transition-colors relative shrink-0 cursor-pointer"
       >
         <div
-          className="w-4 h-4 rounded-sm border border-[var(--border)]/50"
+          className="w-4 h-4 rounded-sm border border-draw-icon/40"
           style={{ backgroundColor: s.color }}
         />
         <input
@@ -163,10 +163,10 @@ export function DrawingPropertiesBar({
           <select
             value={s.fontSize}
             onChange={e => onStyleUpdate({ fontSize: Number(e.target.value) })}
-            className="h-7 px-1 text-[11px] font-mono bg-transparent text-[var(--fg-muted)] border-0 outline-none hover:text-foreground cursor-pointer shrink-0"
+            className="h-7 px-1 text-[11px] font-mono bg-transparent text-draw-icon border-0 outline-none cursor-pointer shrink-0"
           >
             {FONT_SIZES.map(sz => (
-              <option key={sz} value={sz} className="bg-card text-foreground">
+              <option key={sz} value={sz} className="bg-draw-bar text-draw-icon">
                 {sz}
               </option>
             ))}

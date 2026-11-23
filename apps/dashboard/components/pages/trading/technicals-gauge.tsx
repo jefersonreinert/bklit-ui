@@ -15,8 +15,8 @@ const RATING_COLOR: Record<Rating, string> = {
   strong_sell: "text-[var(--down)]",
   sell: "text-[var(--down)]",
   neutral: "text-muted-foreground",
-  buy: "text-[#2962ff]",
-  strong_buy: "text-[#2962ff]",
+  buy: "text-[var(--up)]",
+  strong_buy: "text-[var(--up)]",
 };
 
 const CX = 120;
@@ -48,9 +48,9 @@ function Gauge({ score, rating }: { score: number; rating: Rating }) {
     >
       <defs>
         <linearGradient id="tech-arc" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#ef5350" />
-          <stop offset="50%" stopColor="#9c6ade" />
-          <stop offset="100%" stopColor="#2962ff" />
+          <stop offset="0%" stopColor="var(--down)" />
+          <stop offset="50%" stopColor="var(--draw-accent)" />
+          <stop offset="100%" stopColor="var(--up)" />
         </linearGradient>
       </defs>
       <path
@@ -125,7 +125,7 @@ function SignalTable({
             <td
               className={cn(
                 "py-1.5 text-right",
-                s.vote === 1 && "text-[#2962ff]",
+                s.vote === 1 && "text-[var(--up)]",
                 s.vote === -1 && "text-[var(--down)]",
                 s.vote === 0 && "text-muted-foreground"
               )}

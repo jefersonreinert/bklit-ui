@@ -31,8 +31,8 @@ export interface DrawingStyle {
 }
 
 export const DEFAULT_STYLE: DrawingStyle = {
-  color: "#2962ff",
-  fillColor: "rgba(41,98,255,0.08)",
+  color: "#d97757",
+  fillColor: "rgba(217,119,87,0.08)",
   lineWidth: 1,
   lineStyle: "solid",
   fontSize: 12,

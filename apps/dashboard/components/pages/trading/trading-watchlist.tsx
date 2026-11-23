@@ -98,7 +98,7 @@ function Row({
       className={cn(
         "relative flex w-full items-center gap-3 border-border/60 border-b text-left transition-colors hover:bg-muted/50",
         compact ? "px-3 py-2" : "px-4 py-3",
-        active && "bg-[#2962ff]/8"
+        active && "bg-draw-accent/12"
       )}
       onClick={() => onPick(item.symbol)}
       type="button"
