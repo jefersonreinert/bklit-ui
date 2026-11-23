@@ -58,6 +58,7 @@ import {
   toApiImage,
   useDictation,
 } from "./attachments";
+import { AiSharks } from "./ai-sharks";
 import { Markdown } from "./markdown";
 
 /* -------------------------------------------------------------------------- */
@@ -1471,7 +1472,8 @@ export function AiPage() {
 
         {messages.length === 0 ? (
           /* Tela inicial: saudação no centro, caixa de mensagem embaixo */
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="relative isolate flex min-h-0 flex-1 flex-col">
+            <AiSharks />
             <div className="flex flex-1 items-center justify-center overflow-y-auto px-4">
               <h2
                 className="flex items-center gap-3 text-center font-serif text-3xl tracking-tight md:text-4xl"
