@@ -49,7 +49,7 @@ function Gauge({ score, rating }: { score: number; rating: Rating }) {
       <defs>
         <linearGradient id="tech-arc" x1="0" x2="1" y1="0" y2="0">
           <stop offset="0%" stopColor="var(--down)" />
-          <stop offset="50%" stopColor="var(--draw-accent)" />
+          <stop offset="50%" stopColor="var(--muted-foreground)" />
           <stop offset="100%" stopColor="var(--up)" />
         </linearGradient>
       </defs>

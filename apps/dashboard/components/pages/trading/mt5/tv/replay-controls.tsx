@@ -79,7 +79,7 @@ export function ReplayControls({ replay, symbol, precision = 5, timezone }: Repl
           className={cn(
             "h-7 w-7 flex items-center justify-center rounded-sm cursor-pointer transition-all",
             playing
-              ? "bg-accent text-white"
+              ? "bg-accent text-[var(--draw-accent-ink)]"
               : "bg-foreground text-background hover:opacity-90"
           )}
           title={playing ? "Pause" : "Play"}
@@ -118,7 +118,7 @@ export function ReplayControls({ replay, symbol, precision = 5, timezone }: Repl
             className={cn(
               "h-5 px-1.5 text-[9px] font-black rounded-sm cursor-pointer transition-all",
               speed === s
-                ? "bg-accent text-white"
+                ? "bg-accent text-[var(--draw-accent-ink)]"
                 : "text-[var(--fg-muted)] hover:text-foreground hover:bg-muted"
             )}
           >

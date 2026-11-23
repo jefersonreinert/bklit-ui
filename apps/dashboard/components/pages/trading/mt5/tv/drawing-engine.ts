@@ -31,14 +31,30 @@ export interface DrawingStyle {
 }
 
 export const DEFAULT_STYLE: DrawingStyle = {
-  color: "#d97757",
-  fillColor: "rgba(217,119,87,0.08)",
+  color: "#787878",
+  fillColor: "rgba(120,120,120,0.08)",
   lineWidth: 1,
   lineStyle: "solid",
   fontSize: 12,
   fontBold: false,
   fontItalic: false,
   showLabels: true,
+}
+
+/**
+ * Style for a new drawing in the app theme's line colour (--draw-line:
+ * black on light, manila on beige, white on dark).
+ */
+export function themedStyle(): DrawingStyle {
+  const raw =
+    typeof document === "undefined"
+      ? ""
+      : getComputedStyle(document.documentElement).getPropertyValue("--draw-line").trim()
+  const m = /^#([0-9a-f]{6})$/i.exec(raw)
+  if (!m) return { ...DEFAULT_STYLE }
+  const n = Number.parseInt(m[1] as string, 16)
+  const rgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`
+  return { ...DEFAULT_STYLE, color: raw, fillColor: `rgba(${rgb},0.08)` }
 }
 
 /** A drawing anchor in chart-space coordinates */
