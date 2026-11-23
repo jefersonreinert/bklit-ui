@@ -61,6 +61,10 @@
   --color-down: var(--down);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-draw-bar: var(--draw-bar);
+  --color-draw-border: var(--draw-border);
+  --color-draw-icon: var(--draw-icon);
+  --color-draw-accent: var(--draw-accent);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -484,11 +488,35 @@
   --down: #ebdbbc;
 }
 
+/*
+ * Chart drawing toolbars: follow the theme, Anthropic palette with a
+ * terracotta highlight. Icons are black on light/beige and white on dark.
+ */
+:root,
+.light {
+  --draw-bar: #faf9f5;
+  --draw-border: #e8e6dc;
+  --draw-icon: #141413;
+  --draw-accent: #d97757;
+}
+.beige {
+  --draw-bar: #e8e6dc;
+  --draw-border: #b0aea5;
+  --draw-icon: #141413;
+  --draw-accent: #d97757;
+}
+.dark {
+  --draw-bar: #141413;
+  --draw-border: color-mix(in oklab, #faf9f5 14%, transparent);
+  --draw-icon: #faf9f5;
+  --draw-accent: #d97757;
+}
+
 /* Charting platform (vendored mt5-chart-platform) — scoped tokens */
 .mt5 {
   --up: #26a69a;
   --down: #ef5350;
-  --accent: #2962ff;
+  --accent: var(--draw-accent);
   --fg-muted: var(--muted-foreground);
   --chart-grid: color-mix(in oklab, var(--foreground) 9%, transparent);
   --chart-crosshair: var(--muted-foreground);
