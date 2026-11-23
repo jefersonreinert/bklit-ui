@@ -178,4 +178,65 @@ describe("product photos and logos", () => {
       })
     ).rejects.toThrow("primeiro");
   });
+
+  it("keeps one country per bottle across item and products", async () => {
+    const { t, token, itemId } = await setup();
+    // Country set on the stock item → the gin products of both bars
+    await t.mutation(api.inv.saveItem, {
+      session: token,
+      company: "a",
+      id: itemId,
+      name: "Gin Tanqueray",
+      category: "spirits",
+      unit: "ml",
+      size: 700,
+      container: "garrafa",
+      barcodes: [],
+      country: "United Kingdom",
+    });
+    expect((await product(t, "a-gin"))?.country).toBe("United Kingdom");
+    expect((await product(t, "b-gin"))?.country).toBe("United Kingdom");
+    expect((await product(t, "a-vodka"))?.country).toBeUndefined();
+    // A wine product: wine.country follows, and the item too
+    const cur = await product(t, "b-gin");
+    if (!cur) {
+      return;
+    }
+    const { _id, _creationTime, cid, company, updatedAt, ...rest } = cur;
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "b",
+      product: {
+        ...rest,
+        id: cid,
+        country: "",
+        wine: { color: "red", bottleMl: 750, pours: [], country: "France" },
+      },
+    });
+    const wine = await product(t, "b-gin");
+    expect(wine?.country).toBe("France");
+    expect(wine?.wine?.country).toBe("France");
+    expect((await t.run((ctx) => ctx.db.get(itemId)))?.country).toBe("France");
+    expect((await product(t, "a-gin"))?.country).toBe("France");
+    // Saving without touching the country keeps it
+    const again = await product(t, "a-gin");
+    if (!again) {
+      return;
+    }
+    const {
+      _id: _a,
+      _creationTime: _b,
+      cid: id2,
+      company: _c,
+      updatedAt: _d,
+      country: _e,
+      ...plain
+    } = again;
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { ...plain, id: id2, price: 9 },
+    });
+    expect((await product(t, "a-gin"))?.country).toBe("France");
+  });
 });

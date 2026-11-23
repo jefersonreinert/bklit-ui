@@ -53,7 +53,12 @@ const groupKey = async (ctx: QueryCtx, company: string) =>
 // from one item to another, and a product's own code is never replaced.
 
 /** Code typed on a POS product → the same-name stock item of its group. */
-export async function codeToItem(ctx: MutationCtx, company: string, name: string, code: string | undefined) {
+export async function codeToItem(
+  ctx: MutationCtx,
+  company: string,
+  name: string,
+  code: string | undefined
+) {
   const c = (code ?? "").trim();
   if (!c) {
     return;
@@ -80,7 +85,12 @@ export async function codeToItem(ctx: MutationCtx, company: string, name: string
 }
 
 /** Codes of a stock item → same-name POS products (of every bar in the group) without one. */
-export async function codesToProducts(ctx: MutationCtx, company: string, name: string, codes: string[]) {
+export async function codesToProducts(
+  ctx: MutationCtx,
+  company: string,
+  name: string,
+  codes: string[]
+) {
   const code = codes[0];
   if (!code) {
     return;
@@ -95,6 +105,49 @@ export async function codesToProducts(ctx: MutationCtx, company: string, name: s
     for (const p of products) {
       if (!p.barcode && normalizeName(p.name) === key) {
         await ctx.db.patch(p._id, { barcode: code, updatedAt: Date.now() });
+      }
+    }
+  }
+}
+
+/**
+ * Country of a bottle → its same-name stock item and POS products in every
+ * bar of the group (wines keep wine.country in step too).
+ */
+export async function countryToTwins(
+  ctx: MutationCtx,
+  company: string,
+  name: string,
+  country: string | undefined
+) {
+  const g = await groupOf(ctx, company);
+  const key = normalizeName(name);
+  const now = Date.now();
+  const items = await ctx.db
+    .query("invItems")
+    .withIndex("by_group", (q) => q.eq("group", g?.key ?? company))
+    .take(5000);
+  for (const i of items) {
+    if (i.country !== country && normalizeName(i.name) === key) {
+      await ctx.db.patch(i._id, { country, updatedAt: now });
+    }
+  }
+  for (const c of g?.companies ?? [company]) {
+    const products = await ctx.db
+      .query("posProducts")
+      .withIndex("by_company", (q) => q.eq("company", c))
+      .take(5000);
+    for (const p of products) {
+      if (normalizeName(p.name) !== key) {
+        continue;
+      }
+      const wineOff = p.wine && p.wine.country !== country;
+      if (p.country !== country || wineOff) {
+        await ctx.db.patch(p._id, {
+          country,
+          ...(p.wine ? { wine: { ...p.wine, country } } : {}),
+          updatedAt: now,
+        });
       }
     }
   }
@@ -187,12 +240,19 @@ export async function post(
     const day = dayKey(at);
     const used = await ctx.db
       .query("invUsageDaily")
-      .withIndex("by_item_day", (q) => q.eq("company", m.company).eq("itemId", m.itemId).eq("day", day))
+      .withIndex("by_item_day", (q) =>
+        q.eq("company", m.company).eq("itemId", m.itemId).eq("day", day)
+      )
       .unique();
     if (used) {
       await ctx.db.patch(used._id, { qty: r3(used.qty - qty) });
     } else {
-      await ctx.db.insert("invUsageDaily", { company: m.company, itemId: m.itemId, day, qty: -qty });
+      await ctx.db.insert("invUsageDaily", {
+        company: m.company,
+        itemId: m.itemId,
+        day,
+        qty: -qty,
+      });
     }
   }
   return await ctx.db.insert("invMoves", {
@@ -233,7 +293,9 @@ export const overview = query({
         .take(100),
     ]);
     const byItem = new Map(stock.map((s) => [s.itemId, s]));
-    const costs = user.perms.includes("users") || user.perms.includes("reports") ||
+    const costs =
+      user.perms.includes("users") ||
+      user.perms.includes("reports") ||
       user.perms.includes("stock");
     return {
       group: group
@@ -341,7 +403,12 @@ export const saveGroup = mutation({
     } else {
       await ctx.db.insert("invGroups", doc);
     }
-    await audit(ctx, user, "Grupo de estoque", `${doc.name}: ${doc.companies.join(", ")}`);
+    await audit(
+      ctx,
+      user,
+      "Grupo de estoque",
+      `${doc.name}: ${doc.companies.join(", ")}`
+    );
     return k;
   },
 });
@@ -352,7 +419,10 @@ export async function setBarcodes(
   itemId: Id<"invItems">,
   codes: string[]
 ) {
-  const want = [...new Set(codes.map((c) => c.trim()).filter(Boolean))].slice(0, 20);
+  const want = [...new Set(codes.map((c) => c.trim()).filter(Boolean))].slice(
+    0,
+    20
+  );
   for (const code of want) {
     const taken = await ctx.db
       .query("invBarcodes")
@@ -360,7 +430,9 @@ export async function setBarcodes(
       .first();
     if (taken && taken.itemId !== itemId) {
       const other = await ctx.db.get(taken.itemId);
-      throw new ConvexError(`O código ${code} já é do item ${other?.name ?? "outro"}.`);
+      throw new ConvexError(
+        `O código ${code} já é do item ${other?.name ?? "outro"}.`
+      );
     }
   }
   const old = await ctx.db
@@ -400,6 +472,8 @@ export const saveItem = mutation({
     abv: v.optional(v.number()),
     sku: v.optional(v.string()),
     note: v.optional(v.string()),
+    /** Country of origin (English short name); "" clears it. */
+    country: v.optional(v.string()),
     min: v.optional(v.number()),
     par: v.optional(v.number()),
     /** Cost per base unit, until invoices set it. */
@@ -430,9 +504,13 @@ export const saveItem = mutation({
       container: clean(a.container, 30) || "un",
       emptyG,
       fullG,
-      abv: a.abv !== undefined && a.abv >= 0 && a.abv <= 100 ? a.abv : undefined,
+      abv:
+        a.abv !== undefined && a.abv >= 0 && a.abv <= 100 ? a.abv : undefined,
       sku: clean(a.sku, 40) || undefined,
       note: clean(a.note, 300) || undefined,
+      ...(a.country === undefined
+        ? {}
+        : { country: clean(a.country, 60) || undefined }),
       updatedAt: now,
     };
     let id = a.id;
@@ -458,12 +536,22 @@ export const saveItem = mutation({
     const barcodes = await setBarcodes(ctx, group, id, a.barcodes);
     await ctx.db.patch(id, { barcodes });
     await codesToProducts(ctx, a.company, name, barcodes);
+    if (a.country !== undefined) {
+      await countryToTwins(
+        ctx,
+        a.company,
+        name,
+        clean(a.country, 60) || undefined
+      );
+    }
     // Levels and manual cost belong to this business
     const row = await stockRow(ctx, a.company, id);
     const levels = {
       min: a.min !== undefined && a.min >= 0 ? r3(a.min) : undefined,
       par: a.par !== undefined && a.par >= 0 ? r3(a.par) : undefined,
-      ...(a.avgCost !== undefined && a.avgCost >= 0 ? { avgCost: r6(a.avgCost) } : {}),
+      ...(a.avgCost !== undefined && a.avgCost >= 0
+        ? { avgCost: r6(a.avgCost) }
+        : {}),
       updatedAt: now,
     };
     if (row) {
@@ -479,7 +567,13 @@ export const saveItem = mutation({
         updatedAt: now,
       });
     }
-    await audit(ctx, user, a.id ? "Item de estoque editado" : "Item de estoque criado", name, a.company);
+    await audit(
+      ctx,
+      user,
+      a.id ? "Item de estoque editado" : "Item de estoque criado",
+      name,
+      a.company
+    );
     return id;
   },
 });
@@ -495,7 +589,13 @@ export const setItemActive = mutation({
     const user = await requireStaff(ctx, session, EDIT, company);
     const item = await itemInGroup(ctx, id, company);
     await ctx.db.patch(id, { active, updatedAt: Date.now() });
-    await audit(ctx, user, active ? "Item reativado" : "Item arquivado", item.name, company);
+    await audit(
+      ctx,
+      user,
+      active ? "Item reativado" : "Item arquivado",
+      item.name,
+      company
+    );
   },
 });
 
@@ -544,12 +644,20 @@ export const importFromPos = mutation({
         updatedAt: now,
       });
       if (p.barcode) {
-        const codes = await setBarcodes(ctx, group, id, [p.barcode]).catch(() => []);
+        const codes = await setBarcodes(ctx, group, id, [p.barcode]).catch(
+          () => []
+        );
         await ctx.db.patch(id, { barcodes: codes });
       }
       created++;
     }
-    await audit(ctx, user, "Itens importados do POS", `${created} itens`, company);
+    await audit(
+      ctx,
+      user,
+      "Itens importados do POS",
+      `${created} itens`,
+      company
+    );
     return created;
   },
 });
@@ -630,7 +738,11 @@ export const removeArea = mutation({
 
 /* ------------------------------- movements ------------------------------- */
 
-const MANUAL = v.union(v.literal("opening"), v.literal("waste"), v.literal("adjust"));
+const MANUAL = v.union(
+  v.literal("opening"),
+  v.literal("waste"),
+  v.literal("adjust")
+);
 
 /**
  * A manual movement: opening stock, waste (breakage, spill, staff,
@@ -668,7 +780,13 @@ export const addMove = mutation({
       note: a.note,
       userName: user.name,
     });
-    await audit(ctx, user, `Estoque: ${a.kind}`, `${item.name} ${qty}`, a.company);
+    await audit(
+      ctx,
+      user,
+      `Estoque: ${a.kind}`,
+      `${item.name} ${qty}`,
+      a.company
+    );
   },
 });
 
@@ -716,7 +834,13 @@ export const transfer = mutation({
       ref: `${ref}:in`,
       userName: user.name,
     });
-    await audit(ctx, user, "Transferência", `${item.name} ${a.qty} ${a.from} → ${a.to}`, a.from);
+    await audit(
+      ctx,
+      user,
+      "Transferência",
+      `${item.name} ${a.qty} ${a.from} → ${a.to}`,
+      a.from
+    );
   },
 });
 
@@ -934,8 +1058,18 @@ export const closeCount = mutation({
       value: Math.round(value * 100) / 100,
       diffValue: Math.round(diffValue * 100) / 100,
     });
-    await audit(ctx, user, "Contagem fechada", `#${count.number}: ${totals.size} itens`, count.company);
-    return { items: totals.size, value: Math.round(value * 100) / 100, diffValue: Math.round(diffValue * 100) / 100 };
+    await audit(
+      ctx,
+      user,
+      "Contagem fechada",
+      `#${count.number}: ${totals.size} itens`,
+      count.company
+    );
+    return {
+      items: totals.size,
+      value: Math.round(value * 100) / 100,
+      diffValue: Math.round(diffValue * 100) / 100,
+    };
   },
 });
 
@@ -952,10 +1086,15 @@ export const deleteCount = mutation({
       await ctx.db.delete(l._id);
     }
     await ctx.db.delete(countId);
-    await audit(ctx, user, "Contagem apagada", `#${count.number}`, count.company);
+    await audit(
+      ctx,
+      user,
+      "Contagem apagada",
+      `#${count.number}`,
+      count.company
+    );
   },
 });
-
 
 /**
  * Admin import (run from the CLI): creates the bar's stock items by name,
@@ -981,23 +1120,42 @@ export const upsertItems = internalMutation({
     const out = { created: 0, updated: 0, same: 0, locked: [] as string[] };
     for (const a of items.slice(0, 500)) {
       const name = clean(a.name);
-      const size = a.unit === "un" ? Math.max(1, Math.round(a.size)) : r3(a.size);
+      const size =
+        a.unit === "un" ? Math.max(1, Math.round(a.size)) : r3(a.size);
       if (!(name && size > 0)) {
         continue;
       }
-      const fields = { category: clean(a.category, 40) || "other", unit: a.unit, size, container: clean(a.container, 40) || "un" };
+      const fields = {
+        category: clean(a.category, 40) || "other",
+        unit: a.unit,
+        size,
+        container: clean(a.container, 40) || "un",
+      };
       const cur = await ctx.db
         .query("invItems")
         .withIndex("by_group", (q) => q.eq("group", group).eq("name", name))
         .first();
       const now = Date.now();
       if (!cur) {
-        await ctx.db.insert("invItems", { group, name, ...fields, barcodes: [], note: a.note, active: true, createdAt: now, updatedAt: now });
+        await ctx.db.insert("invItems", {
+          group,
+          name,
+          ...fields,
+          barcodes: [],
+          note: a.note,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        });
         out.created++;
         continue;
       }
       const same =
-        cur.active && cur.category === fields.category && cur.unit === fields.unit && cur.size === fields.size && cur.container === fields.container;
+        cur.active &&
+        cur.category === fields.category &&
+        cur.unit === fields.unit &&
+        cur.size === fields.size &&
+        cur.container === fields.container;
       if (same) {
         out.same++;
         continue;
@@ -1008,13 +1166,24 @@ export const upsertItems = internalMutation({
         .first();
       if (moved && (cur.unit !== fields.unit || cur.size !== fields.size)) {
         out.locked.push(name);
-        await ctx.db.patch(cur._id, { category: fields.category, container: fields.container, active: true, updatedAt: now });
+        await ctx.db.patch(cur._id, {
+          category: fields.category,
+          container: fields.container,
+          active: true,
+          updatedAt: now,
+        });
         continue;
       }
       await ctx.db.patch(cur._id, { ...fields, active: true, updatedAt: now });
       out.updated++;
     }
-    await audit(ctx, null, "Itens do bar importados", `${out.created} novos, ${out.updated} corrigidos`, company);
+    await audit(
+      ctx,
+      null,
+      "Itens do bar importados",
+      `${out.created} novos, ${out.updated} corrigidos`,
+      company
+    );
     return out;
   },
 });
@@ -1030,7 +1199,12 @@ export const addBarcodes = internalMutation({
   },
   handler: async (ctx, { company, rows }) => {
     const group = await groupKey(ctx, company);
-    const out = { added: 0, had: 0, noItem: [] as string[], taken: [] as string[] };
+    const out = {
+      added: 0,
+      had: 0,
+      noItem: [] as string[],
+      taken: [] as string[],
+    };
     for (const r of rows.slice(0, 500)) {
       const name = clean(r.name);
       const code = r.code.trim().slice(0, 40);
@@ -1054,11 +1228,20 @@ export const addBarcodes = internalMutation({
         out.taken.push(`${name}: ${code}`);
         continue;
       }
-      const codes = await setBarcodes(ctx, group, item._id, [...item.barcodes, code]);
+      const codes = await setBarcodes(ctx, group, item._id, [
+        ...item.barcodes,
+        code,
+      ]);
       await ctx.db.patch(item._id, { barcodes: codes, updatedAt: Date.now() });
       out.added++;
     }
-    await audit(ctx, null, "Códigos copiados para o estoque", `${out.added} códigos`, company);
+    await audit(
+      ctx,
+      null,
+      "Códigos copiados para o estoque",
+      `${out.added} códigos`,
+      company
+    );
     return out;
   },
 });
@@ -1090,7 +1273,15 @@ export const syncCodes = internalMutation({
 
 /* -------------------------------- pending -------------------------------- */
 
-const BOTTLES = new Set(["spirits", "liqueur", "wine", "sparkling", "beer", "soft", "mixer"]);
+const BOTTLES = new Set([
+  "spirits",
+  "liqueur",
+  "wine",
+  "sparkling",
+  "beer",
+  "soft",
+  "mixer",
+]);
 const LIST = 40;
 
 /**
@@ -1126,31 +1317,73 @@ export const pending = query({
         .order("desc")
         .take(200),
     ]);
-    const product = (p: Doc<"posProducts">) => ({ id: p.cid, name: p.name, category: p.category });
+    const product = (p: Doc<"posProducts">) => ({
+      id: p.cid,
+      name: p.name,
+      category: p.category,
+    });
     const linked = new Set(prices.map((r) => r.productId).filter(Boolean));
     const byItem = new Map(stock.map((s) => [s.itemId as string, s]));
     const active = items.filter((i) => i.active);
     const free = products.filter((p) => p.available && !(p.price > 0));
     const noPrice = products.filter((p) => !p.available && !(p.price > 0));
-    const noSheet = products.filter((p) => /cocktail/i.test(p.category) && !linked.has(p.cid));
-    const noCode = active.filter((i) => BOTTLES.has(i.category) && !i.barcodes.length);
+    const noSheet = products.filter(
+      (p) => /cocktail/i.test(p.category) && !linked.has(p.cid)
+    );
+    const noCode = active.filter(
+      (i) => BOTTLES.has(i.category) && !i.barcodes.length
+    );
     const low = active
       .map((i) => ({ i, s: byItem.get(i._id) }))
       .filter(({ s }) => s?.min !== undefined && s.qty < s.min)
-      .map(({ i, s }) => ({ id: i._id, name: i.name, qty: s?.qty ?? 0, min: s?.min ?? 0, unit: i.unit, size: i.size, container: i.container }));
+      .map(({ i, s }) => ({
+        id: i._id,
+        name: i.name,
+        qty: s?.qty ?? 0,
+        min: s?.min ?? 0,
+        unit: i.unit,
+        size: i.size,
+        container: i.container,
+      }));
     const review = invoices.filter((x) => x.status === "review");
-    const neverCounted = active.filter((i) => byItem.get(i._id)?.lastCountAt === undefined).length;
+    const neverCounted = active.filter(
+      (i) => byItem.get(i._id)?.lastCountAt === undefined
+    ).length;
     return {
       free: { count: free.length, list: free.slice(0, LIST).map(product) },
-      noPrice: { count: noPrice.length, list: noPrice.slice(0, LIST).map(product) },
-      noSheet: { count: noSheet.length, list: noSheet.slice(0, LIST).map(product) },
-      noCode: { count: noCode.length, list: noCode.slice(0, LIST).map((i) => ({ id: i._id, name: i.name, category: i.category })) },
+      noPrice: {
+        count: noPrice.length,
+        list: noPrice.slice(0, LIST).map(product),
+      },
+      noSheet: {
+        count: noSheet.length,
+        list: noSheet.slice(0, LIST).map(product),
+      },
+      noCode: {
+        count: noCode.length,
+        list: noCode
+          .slice(0, LIST)
+          .map((i) => ({ id: i._id, name: i.name, category: i.category })),
+      },
       low: { count: low.length, list: low.slice(0, LIST) },
       invoices: {
         count: review.length,
-        list: review.slice(0, LIST).map((x) => ({ id: x._id, supplier: x.supplierName, number: x.number, total: x.total, date: x.date })),
+        list: review
+          .slice(0, LIST)
+          .map((x) => ({
+            id: x._id,
+            supplier: x.supplierName,
+            number: x.number,
+            total: x.total,
+            date: x.date,
+          })),
       },
-      totals: { products: products.length, items: active.length, sheets: linked.size, neverCounted },
+      totals: {
+        products: products.length,
+        items: active.length,
+        sheets: linked.size,
+        neverCounted,
+      },
     };
   },
 });

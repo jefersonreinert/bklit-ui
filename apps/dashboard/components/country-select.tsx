@@ -40,6 +40,23 @@ export function Flag({ code, size = 20 }: { code: string; size?: number }) {
   );
 }
 
+/** Flag of a saved country value (nothing when unknown). */
+export function CountryFlag({
+  value,
+  size = 16,
+}: {
+  value?: string;
+  size?: number;
+}) {
+  const locale = useLocale();
+  const c = findCountry(value, locale);
+  return c ? (
+    <span className="inline-flex shrink-0" title={c.label}>
+      <Flag code={c.code} size={size} />
+    </span>
+  ) : null;
+}
+
 function Row({
   c,
   selected,

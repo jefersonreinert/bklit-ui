@@ -1,5 +1,6 @@
 "use client";
 
+import { CountrySelect } from "@/components/country-select";
 import { MediaPicker } from "./media-picker";
 import { type ReactNode, useMemo, useState } from "react";
 import { FullPage } from "@/components/dashboard/full-page";
@@ -608,6 +609,8 @@ function ProductEditor({
       stock: isNew ? num(stock) || 0 : (live?.stock ?? p.stock),
       minStock: num(minStock) || 0,
       modifiers: cleanModifiers(p.modifiers ?? []),
+      // "" clears; the server keeps wine.country in step
+      country: p.country ?? p.wine?.country ?? "",
       wine: p.wine
         ? { ...p.wine, pours: p.wine.pours.filter((x) => x.ml > 0) }
         : undefined,
@@ -648,6 +651,24 @@ function ProductEditor({
             p={p}
             tree={tree}
           />
+          <label
+            className="flex flex-col gap-1.5 text-sm"
+            htmlFor="ppf-country"
+          >
+            País de origem
+            <CountrySelect
+              id="ppf-country"
+              onChange={(country) =>
+                setP({
+                  ...p,
+                  country: country ?? "",
+                  wine: p.wine ? { ...p.wine, country } : p.wine,
+                })
+              }
+              value={p.country || p.wine?.country || undefined}
+              wine={Boolean(p.wine || company?.wine)}
+            />
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-4">
               Código (SKU)
