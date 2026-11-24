@@ -17,7 +17,7 @@ import {
   requireStaff,
   worksIn,
 } from "./access";
-import { codeToItem, countryToTwins } from "./inv";
+import { codeToItem, originToTwins } from "./inv";
 import { requirePanel } from "./lib";
 import { settleLoyalty } from "./loyalty";
 import { finishTableBooking } from "./reservations";
@@ -63,6 +63,8 @@ const productFields = {
   logoId: v.optional(v.id("_storage")),
   /** Country of origin, English short name. */
   country: v.optional(v.string()),
+  /** Alcohol, % vol. */
+  abv: v.optional(v.number()),
 };
 const product = v.object({ id: v.string(), ...productFields });
 
@@ -899,6 +901,15 @@ export const saveProduct = mutation({
         fields.wine = { ...fields.wine, country };
       }
     }
+    // Alcohol: 0 clears, missing keeps what was there
+    const abvTouched = fields.abv !== undefined;
+    const abv =
+      fields.abv !== undefined && fields.abv > 0 && fields.abv <= 100
+        ? Math.round(fields.abv * 10) / 10
+        : undefined;
+    if (abvTouched) {
+      fields.abv = abv;
+    }
     const current = await ctx.db
       .query("posProducts")
       .withIndex("by_cid", (q) => q.eq("cid", id))
@@ -952,13 +963,19 @@ export const saveProduct = mutation({
       fields.name,
       fields.barcode
     );
-    // …and the country (stock item and the other bars' products)
-    if (touched && country !== (current?.country ?? current?.wine?.country)) {
-      await countryToTwins(
+    // …and the country and alcohol (stock item and the other bars' products)
+    const countryChanged =
+      touched && country !== (current?.country ?? current?.wine?.country);
+    const abvChanged = abvTouched && abv !== current?.abv;
+    if (countryChanged || abvChanged) {
+      await originToTwins(
         ctx,
         current ? companyOf(current) : company,
         fields.name,
-        country
+        {
+          ...(countryChanged ? { country } : {}),
+          ...(abvChanged ? { abv } : {}),
+        }
       );
     }
   },

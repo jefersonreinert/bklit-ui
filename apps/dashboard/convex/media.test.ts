@@ -179,6 +179,51 @@ describe("product photos and logos", () => {
     ).rejects.toThrow("primeiro");
   });
 
+  it("keeps one alcohol % per bottle across item and products", async () => {
+    const { t, token, itemId } = await setup();
+    const cur = await product(t, "a-gin");
+    if (!cur) {
+      return;
+    }
+    const { _id, _creationTime, cid, company, updatedAt, ...rest } = cur;
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { ...rest, id: cid, abv: 43.1 },
+    });
+    expect((await product(t, "b-gin"))?.abv).toBe(43.1);
+    expect((await t.run((ctx) => ctx.db.get(itemId)))?.abv).toBe(43.1);
+    expect((await product(t, "a-vodka"))?.abv).toBeUndefined();
+    // Saving without abv keeps it; 0 clears it everywhere
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { ...rest, id: cid, price: 9 },
+    });
+    expect((await product(t, "a-gin"))?.abv).toBe(43.1);
+    await t.mutation(api.pos.saveProduct, {
+      session: token,
+      company: "a",
+      product: { ...rest, id: cid, abv: 0 },
+    });
+    expect((await product(t, "b-gin"))?.abv).toBeUndefined();
+    // The stock item sets it too
+    await t.mutation(api.inv.saveItem, {
+      session: token,
+      company: "a",
+      id: itemId,
+      name: "Gin Tanqueray",
+      category: "spirits",
+      unit: "ml",
+      size: 700,
+      container: "garrafa",
+      barcodes: [],
+      abv: 47.3,
+    });
+    expect((await product(t, "a-gin"))?.abv).toBe(47.3);
+    expect((await product(t, "b-gin"))?.abv).toBe(47.3);
+  });
+
   it("keeps one country per bottle across item and products", async () => {
     const { t, token, itemId } = await setup();
     // Country set on the stock item → the gin products of both bars

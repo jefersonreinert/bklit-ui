@@ -572,6 +572,7 @@ function ProductEditor({
   const [cost, setCost] = useState(money2(product.cost));
   const [stock, setStock] = useState(fix(product.stock ?? 0));
   const [minStock, setMinStock] = useState(fix(product.minStock ?? 0));
+  const [abv, setAbv] = useState(product.abv?.toString() ?? "");
   const [scanning, setScanning] = useState(false);
   const value = num(price);
   const costValue = cost ? num(cost) : undefined;
@@ -608,6 +609,8 @@ function ProductEditor({
       // Stock is edited here only for new products; later through movements
       stock: isNew ? num(stock) || 0 : (live?.stock ?? p.stock),
       minStock: num(minStock) || 0,
+      // 0 clears it (here, in stock and the same-name products)
+      abv: num(abv) > 0 ? num(abv) : 0,
       modifiers: cleanModifiers(p.modifiers ?? []),
       // "" clears; the server keeps wine.country in step
       country: p.country ?? p.wine?.country ?? "",
@@ -667,6 +670,16 @@ function ProductEditor({
               }
               value={p.country || p.wine?.country || undefined}
               wine={Boolean(p.wine || company?.wine)}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm" htmlFor="ppf-abv">
+            Teor alcoólico (% vol.)
+            <Input
+              id="ppf-abv"
+              inputMode="decimal"
+              onChange={(e) => setAbv(e.target.value)}
+              placeholder="40"
+              value={abv}
             />
           </label>
           <div className="grid grid-cols-2 gap-3">

@@ -466,6 +466,8 @@ export default defineSchema({
     logoId: v.optional(v.id("_storage")),
     /** Country of origin, English short name ("France"); wines keep wine.country in step. */
     country: v.optional(v.string()),
+    /** Alcohol, % vol.; same as its stock item and same-name products. */
+    abv: v.optional(v.number()),
     /** Business (posMeta key); missing = "main". */
     company: v.optional(v.string()),
     updatedAt: v.number(),
