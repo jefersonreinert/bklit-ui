@@ -120,16 +120,39 @@ export async function countryToTwins(
   name: string,
   country: string | undefined
 ) {
+  await originToTwins(ctx, company, name, { country });
+}
+
+/**
+ * Country and/or alcohol (% vol.) of one bottle, copied to the stock item
+ * and every product with the same name in the group (wines keep
+ * wine.country in step). Only the keys present are written.
+ */
+export async function originToTwins(
+  ctx: MutationCtx,
+  company: string,
+  name: string,
+  set: { country?: string | undefined; abv?: number | undefined }
+) {
   const g = await groupOf(ctx, company);
   const key = normalizeName(name);
   const now = Date.now();
+  const hasCountry = "country" in set;
+  const hasAbv = "abv" in set;
   const items = await ctx.db
     .query("invItems")
     .withIndex("by_group", (q) => q.eq("group", g?.key ?? company))
     .take(5000);
   for (const i of items) {
-    if (i.country !== country && normalizeName(i.name) === key) {
-      await ctx.db.patch(i._id, { country, updatedAt: now });
+    const off =
+      (hasCountry && i.country !== set.country) ||
+      (hasAbv && i.abv !== set.abv);
+    if (off && normalizeName(i.name) === key) {
+      await ctx.db.patch(i._id, {
+        ...(hasCountry ? { country: set.country } : {}),
+        ...(hasAbv ? { abv: set.abv } : {}),
+        updatedAt: now,
+      });
     }
   }
   for (const c of g?.companies ?? [company]) {
@@ -141,14 +164,27 @@ export async function countryToTwins(
       if (normalizeName(p.name) !== key) {
         continue;
       }
-      const wineOff = p.wine && p.wine.country !== country;
-      if (p.country !== country || wineOff) {
-        await ctx.db.patch(p._id, {
-          country,
-          ...(p.wine ? { wine: { ...p.wine, country } } : {}),
-          updatedAt: now,
-        });
+      const off =
+        (hasCountry &&
+          (p.country !== set.country ||
+            (p.wine && p.wine.country !== set.country))) ||
+        (hasAbv && p.abv !== set.abv);
+      if (!off) {
+        continue;
       }
+      await ctx.db.patch(p._id, {
+        ...(hasCountry ? { country: set.country } : {}),
+        ...(hasAbv ? { abv: set.abv } : {}),
+        ...(p.wine
+          ? {
+              wine: {
+                ...p.wine,
+                ...(hasCountry ? { country: set.country } : {}),
+              },
+            }
+          : {}),
+        updatedAt: now,
+      });
     }
   }
 }
@@ -514,8 +550,10 @@ export const saveItem = mutation({
       updatedAt: now,
     };
     let id = a.id;
+    let abvChanged = fields.abv !== undefined;
     if (id) {
-      await itemInGroup(ctx, id, a.company);
+      const before = await itemInGroup(ctx, id, a.company);
+      abvChanged = before.abv !== fields.abv;
       await ctx.db.patch(id, fields);
     } else {
       const same = await ctx.db
@@ -536,13 +574,13 @@ export const saveItem = mutation({
     const barcodes = await setBarcodes(ctx, group, id, a.barcodes);
     await ctx.db.patch(id, { barcodes });
     await codesToProducts(ctx, a.company, name, barcodes);
-    if (a.country !== undefined) {
-      await countryToTwins(
-        ctx,
-        a.company,
-        name,
-        clean(a.country, 60) || undefined
-      );
+    if (a.country !== undefined || abvChanged) {
+      await originToTwins(ctx, a.company, name, {
+        ...(a.country === undefined
+          ? {}
+          : { country: clean(a.country, 60) || undefined }),
+        ...(abvChanged ? { abv: fields.abv } : {}),
+      });
     }
     // Levels and manual cost belong to this business
     const row = await stockRow(ctx, a.company, id);
@@ -1368,15 +1406,13 @@ export const pending = query({
       low: { count: low.length, list: low.slice(0, LIST) },
       invoices: {
         count: review.length,
-        list: review
-          .slice(0, LIST)
-          .map((x) => ({
-            id: x._id,
-            supplier: x.supplierName,
-            number: x.number,
-            total: x.total,
-            date: x.date,
-          })),
+        list: review.slice(0, LIST).map((x) => ({
+          id: x._id,
+          supplier: x.supplierName,
+          number: x.number,
+          total: x.total,
+          date: x.date,
+        })),
       },
       totals: {
         products: products.length,
@@ -1385,5 +1421,30 @@ export const pending = query({
         neverCounted,
       },
     };
+  },
+});
+
+/** Admin fill: country and alcohol for many bottles by name (whole group). */
+export const fillOrigin = internalMutation({
+  args: {
+    company: v.string(),
+    rows: v.array(
+      v.object({
+        name: v.string(),
+        country: v.optional(v.string()),
+        abv: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, { company, rows }) => {
+    for (const r of rows) {
+      await originToTwins(ctx, company, r.name, {
+        ...(r.country ? { country: r.country } : {}),
+        ...(r.abv !== undefined && r.abv > 0 && r.abv <= 100
+          ? { abv: r.abv }
+          : {}),
+      });
+    }
+    return rows.length;
   },
 });
