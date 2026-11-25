@@ -1,11 +1,11 @@
 import { ConvexError, v } from "convex/values";
+import { normalizeName } from "../lib/inventory/match";
+import { dayKey } from "../lib/inventory/reorder";
 import {
   averageCost,
   type BottleProfile,
   countedQty,
 } from "../lib/inventory/units";
-import { normalizeName } from "../lib/inventory/match";
-import { dayKey } from "../lib/inventory/reorder";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   internalMutation,
@@ -1364,7 +1364,7 @@ export const pending = query({
     const byItem = new Map(stock.map((s) => [s.itemId as string, s]));
     const active = items.filter((i) => i.active);
     const free = products.filter((p) => p.available && !(p.price > 0));
-    const noPrice = products.filter((p) => !p.available && !(p.price > 0));
+    const noPrice = products.filter((p) => !(p.available || p.price > 0));
     const noSheet = products.filter(
       (p) => /cocktail/i.test(p.category) && !linked.has(p.cid)
     );
@@ -1446,5 +1446,42 @@ export const fillOrigin = internalMutation({
       });
     }
     return rows.length;
+  },
+});
+
+/**
+ * Admin fill: empty-bottle weight (grams, with cap) for stock items by
+ * name. Skipped when the item is missing or the value is not below its
+ * full weight.
+ */
+export const fillWeights = internalMutation({
+  args: {
+    company: v.string(),
+    rows: v.array(v.object({ name: v.string(), emptyG: v.number() })),
+  },
+  handler: async (ctx, { company, rows }) => {
+    const group = await groupKey(ctx, company);
+    const out = { set: 0, skipped: [] as string[] };
+    for (const r of rows.slice(0, 200)) {
+      const item = await ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", group).eq("name", r.name))
+        .first();
+      const g = Math.round(r.emptyG);
+      if (!item || g <= 0 || (item.fullG !== undefined && g >= item.fullG)) {
+        out.skipped.push(r.name);
+        continue;
+      }
+      await ctx.db.patch(item._id, { emptyG: g, updatedAt: Date.now() });
+      out.set++;
+    }
+    await audit(
+      ctx,
+      null,
+      "Peso de garrafa vazia preenchido",
+      `${out.set} itens`,
+      company
+    );
+    return out;
   },
 });
