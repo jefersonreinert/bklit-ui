@@ -1,127 +1,68 @@
-import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Round symbol marks like TradingView's watchlist: two overlapping flags
- * for currency pairs, colored badges for indices, crypto, metals, rates,
+ * Round symbol marks like TradingView's watchlist: two overlapping round
+ * country flags for currency pairs, colored badges for indices, crypto, metals, rates,
  * real logos for the big stocks and a letter badge for the rest.
  */
 
-const FLAGS: Record<string, ReactNode> = {
-  USD: (
-    <>
-      {[0, 2, 4, 6, 8, 10, 12].map((y) => (
-        <rect fill="#e0484f" height="1.4" key={y} width="20" y={y * 1.55} />
-      ))}
-      <rect fill="#2f4f9e" height="10.8" width="10" />
-      {[2, 5, 8].map((x) =>
-        [2.5, 5.5, 8.5].map((y) => (
-          <circle cx={x} cy={y} fill="#fff" key={`${x}-${y}`} r="0.6" />
-        ))
-      )}
-    </>
-  ),
-  EUR: (
-    <>
-      <rect fill="#2f4aa8" height="20" width="20" />
-      {Array.from({ length: 12 }, (_, i) => {
-        const a = (i / 12) * Math.PI * 2;
-        return (
-          <circle
-            cx={10 + Math.cos(a) * 5.5}
-            cy={10 + Math.sin(a) * 5.5}
-            fill="#ffd43b"
-            key={a}
-            r="0.9"
-          />
-        );
-      })}
-    </>
-  ),
-  GBP: (
-    <>
-      <rect fill="#2a3f8f" height="20" width="20" />
-      <path d="M0 0 20 20M20 0 0 20" stroke="#fff" strokeWidth="4" />
-      <path d="M0 0 20 20M20 0 0 20" stroke="#d6323f" strokeWidth="1.4" />
-      <path d="M10 0v20M0 10h20" stroke="#fff" strokeWidth="6" />
-      <path d="M10 0v20M0 10h20" stroke="#d6323f" strokeWidth="3.4" />
-    </>
-  ),
-  JPY: (
-    <>
-      <rect fill="#fff" height="20" width="20" />
-      <circle cx="10" cy="10" fill="#d6323f" r="5" />
-    </>
-  ),
-  AUD: (
-    <>
-      <rect fill="#273b8f" height="20" width="20" />
-      <path d="M0 0 9 9M9 0 0 9" stroke="#fff" strokeWidth="2" />
-      <path d="M4.5 0v9M0 4.5h9" stroke="#d6323f" strokeWidth="1.8" />
-      {[
-        [14, 6],
-        [16, 11],
-        [12, 13],
-        [14, 16],
-        [5, 15],
-      ].map(([x, y]) => (
-        <circle cx={x} cy={y} fill="#fff" key={`${x}${y}`} r="1" />
-      ))}
-    </>
-  ),
-  NZD: (
-    <>
-      <rect fill="#273b8f" height="20" width="20" />
-      <path d="M0 0 9 9M9 0 0 9" stroke="#fff" strokeWidth="2" />
-      <path d="M4.5 0v9M0 4.5h9" stroke="#d6323f" strokeWidth="1.8" />
-      {[
-        [14, 5],
-        [16.5, 10],
-        [12, 11],
-        [14, 16],
-      ].map(([x, y]) => (
-        <circle cx={x} cy={y} fill="#d6323f" key={`${x}${y}`} r="1.1" />
-      ))}
-    </>
-  ),
-  CAD: (
-    <>
-      <rect fill="#fff" height="20" width="20" />
-      <rect fill="#d6323f" height="20" width="5" />
-      <rect fill="#d6323f" height="20" width="5" x="15" />
-      <path d="M10 5l1.5 3 2-1-1 4 2 0-4 4-4-4 2 0-1-4 2 1z" fill="#d6323f" />
-    </>
-  ),
-  CHF: (
-    <>
-      <rect fill="#d6323f" height="20" width="20" />
-      <path d="M10 5v10M5 10h10" stroke="#fff" strokeWidth="3" />
-    </>
-  ),
-  BRL: (
-    <>
-      <rect fill="#1f9a50" height="20" width="20" />
-      <path d="M10 3 18 10 10 17 2 10z" fill="#ffd43b" />
-      <circle cx="10" cy="10" fill="#273b8f" r="3.6" />
-    </>
-  ),
-  CNY: (
-    <>
-      <rect fill="#d6323f" height="20" width="20" />
-      <circle cx="6" cy="6" fill="#ffd43b" r="2" />
-    </>
-  ),
-  MXN: (
-    <>
-      <rect fill="#1f9a50" height="20" width="7" />
-      <rect fill="#fff" height="20" width="6" x="7" />
-      <rect fill="#d6323f" height="20" width="7" x="13" />
-    </>
-  ),
+/**
+ * Currency → round country flag in /public/flags (circle-flags, MIT, the
+ * same set as the country pickers). EUR uses the EU flag.
+ */
+export const CURRENCY_FLAGS: Record<string, string> = {
+  USD: "us",
+  EUR: "eu",
+  GBP: "gb",
+  JPY: "jp",
+  AUD: "au",
+  NZD: "nz",
+  CAD: "ca",
+  CHF: "ch",
+  CNY: "cn",
+  CNH: "cn",
+  HKD: "hk",
+  SGD: "sg",
+  SEK: "se",
+  NOK: "no",
+  DKK: "dk",
+  ISK: "is",
+  PLN: "pl",
+  HUF: "hu",
+  CZK: "cz",
+  RON: "ro",
+  BGN: "bg",
+  TRY: "tr",
+  RUB: "ru",
+  ILS: "il",
+  ZAR: "za",
+  MXN: "mx",
+  BRL: "br",
+  ARS: "ar",
+  CLP: "cl",
+  COP: "co",
+  PEN: "pe",
+  INR: "in",
+  KRW: "kr",
+  TWD: "tw",
+  THB: "th",
+  IDR: "id",
+  MYR: "my",
+  PHP: "ph",
+  VND: "vn",
+  SAR: "sa",
+  AED: "ae",
+  QAR: "qa",
+  KWD: "kw",
+  EGP: "eg",
+  NGN: "ng",
+  KES: "ke",
 };
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 function Flag({ code, className }: { code: string; className?: string }) {
-  const flag = FLAGS[code];
+  const country = CURRENCY_FLAGS[code];
   return (
     <span
       className={cn(
@@ -129,10 +70,17 @@ function Flag({ code, className }: { code: string; className?: string }) {
         className
       )}
     >
-      {flag ? (
-        <svg aria-hidden="true" className="size-full" viewBox="0 0 20 20">
-          {flag}
-        </svg>
+      {country ? (
+        // biome-ignore lint/performance/noImgElement: static SVG flag
+        <img
+          alt=""
+          className="size-full"
+          decoding="async"
+          height={32}
+          loading="lazy"
+          src={`${BASE_PATH}/flags/${country}.svg`}
+          width={32}
+        />
       ) : (
         code
       )}
@@ -233,8 +181,6 @@ export const STOCK_LOGOS = new Set([
   "XOM",
 ]);
 
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-
 export function stockLogoSrc(symbol: string) {
   return STOCK_LOGOS.has(symbol)
     ? `${BASE_PATH}/logos/stocks/${symbol}.svg`
@@ -243,6 +189,8 @@ export function stockLogoSrc(symbol: string) {
 
 const PAIR = /^([A-Z]{3})([A-Z]{3})=X$/;
 const SINGLE_PAIR = /^([A-Z]{3})=X$/;
+/** MT5 names: "mt5:EURUSD", broker suffixes like "EURUSD.r" or "EURUSDm". */
+const MT5_PAIR = /^(?:MT5:)?([A-Z]{3})([A-Z]{3})(?:[^A-Z].*|M|PRO)?$/;
 const RATE = /^\^(IRX|FVX|TNX|TYX)$/;
 const STOCK_COLORS = [
   "#2563eb",
@@ -263,14 +211,23 @@ function hashColor(s: string) {
   return STOCK_COLORS[h % STOCK_COLORS.length] ?? "#2563eb";
 }
 
-/** Currencies of a Yahoo forex symbol ("EURUSD=X", "BRL=X" → USD/BRL). */
+/**
+ * Currencies of a forex symbol: Yahoo ("EURUSD=X", "BRL=X" → USD/BRL) or
+ * MT5 ("mt5:GBPJPY"), when both sides are known currencies.
+ */
 export function pairOf(symbol: string): [string, string] | null {
   const p = PAIR.exec(symbol);
   if (p?.[1] && p[2]) {
     return [p[1], p[2]];
   }
   const s = SINGLE_PAIR.exec(symbol);
-  return s?.[1] ? ["USD", s[1]] : null;
+  if (s?.[1]) {
+    return ["USD", s[1]];
+  }
+  const m = MT5_PAIR.exec(symbol.toUpperCase());
+  return m?.[1] && m[2] && CURRENCY_FLAGS[m[1]] && CURRENCY_FLAGS[m[2]]
+    ? [m[1], m[2]]
+    : null;
 }
 
 export function SymbolIcon({
