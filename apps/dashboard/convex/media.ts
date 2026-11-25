@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   action,
+  internalAction,
   internalMutation,
   internalQuery,
   type MutationCtx,
@@ -266,5 +267,69 @@ export const removeBackground = action({
       await ctx.storage.delete(storageId);
       throw err;
     }
+  },
+});
+
+/* ------------------------------ admin import ------------------------------ */
+
+/** Admin (CLI): puts a stored picture on the item/products with that name. */
+export const attachByName = internalMutation({
+  args: {
+    company: v.string(),
+    name: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, a) => {
+    const { products, items } = await sameBottle(ctx, a.company, a.name);
+    const item = items[0];
+    const product = products.find((p) => companyOf(p) === a.company);
+    if (!(item || product)) {
+      await ctx.storage.delete(a.storageId);
+      throw new ConvexError(`Item não encontrado: ${a.name}`);
+    }
+    return await applyMedia(
+      ctx,
+      item
+        ? {
+            company: a.company,
+            target: "item",
+            id: item._id,
+            kind: "image",
+            storageId: a.storageId,
+          }
+        : {
+            company: a.company,
+            target: "product",
+            id: product?.cid ?? "",
+            kind: "image",
+            storageId: a.storageId,
+          },
+      { name: "Admin" }
+    );
+  },
+});
+
+/**
+ * Admin (CLI): uploads a picture (base64, e.g. a transparent PNG) and puts
+ * it on the stock item and same-name products of the group.
+ */
+export const importPhoto = internalAction({
+  args: {
+    company: v.string(),
+    name: v.string(),
+    base64: v.string(),
+    type: v.optional(v.string()),
+  },
+  handler: async (ctx, a): Promise<{ url: string | null }> => {
+    const bytes = Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0));
+    const storageId = await ctx.storage.store(
+      new Blob([bytes], { type: a.type ?? "image/png" })
+    );
+    const r = await ctx.runMutation(internal.media.attachByName, {
+      company: a.company,
+      name: a.name,
+      storageId,
+    });
+    return { url: r.url };
   },
 });
