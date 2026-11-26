@@ -110,25 +110,24 @@ export function CocktailsSection() {
   const current = guide?.cocktails.find((c) => c.id === open);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
-      <div className={cn(CARD, "flex flex-wrap items-center gap-4")}>
-        <div className="flex -space-x-3">
-          <ToolArt className="size-12" tool="shaker" />
-          <ToolArt className="size-12" tool="bar-spoon" />
-          <GarnishArt className="size-12" kind="lime" />
+    <div className="mx-auto max-w-5xl space-y-3 p-3 sm:space-y-4 sm:p-4">
+      <div className={cn(CARD, "flex items-center gap-3")}>
+        <div className="flex shrink-0 -space-x-4">
+          <ToolArt className="size-10 sm:size-12" tool="shaker" />
+          <ToolArt className="size-10 sm:size-12" tool="bar-spoon" />
+          <GarnishArt className="size-10 sm:size-12" kind="lime" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">Instruções de cocktails</p>
-          <p className="text-muted-foreground text-sm">
-            Como fazer cada cocktail do bar, passo a passo, com as medidas da ficha técnica, o copo e
-            a guarnição.
+        <div className="min-w-0">
+          <p className="font-medium leading-tight">Instruções de cocktails</p>
+          <p className="text-muted-foreground text-xs leading-snug sm:text-sm">
+            Cada cocktail passo a passo, com as medidas da ficha, o copo e a guarnição.
           </p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          className="h-9 max-w-xs"
+          className="h-9 w-full sm:max-w-xs"
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar cocktail ou ingrediente…"
           value={q}
