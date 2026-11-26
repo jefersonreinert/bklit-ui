@@ -13,6 +13,7 @@ import type { ExtractedInvoice } from "@/lib/invoices/types";
 import { BASE_PATH } from "@/lib/use-connectors";
 import { getSession, sendPos, useCompany, usePosQuery } from "@/lib/pos/store";
 import { cn } from "@/lib/utils";
+import { DigitalInvoice, OriginalFiles } from "./invoice-digital";
 import {
   CARD,
   Field,
@@ -244,6 +245,14 @@ export function InvoicesSection({ data }: { data: InvOverview }) {
   );
 }
 
+type View = "review" | "digital" | "original";
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: "review", label: "Revisão" },
+  { id: "digital", label: "Digitalizada" },
+  { id: "original", label: "Original" },
+];
+
 function InvoiceDetail({
   id,
   data,
@@ -256,6 +265,7 @@ function InvoiceDetail({
   const fmt = useMoney();
   const d = usePosQuery(api.invoices.detail, { id });
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<View | null>(null);
   if (!d) {
     return (
       <FullPage onClose={onClose} open title="Invoice">
@@ -268,6 +278,8 @@ function InvoiceDetail({
   const inv = d.invoice;
   const review = inv.status === "review";
   const open = inv.lines.filter((l) => !l.skip && !(l.itemId && l.perUnit > 0)).length;
+  // To review it opens on the work view; once done, on the clean copy
+  const shown: View = view ?? (review ? "review" : "digital");
 
   const approve = async () => {
     setBusy(true);
@@ -326,40 +338,37 @@ function InvoiceDetail({
             dá para lançar duas vezes.
           </p>
         ) : null}
-        {d.files.length ? (
-          <div className="flex flex-wrap gap-2">
-            {d.files.map((f) =>
-              f.url ? (
-                <a
-                  className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-sm"
-                  href={f.url}
-                  key={f.id}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <Icon className="size-4" name="IconFileText" />
-                  Ver original
-                </a>
-              ) : null
-            )}
-          </div>
-        ) : null}
-        {review || inv.review ? <AgentPanel d={d} data={data} editable={review} /> : null}
-        <Header d={d} editable={review} />
-        <div className="space-y-2">
-          <p className="font-medium text-sm">Linhas ({inv.lines.length})</p>
-          {inv.lines.map((l) => (
-            <LineCard
-              cost={l.itemId ? d.costs[l.itemId] : undefined}
-              editable={review}
-              invoiceId={id}
-              items={data.items}
-              key={l.id}
-              line={l}
-              seeCosts={data.seeCosts}
-            />
+        <div className="flex gap-1.5 overflow-x-auto">
+          {VIEWS.map((v) => (
+            <Pill active={shown === v.id} key={v.id} onClick={() => setView(v.id)}>
+              {v.id === "review" && !review ? "Detalhes" : v.label}
+            </Pill>
           ))}
         </div>
+        {shown === "digital" ? (
+          <DigitalInvoice d={d} items={data.items} marks={review} />
+        ) : shown === "original" ? (
+          <OriginalFiles files={d.files} />
+        ) : (
+          <>
+            {review || inv.review ? <AgentPanel d={d} data={data} editable={review} /> : null}
+            <Header d={d} editable={review} />
+            <div className="space-y-2">
+              <p className="font-medium text-sm">Linhas ({inv.lines.length})</p>
+              {inv.lines.map((l) => (
+                <LineCard
+                  cost={l.itemId ? d.costs[l.itemId] : undefined}
+                  editable={review}
+                  invoiceId={id}
+                  items={data.items}
+                  key={l.id}
+                  line={l}
+                  seeCosts={data.seeCosts}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </FullPage>
   );
