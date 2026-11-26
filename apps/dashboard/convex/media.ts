@@ -199,6 +199,27 @@ export const attachInternal = internalMutation({
   },
 });
 
+/** Upload URL for bulk photo loads from the admin CLI (no POS session). */
+export const uploadUrlInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+});
+
+/**
+ * Puts an uploaded photo on a stock item and its same-name twins, from the
+ * admin CLI (e.g. brand bottle shots loaded in bulk).
+ */
+export const attachAdmin = internalMutation({
+  args: {
+    company: v.string(),
+    target: v.union(v.literal("product"), v.literal("item")),
+    id: v.string(),
+    kind: v.union(v.literal("image"), v.literal("logo")),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, a) => await applyMedia(ctx, a, { name: "Importação" }),
+});
+
 /* --------------------------- background removal -------------------------- */
 
 const pick = {
