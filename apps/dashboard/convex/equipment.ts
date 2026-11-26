@@ -352,3 +352,45 @@ export const removeBackground = action({
     }
   },
 });
+
+/**
+ * Loads a standard list (glasses, shakers, strainers…) into a bar with
+ * quantity 0, skipping names it already has (admin CLI).
+ */
+export const seed = internalMutation({
+  args: {
+    company: v.string(),
+    items: v.array(v.object({ name: v.string(), category: v.string(), description: v.optional(v.string()) })),
+  },
+  handler: async (ctx, { company, items }) => {
+    const have = new Set(
+      (
+        await ctx.db
+          .query("equipment")
+          .withIndex("by_company", (q) => q.eq("company", company))
+          .take(MAX)
+      ).map((e) => e.name.toLowerCase())
+    );
+    let created = 0;
+    const now = Date.now();
+    for (const it of items.slice(0, 200)) {
+      const name = clean(it.name, 80);
+      if (!name || have.has(name.toLowerCase())) {
+        continue;
+      }
+      have.add(name.toLowerCase());
+      await ctx.db.insert("equipment", {
+        company,
+        name,
+        category: clean(it.category, 40) || "Outros",
+        description: clean(it.description, 600) || undefined,
+        quantity: 0,
+        active: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      created++;
+    }
+    return { created };
+  },
+});

@@ -220,6 +220,17 @@ export const TOOLS = {
   torch: "Maçarico",
   espresso: "Espresso",
   blender: "Liquidificador",
+  tweezers: "Pinça de guarnição",
+  knife: "Faca de bar",
+  opener: "Saca-rolhas",
+  squeezer: "Espremedor",
+  spout: "Bico dosador",
+  dasher: "Dasher de bitters",
+  scoop: "Pá de gelo",
+  tongs: "Pinça de gelo",
+  bucket: "Balde de gelo",
+  board: "Tábua de corte",
+  "bar-mat": "Tapete de bar",
   garnish: "Guarnição",
 } as const;
 
@@ -360,6 +371,94 @@ export function ToolArt({ tool, className, title }: Svg & { tool: ToolKind }) {
         <path d="M42 34c6 0 6 8 0 8" />
         <path d="M14 56h32" />
         <path d="M26 24c-2-3 2-5 0-8M33 24c-2-3 2-5 0-8" strokeWidth={1.4} />
+      </>
+    ),
+    tweezers: (
+      <>
+        <path d="M24 4l7 50M40 4l-7 50" strokeWidth={2.25} />
+        <path d="M31 54l1 5 1-5" />
+        <path d="M24 4h16" />
+        <path d="M26 16l1 6M38 16l-1 6" strokeOpacity={0.4} />
+      </>
+    ),
+    knife: (
+      <>
+        <path d="M10 44L44 14c4 6 4 12-2 18L22 50z" {...steel} />
+        <path d="M22 50l-6 6c-2 2-6 0-5-3l5-6" fill="#3b3b3b" fillOpacity={0.75} />
+        <path d="M20 42l18-16" strokeOpacity={0.35} />
+      </>
+    ),
+    opener: (
+      <>
+        <path d="M8 34h40a6 6 0 010 12H14a6 6 0 01-6-6z" fill="#6b3e1f" fillOpacity={0.6} />
+        <path d="M34 34c0-6 1-12 0-18M34 16c-3 2-3 4 0 6 3 2 3 4 0 6" strokeWidth={1.5} />
+        <path d="M48 34l8-8" strokeWidth={2.25} />
+        <path d="M10 34l6-6" />
+      </>
+    ),
+    squeezer: (
+      <>
+        <path d="M6 30h18c4 0 8 3 8 6s-4 6-8 6H6" fill="#e8c02c" fillOpacity={0.55} />
+        <path d="M32 36l26-12" strokeWidth={3} />
+        <path d="M32 36l26 6" strokeWidth={3} />
+        <circle cx="32" cy="36" r="2.5" fill="currentColor" />
+        <path d="M14 30v12" strokeOpacity={0.4} />
+      </>
+    ),
+    spout: (
+      <>
+        <path d="M24 40h16v16H24z" fill="#333" fillOpacity={0.6} />
+        <path d="M30 40V22l20-14 2 3-18 14v15" {...steel} />
+        <path d="M24 46h16M24 51h16" strokeOpacity={0.4} />
+      </>
+    ),
+    dasher: (
+      <>
+        <path d="M20 24c0-4 4-6 12-6s12 2 12 6v28c0 3-2 5-5 5H25c-3 0-5-2-5-5z" fill="#8a3b25" fillOpacity={0.55} />
+        <path d="M28 18v-6h8v6" {...steel} />
+        <path d="M32 12V6" strokeWidth={1.5} />
+        <path d="M22 34h20v12H22z" fill="#f4e7d0" />
+      </>
+    ),
+    scoop: (
+      <>
+        <path d="M8 26c0-6 6-10 14-10h20v22H22c-8 0-14-4-14-12z" {...steel} />
+        <path d="M42 22h8a4 4 0 014 4v6a4 4 0 01-4 4h-8" />
+        <path d="M14 22c2-2 5-3 8-3" stroke="#fff" />
+        <path d="M42 27h16" strokeWidth={3} />
+      </>
+    ),
+    tongs: (
+      <>
+        <path d="M32 6c-8 0-10 6-12 16l-6 26c-1 4 1 8 4 9M32 6c8 0 10 6 12 16l6 26c1 4-1 8-4 9" strokeWidth={2.25} />
+        <path d="M12 54l6 4M52 54l-6 4" strokeWidth={3} />
+        <path d="M26 8h12" strokeWidth={3} />
+      </>
+    ),
+    bucket: (
+      <>
+        <path d="M12 22h40l-5 32H17z" {...steel} />
+        <path d="M10 22h44" strokeWidth={2.25} />
+        <path d="M14 22c0-12 36-12 36 0" />
+        <rect fill="#dff2fb" height="8" rx="1.5" width="8" x="20" y="14" />
+        <rect fill="#dff2fb" height="8" rx="1.5" transform="rotate(12 37 17)" width="8" x="33" y="13" />
+      </>
+    ),
+    board: (
+      <>
+        <rect fill="#c99a62" fillOpacity={0.55} height="34" rx="5" width="46" x="6" y="20" />
+        <circle cx="52" cy="26" r="3" />
+        <circle cx="22" cy="38" fill="#b9dd6a" r="8" />
+        <path d="M22 30v16M14 38h16" stroke="#fff" strokeWidth={1.25} />
+        <path d="M34 34h10M34 40h8" strokeOpacity={0.35} />
+      </>
+    ),
+    "bar-mat": (
+      <>
+        <rect fill="#3b3b3b" fillOpacity={0.3} height="30" rx="4" width="52" x="6" y="18" />
+        {[14, 22, 30, 38, 46, 54].map((x) =>
+          [25, 33, 41].map((y) => <circle cx={x - 2} cy={y} fill="currentColor" key={`${x}-${y}`} r="1.6" stroke="none" />)
+        )}
       </>
     ),
     blender: (
