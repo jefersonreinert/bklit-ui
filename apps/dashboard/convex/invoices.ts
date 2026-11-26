@@ -13,7 +13,7 @@ import {
   type QueryCtx,
   query,
 } from "./_generated/server";
-import { audit, requireStaff } from "./access";
+import { audit, meta, requireStaff } from "./access";
 import { invInvoiceReview } from "./schema";
 import { groupOf, post } from "./inv";
 
@@ -357,10 +357,35 @@ export const detail = query({
       .query("invSuppliers")
       .withIndex("by_group", (q) => q.eq("group", group))
       .take(500);
+    // Letterheads for the digital copy: the supplier and the buying bar
+    const sup = await ctx.db.get(inv.supplierId);
+    const m = await meta(ctx, inv.company);
+    const r = (m?.receipt ?? {}) as Partial<
+      Record<"businessName" | "legalName" | "taxId" | "address" | "phone" | "email" | "logo", string>
+    >;
+    const p = (m?.profile ?? {}) as { name?: string; color?: string };
     return {
       invoice: inv,
       files,
       costs,
+      parties: {
+        supplier: {
+          name: sup?.name ?? inv.supplierName,
+          taxId: sup?.taxId ?? "",
+          email: sup?.email ?? "",
+          phone: sup?.phone ?? "",
+        },
+        buyer: {
+          name: p.name || r.businessName || "",
+          legalName: r.legalName ?? "",
+          taxId: r.taxId ?? "",
+          address: r.address ?? "",
+          phone: r.phone ?? "",
+          email: r.email ?? "",
+          logo: r.logo ?? "",
+          color: p.color || "#c96442",
+        },
+      },
       duplicate: dup ? { id: dup._id, status: dup.status, date: dup.date } : null,
       suppliers: suppliers.filter((s) => s.active).map((s) => ({ id: s._id, name: s.name })),
     };
