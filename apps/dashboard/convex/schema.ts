@@ -2268,6 +2268,53 @@ export default defineSchema({
     .index("by_count", ["countId"])
     .index("by_count_item", ["countId", "itemId", "areaId"]),
   /** Suppliers of a group of bars (found by VAT number or name). */
+  /**
+   * Bar equipment of one business (glasses, shakers, bar spoons,
+   * strainers, machines…): how many there are, a photo, and what was last
+   * paid and to whom. The moves below are the history.
+   */
+  equipment: defineTable({
+    company: v.string(),
+    name: v.string(),
+    category: v.string(),
+    description: v.optional(v.string()),
+    quantity: v.number(),
+    /** Alert when fewer than this are left (0 = none). */
+    minQty: v.optional(v.number()),
+    /** Last price paid per piece, with VAT. */
+    unitPrice: v.optional(v.number()),
+    /** Company it was last bought from. */
+    supplier: v.optional(v.string()),
+    image: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_company", ["company", "name"]),
+  /** Purchases, breakages/losses and counts of the equipment. */
+  equipmentMoves: defineTable({
+    company: v.string(),
+    equipmentId: v.id("equipment"),
+    kind: v.union(
+      v.literal("purchase"),
+      v.literal("broken"),
+      v.literal("lost"),
+      v.literal("count")
+    ),
+    /** Change in pieces (+ bought, − broken/lost, ± the count's difference). */
+    qty: v.number(),
+    /** Pieces after this move. */
+    after: v.number(),
+    unitPrice: v.optional(v.number()),
+    supplier: v.optional(v.string()),
+    /** "YYYY-MM-DD" of the purchase or event. */
+    date: v.string(),
+    note: v.optional(v.string()),
+    by: v.string(),
+    at: v.number(),
+  })
+    .index("by_equipment", ["equipmentId", "at"])
+    .index("by_company", ["company", "at"]),
   invSuppliers: defineTable({
     group: v.string(),
     name: v.string(),

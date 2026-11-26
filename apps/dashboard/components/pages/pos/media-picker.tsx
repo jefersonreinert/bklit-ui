@@ -20,7 +20,7 @@ type Kind = "image" | "logo";
 const MAX_SIDE: Record<Kind, number> = { image: 1200, logo: 600 };
 
 /** Shrinks a picture; keeps transparency (logos) as WebP or PNG. */
-async function shrink(file: File, kind: Kind): Promise<Blob> {
+export async function shrink(file: File, kind: Kind): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(
     1,

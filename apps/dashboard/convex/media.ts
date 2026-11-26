@@ -241,6 +241,33 @@ export const photoOf = internalQuery({
 });
 
 /**
+ * The picture with a transparent background (PNG), from the self-hosted
+ * rembg service (/opt/rembg, behind Caddy at REMBG_URL with REMBG_KEY).
+ */
+export async function cutout(photo: Blob): Promise<Blob> {
+  const url = process.env.REMBG_URL;
+  const key = process.env.REMBG_KEY;
+  if (!(url && key)) {
+    throw new ConvexError("Remoção de fundo não configurada no servidor.");
+  }
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Key": key,
+      "Content-Type": photo.type || "application/octet-stream",
+    },
+    body: photo,
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!res.ok) {
+    throw new ConvexError(
+      `Não consegui remover o fundo (serviço respondeu ${res.status}).`
+    );
+  }
+  return new Blob([await res.arrayBuffer()], { type: "image/png" });
+}
+
+/**
  * Removes the photo's (or logo's) background (transparent PNG) with the self-hosted
  * rembg service (/opt/rembg, U2Net, behind Caddy at REMBG_URL with
  * REMBG_KEY) and puts the result in place of the photo.
@@ -252,30 +279,11 @@ export const removeBackground = action({
     if (!imageId) {
       throw new ConvexError("Envie a imagem primeiro.");
     }
-    const url = process.env.REMBG_URL;
-    const key = process.env.REMBG_KEY;
-    if (!(url && key)) {
-      throw new ConvexError("Remoção de fundo não configurada no servidor.");
-    }
     const photo = await ctx.storage.get(imageId);
     if (!photo) {
       throw new ConvexError("Foto não encontrada.");
     }
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "X-Key": key,
-        "Content-Type": photo.type || "application/octet-stream",
-      },
-      body: photo,
-      signal: AbortSignal.timeout(90_000),
-    });
-    if (!res.ok) {
-      throw new ConvexError(
-        `Não consegui remover o fundo (serviço respondeu ${res.status}).`
-      );
-    }
-    const png = new Blob([await res.arrayBuffer()], { type: "image/png" });
+    const png = await cutout(photo);
     const storageId = await ctx.storage.store(png);
     try {
       const r = await ctx.runMutation(internal.media.attachInternal, {
