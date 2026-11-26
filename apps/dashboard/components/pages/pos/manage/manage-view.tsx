@@ -18,6 +18,7 @@ import { CARD, type InvOverview, useOverview } from "../inventory/shared";
 import { useCan } from "../pos-auth";
 import { ProductsView } from "../pos-products";
 import { CocktailsSection } from "./cocktails";
+import { EquipmentSection } from "./equipment";
 import { PanelSection } from "./panel";
 import { SuppliersSection } from "./suppliers";
 
@@ -34,6 +35,7 @@ export type ManageSection =
   | "items"
   | "recipes"
   | "cocktails"
+  | "equipment"
   | "suppliers"
   | "purchasing"
   | "invoices"
@@ -55,6 +57,7 @@ const GROUPS: { title: string; entries: Entry[] }[] = [
       { id: "items", label: "Itens de estoque", icon: "IconBox2", stock: true },
       { id: "recipes", label: "Fichas técnicas", icon: "IconCocktail", stock: true },
       { id: "cocktails", label: "Cocktails", icon: "IconCocktail" },
+      { id: "equipment", label: "Equipamentos", icon: "IconGlass" },
       { id: "suppliers", label: "Fornecedores", icon: "IconTruck", stock: true },
     ],
   },
@@ -150,6 +153,8 @@ export function ManageView({ products = true }: { products?: boolean }) {
           <ProductsView />
         ) : section === "cocktails" ? (
           <CocktailsSection />
+        ) : section === "equipment" ? (
+          <EquipmentSection />
         ) : (
           <StockSection data={data}>
             {(d) => (

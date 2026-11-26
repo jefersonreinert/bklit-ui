@@ -16,6 +16,7 @@ import type * as contracts from "../contracts.js";
 import type * as crons from "../crons.js";
 import type * as designs from "../designs.js";
 import type * as eatrade from "../eatrade.js";
+import type * as equipment from "../equipment.js";
 import type * as files from "../files.js";
 import type * as guardian from "../guardian.js";
 import type * as guests from "../guests.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   designs: typeof designs;
   eatrade: typeof eatrade;
+  equipment: typeof equipment;
   files: typeof files;
   guardian: typeof guardian;
   guests: typeof guests;
