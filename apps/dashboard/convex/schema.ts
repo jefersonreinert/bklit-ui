@@ -347,6 +347,13 @@ export const invMoveKind = v.union(
 );
 
 /** One line of a supplier invoice, as reviewed. */
+/** One step of a cocktail's how-to; `tool` picks its drawing. */
+export const cocktailStep = v.object({
+  tool: v.string(),
+  text: v.string(),
+  en: v.optional(v.string()),
+});
+
 export const invInvoiceLine = v.object({
   id: v.string(),
   description: v.string(),
@@ -2356,6 +2363,16 @@ export default defineSchema({
     method: v.optional(v.string()),
     glass: v.optional(v.string()),
     garnish: v.optional(v.string()),
+    /**
+     * Illustrated how-to for the bar (cocktails): each step names the tool
+     * drawn next to it (shaker, bar-spoon, strainer…), in Portuguese and
+     * English.
+     */
+    steps: v.optional(v.array(cocktailStep)),
+    /** Colour of the drink, for its drawing (#rrggbb). */
+    color: v.optional(v.string()),
+    /** Whoever wrote the guide asks the bar to confirm the measures. */
+    toConfirm: v.optional(v.boolean()),
     active: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),

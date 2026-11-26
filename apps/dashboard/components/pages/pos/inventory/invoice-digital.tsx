@@ -45,7 +45,7 @@ const STATUS: Record<Detail["invoice"]["status"], { label: string; tone: string 
 };
 
 /** Opens the page alone in a window and prints it (or saves it as PDF). */
-function printPaper(el: HTMLElement, title: string) {
+export function printPaper(el: HTMLElement, title: string) {
   const w = window.open("", "_blank", "width=900,height=1200");
   if (!w) {
     window.alert("O navegador bloqueou a janela. Permita pop-ups para imprimir.");

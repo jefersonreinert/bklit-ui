@@ -11,7 +11,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
 import { audit, type Perm, requireStaff } from "./access";
 import { groupOf } from "./inv";
-import { invUnit } from "./schema";
+import { cocktailStep, invUnit } from "./schema";
 
 /**
  * Technical sheets with live cost. A recipe belongs to the group (the
@@ -551,6 +551,163 @@ export const importSheets = internalMutation({
       }
     }
     await audit(ctx, null, "Fichas técnicas importadas", `${out.created} novas, ${out.updated} atualizadas`, company);
+    return out;
+  },
+});
+
+/* ------------------------------ cocktail guide ------------------------------ */
+
+/**
+ * The bar's illustrated cocktail guide: every cocktail sheet of the group
+ * with its ingredients in measures, glass, garnish and steps. Every staff
+ * member of the bar may read it (no costs in it); the ones on this bar's
+ * menu come first, with their menu name and description.
+ */
+export const guide = query({
+  args: { session: v.optional(v.string()), company: v.string() },
+  handler: async (ctx, { session, company }) => {
+    const user = await requireStaff(ctx, session, undefined, company);
+    const group = await groupKey(ctx, company);
+    const [recipes, items, prices] = await Promise.all([
+      ctx.db
+        .query("invRecipes")
+        .withIndex("by_group", (q) => q.eq("group", group))
+        .take(MAX),
+      ctx.db
+        .query("invItems")
+        .withIndex("by_group", (q) => q.eq("group", group))
+        .take(5000),
+      ctx.db
+        .query("invRecipePrices")
+        .withIndex("by_company", (q) => q.eq("company", company))
+        .take(MAX),
+    ]);
+    const itemBy = new Map(items.map((i) => [i._id as string, i]));
+    const recipeBy = new Map(recipes.map((r) => [r._id as string, r]));
+    const priceBy = new Map(prices.map((p) => [p.recipeId as string, p]));
+    const out = [];
+    for (const r of recipes) {
+      if (!r.active || r.kind !== "menu" || r.category !== "cocktail") {
+        continue;
+      }
+      const link = priceBy.get(r._id);
+      const product = link?.productId
+        ? await ctx.db
+            .query("posProducts")
+            .withIndex("by_cid", (q) => q.eq("cid", link.productId as string))
+            .unique()
+        : null;
+      out.push({
+        id: r._id,
+        name: product?.name ?? r.name,
+        sheet: r.name,
+        menu: Boolean(product),
+        section: product?.category ?? "",
+        description: product?.description ?? "",
+        price: product?.price ?? link?.price ?? null,
+        glass: r.glass ?? "",
+        garnish: r.garnish ?? "",
+        method: r.method ?? "",
+        color: r.color ?? "",
+        steps: r.steps ?? [],
+        toConfirm: Boolean(r.toConfirm),
+        lines: r.lines.map((l) => {
+          const item = l.itemId ? itemBy.get(l.itemId) : undefined;
+          const prep = l.prepId ? recipeBy.get(l.prepId) : undefined;
+          return {
+            name: item?.name ?? prep?.name ?? "?",
+            qty: l.qty,
+            unit: item?.unit ?? prep?.yieldUnit ?? "un",
+            prep: Boolean(prep),
+          };
+        }),
+      });
+    }
+    out.sort((a, b) => Number(b.menu) - Number(a.menu) || a.section.localeCompare(b.section) || a.name.localeCompare(b.name));
+    const admin = user.perms.includes("users");
+    return { cocktails: out, canEdit: admin || EDIT.some((p) => user.perms.includes(p)) };
+  },
+});
+
+const cleanSteps = (steps: { tool: string; text: string; en?: string }[]) =>
+  steps
+    .slice(0, 20)
+    .map((s) => ({
+      tool: clean(s.tool, 30) || "jigger",
+      text: clean(s.text, 400),
+      en: clean(s.en, 400) || undefined,
+    }))
+    .filter((s) => s.text);
+
+/** Edit a cocktail's how-to (steps, glass, garnish, colour). */
+export const saveGuide = mutation({
+  args: {
+    session: v.optional(v.string()),
+    company: v.string(),
+    id: v.id("invRecipes"),
+    steps: v.array(cocktailStep),
+    glass: v.string(),
+    garnish: v.string(),
+    color: v.optional(v.string()),
+    confirmed: v.optional(v.boolean()),
+  },
+  handler: async (ctx, a) => {
+    const user = await requireStaff(ctx, a.session, EDIT, a.company);
+    const r = await ctx.db.get(a.id);
+    if (!r || r.group !== (await groupKey(ctx, a.company))) {
+      throw new ConvexError("Ficha não encontrada.");
+    }
+    const color = a.color && /^#[0-9a-f]{6}$/i.test(a.color) ? a.color : r.color;
+    await ctx.db.patch(a.id, {
+      steps: cleanSteps(a.steps),
+      glass: clean(a.glass, 80) || undefined,
+      garnish: clean(a.garnish, 120) || undefined,
+      color,
+      toConfirm: a.confirmed ? false : r.toConfirm,
+      updatedAt: Date.now(),
+    });
+    await audit(ctx, user, "Instrução de cocktail", r.name, a.company);
+  },
+});
+
+/** Bulk-write cocktail guides by sheet name (CLI). */
+export const setGuides = internalMutation({
+  args: {
+    company: v.string(),
+    guides: v.array(
+      v.object({
+        name: v.string(),
+        steps: v.array(cocktailStep),
+        color: v.optional(v.string()),
+        glass: v.optional(v.string()),
+        garnish: v.optional(v.string()),
+        toConfirm: v.optional(v.boolean()),
+      })
+    ),
+  },
+  handler: async (ctx, { company, guides }) => {
+    const group = await groupKey(ctx, company);
+    const recipes = await ctx.db
+      .query("invRecipes")
+      .withIndex("by_group", (q) => q.eq("group", group))
+      .take(MAX);
+    const out = { updated: 0, missing: [] as string[] };
+    for (const g of guides) {
+      const r = recipes.find((x) => x.name === clean(g.name));
+      if (!r) {
+        out.missing.push(g.name);
+        continue;
+      }
+      await ctx.db.patch(r._id, {
+        steps: cleanSteps(g.steps),
+        ...(g.color ? { color: g.color } : {}),
+        ...(g.glass ? { glass: clean(g.glass, 80) } : {}),
+        ...(g.garnish ? { garnish: clean(g.garnish, 120) } : {}),
+        ...(g.toConfirm !== undefined ? { toConfirm: g.toConfirm } : {}),
+        updatedAt: Date.now(),
+      });
+      out.updated++;
+    }
     return out;
   },
 });
